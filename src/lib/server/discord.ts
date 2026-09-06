@@ -130,6 +130,18 @@ export async function listVoiceChannels(): Promise<VoiceChannel[]> {
   return list;
 }
 
+export async function listTextChannels(): Promise<VoiceChannel[]> {
+  const rows = await discord<{ id: string; name: string; type: number }[]>(
+    "GET",
+    `/guilds/${DISCORD_GUILD_ID}/channels`,
+  );
+  const list = (Array.isArray(rows) ? rows : [])
+    .filter((c) => c.type === 0)
+    .map((c): VoiceChannel => ({ id: c.id, name: c.name, kind: "text" }));
+  list.sort((a, b) => a.name.localeCompare(b.name, "ru"));
+  return list;
+}
+
 function assertPunishable(targetId: string) {
   if (PROTECTED_USER_IDS.includes(targetId as (typeof PROTECTED_USER_IDS)[number])) {
     throw new DiscordError("Нельзя выдать наказание владельцу бота.", 403);
@@ -172,6 +184,12 @@ export async function unmuteMember(targetId: string) {
 
 export async function sendChannelMessage(channelId: string, content: string) {
   await discord("POST", `/channels/${channelId}/messages`, { content: content.slice(0, 1900) });
+}
+
+export async function sendBotDm(targetId: string, content: string) {
+  const dm = await discord<{ id: string }>("POST", "/users/@me/channels", { recipient_id: targetId });
+  if (!dm?.id) throw new DiscordError("Не удалось открыть ЛС с этим пользователем", 400);
+  await discord("POST", `/channels/${dm.id}/messages`, { content: content.slice(0, 1900) });
 }
 
 export async function sendWarn(targetId: string, reason: string, actorTag: string) {
