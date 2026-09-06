@@ -174,7 +174,7 @@ export function StatsView() {
                     ({m.rank ? RANK_SHORT[m.rank] ?? "—" : "—"})
                   </span>
                 </p>
-                <OnlineBadges info={online[m.name]} />
+                <OnlineBadges info={online[m.steamid]} />
                 {m.pct != null ? (
                   <span
                     className={cn(
