@@ -8,6 +8,7 @@ import type {
   StaffListItem,
   StaffProfile,
   StatsPayload,
+  VoiceChannel,
 } from "@/lib/types";
 
 export const getMe = createServerFn({ method: "POST" })
@@ -155,8 +156,75 @@ export const moderateFn = createServerFn({ method: "POST" })
     return { ok: true, message: labels[data.action] };
   });
 
-export const getLogsFn = createServerFn({ method: "GET" })
+export const listTextChannelsFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
+  .validator((_d: unknown) => ({}))
+  .handler(async ({ context, data: _data }): Promise<VoiceChannel[]> => {
+    const { getStaff } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.canVoice) throw new Error("Нет доступа.");
+    const { listTextChannels } = await import("./server/discord");
+    return listTextChannels();
+  });
+
+export const searchMembersVoiceFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { query: string }) => d)
+  .handler(async ({ context, data }): Promise<GuildMember[]> => {
+    const { getStaff } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.canVoice) throw new Error("Нет доступа.");
+    const { searchMembers } = await import("./server/discord");
+    return searchMembers(data.query);
+  });
+
+export const botSendFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(
+    (d: {
+      place: "dm" | "channel";
+      userId?: string;
+      channelId?: string;
+      text: string;
+      mention: "none" | "user" | "everyone";
+      sign: boolean;
+    }) => d,
+  )
+  .handler(async ({ context, data }): Promise<{ ok: true }> => {
+    const { getStaff, writeLog } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.canVoice) throw new Error("Нет доступа к отправке сообщений.");
+    const text = data.text.trim().slice(0, 1500);
+    if (!text) throw new Error("Пустой текст.");
+    const d = await import("./server/discord");
+    const actor = me.displayName || me.email || context.userId;
+    let who = "";
+    if (data.place === "dm") {
+      if (!data.userId) throw new Error("Не выбран получатель.");
+      const m = await d.fetchGuildMember(data.userId);
+      const name = m ? m.nick || m.globalName || m.username : data.userId;
+      const prefix = data.sign ? `**Сообщение от ${actor}:**\n` : "";
+      await d.sendBotDm(data.userId, prefix + text);
+      who = `ЛС → **${name}** (\`${m?.username ?? "?"}\`)`;
+    } else {
+      if (!data.channelId) throw new Error("Не выбран канал.");
+      const chans = await d.listTextChannels();
+      const ch = chans.find((c) => c.id === data.channelId);
+      let body = text;
+      if (data.mention === "user" && data.userId) {
+        body = `<@${data.userId}>, ${text}`;
+      } else if (data.mention === "everyone") {
+        body = `@everyone\n${text}`;
+      }
+      const prefix = data.sign ? `-# от ${actor}\n` : "";
+      await d.sendChannelMessage(data.channelId, prefix + body);
+      who = `канал → **#${ch?.name ?? data.channelId}**${data.mention === "everyone" ? " (@everyone)" : ""}`;
+    }
+    await writeLog(context.userId, "bot-send", `${who} • ${text.slice(0, 100)}`);
+    return { ok: true };
+  });
+
+export const getLogsFn = createServerFn({ method: "GET" })  .middleware([authMiddleware])
   .handler(async ({ context }): Promise<LogEntry[]> => {
     const { getStaff } = await import("./server/staff");
     const me = await getStaff(context.userId);
