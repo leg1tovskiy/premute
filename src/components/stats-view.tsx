@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { Hammer, Loader2, RefreshCw, Unlock, VolumeX } from "lucide-react";
+import { Gamepad2, Hammer, Loader2, RefreshCw, Unlock, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getStatsFn } from "@/lib/fn";
+import { getStatsFn, moderatorOnlineFn } from "@/lib/fn";
 import { RANK_SHORT } from "@/lib/constants";
 import type { StatsPayload } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+type OnlineInfo = { server: string; nickname: string; map: string | null };
 
 function fmtMsk(sec: number) {
   return new Intl.DateTimeFormat("ru-RU", {
@@ -37,6 +39,7 @@ export function StatsView() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [online, setOnline] = useState<Record<string, OnlineInfo>>({});
 
   async function load(refresh = false) {
     if (refresh) setRefreshing(true);
@@ -53,6 +56,32 @@ export function StatsView() {
     }
   }
 
+  // Кто из модеров сейчас в игре на серверах FEAR — обновляем раз в минуту
+  useEffect(() => {
+    let alive = true;
+    async function pull(ids: string[]) {
+      if (!ids.length) return;
+      try {
+        const res = await moderatorOnlineFn({ data: { ids } });
+        if (alive) setOnline(res);
+      } catch {
+        /* тихо: индикатор не критичен */
+      }
+    }
+    if (data?.moderators?.length) {
+      const ids = data.moderators.map((m) => m.steamid);
+      void pull(ids);
+      const t = setInterval(() => void pull(ids), 60_000);
+      return () => {
+        alive = false;
+        clearInterval(t);
+      };
+    }
+    return () => {
+      alive = false;
+    };
+  }, [data?.moderators]);
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -62,7 +91,6 @@ export function StatsView() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
@@ -146,6 +174,7 @@ export function StatsView() {
                     ({m.rank ? RANK_SHORT[m.rank] ?? "—" : "—"})
                   </span>
                 </p>
+                <OnlineBadges info={online[m.name]} />
                 {m.pct != null ? (
                   <span
                     className={cn(
@@ -211,6 +240,18 @@ function Count({
     <span className={cn("inline-flex items-center gap-1", tone)}>
       <Icon className="size-3.5" />
       {n}
+    </span>
+  );
+}
+
+function OnlineBadges({ info }: { info?: OnlineInfo }) {
+  if (!info) return null;
+  return (
+    <span className="ml-auto mr-2 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
+      <Gamepad2 className="size-3.5" />
+      <span className="max-w-44 truncate" title={info.map ? `${info.server} · ${info.map}` : info.server}>
+        {info.server}
+      </span>
     </span>
   );
 }
