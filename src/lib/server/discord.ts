@@ -369,6 +369,26 @@ export async function fetchBotLogs(): Promise<{ ts: number; text: string }[] | n
   }
 }
 
+export type OnlineInfo = { server: string; nickname: string; map: string | null };
+
+// Кто из модеров сейчас в игре на серверах fearproject.ru (по SteamID, кэш у бота 30 сек).
+export async function fetchBotOnline(ids: string[]): Promise<Record<string, OnlineInfo> | null> {
+  const list = ids.map((s) => s.trim()).filter((s) => /^\d{17}$/.test(s)).slice(0, 200);
+  if (!list.length) return {};
+  try {
+    const res = await fetch(
+      `${PANEL_BOT_URL}/panel/online?s=${encodeURIComponent(panelSecret())}&ids=${encodeURIComponent(list.join(","))}`,
+      { signal: AbortSignal.timeout(8000) },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as { ok?: boolean; online?: Record<string, OnlineInfo> };
+    if (!json.ok || !json.online) return null;
+    return json.online;
+  } catch {
+    return null;
+  }
+}
+
 export async function botPower(
   action: "restart" | "shutdown",
   actor: string,
