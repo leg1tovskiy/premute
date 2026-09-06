@@ -224,6 +224,21 @@ export const botSendFn = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const moderatorOnlineFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { ids: string[] }) => d)
+  .handler(
+    async ({ context, data }): Promise<Record<string, { server: string; nickname: string; map: string | null }>> => {
+      const { getStaff } = await import("./server/staff");
+      const me = await getStaff(context.userId);
+      if (!me?.caps.canStats) throw new Error("Нет доступа к статистике.");
+      const { fetchBotOnline } = await import("./server/discord");
+      const ids = (data.ids || []).map((s) => String(s || "").trim()).filter((s) => /^\d{17}$/.test(s)).slice(0, 200);
+      const res = await fetchBotOnline(ids);
+      return res || {};
+    },
+  );
+
 export const getLogsFn = createServerFn({ method: "GET" })  .middleware([authMiddleware])
   .handler(async ({ context }): Promise<LogEntry[]> => {
     const { getStaff } = await import("./server/staff");
