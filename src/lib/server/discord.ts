@@ -406,6 +406,31 @@ export async function botPower(
   throw new DiscordError(`Panel HTTP ${res.status}`, res.status);
 }
 
+// Голосовое сообщение с сайта -> бот проигрывает в войсе (raw body, макс ~8 МБ).
+export async function botVoiceUpload(
+  audio: ArrayBuffer,
+  mime: string,
+  channelId: string,
+  actor: string,
+): Promise<void> {
+  const qs = new URLSearchParams({
+    s: panelSecret(),
+    ch: channelId,
+    mime: mime || "audio/webm",
+    actor: actor.slice(0, 80),
+  });
+  const res = await fetch(`${PANEL_BOT_URL}/panel/voice-upload?${qs.toString()}`, {
+    method: "POST",
+    headers: { "Content-Type": mime || "application/octet-stream" },
+    body: audio,
+    signal: AbortSignal.timeout(20000),
+  });
+  const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+  if (res.ok && json.ok) return;
+  if (json.error) throw new DiscordError(json.error, res.status);
+  throw new DiscordError(`Panel HTTP ${res.status}`, res.status);
+}
+
 export async function mutateBotMod(opts: {
   op: "mod_add" | "mod_edit" | "mod_del";
   actor: string;
