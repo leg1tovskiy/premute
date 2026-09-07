@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { botSendFn, listTextChannelsFn, listVoiceChannelsFn, playSoundFn, sayFn, searchMembersVoiceFn, voiceRecordFn } from "@/lib/fn";
+import { botSendFn, listTextChannelsFn, playSoundFn, sayFn, searchMembersVoiceFn, voiceRecordFn } from "@/lib/fn";
 import { SOUNDS } from "@/lib/constants";
 import type { GuildMember, VoiceChannel } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -112,8 +112,6 @@ export function VoiceView() {
   const [recBlob, setRecBlob] = useState<Blob | null>(null);
   const [recUrl, setRecUrl] = useState<string | null>(null);
   const [recSec, setRecSec] = useState(0);
-  const [voiceCh, setVoiceCh] = useState("");
-  const [voiceChannels, setVoiceChannels] = useState<VoiceChannel[]>([]);
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -131,13 +129,6 @@ export function VoiceView() {
 
   useEffect(() => {
     let alive = true;
-    listVoiceChannelsFn()
-      .then((rows) => {
-        if (!alive) return;
-        setVoiceChannels(rows);
-        setVoiceCh((prev) => prev || (rows[0] ? rows[0].id : ""));
-      })
-      .catch(() => {});
     listTextChannelsFn()
       .then((rows) => {
         if (!alive) return;
@@ -220,10 +211,6 @@ export function VoiceView() {
       toast.error("Сначала запиши голосовое");
       return;
     }
-    if (!voiceCh) {
-      toast.error("Выбери голосовой канал");
-      return;
-    }
     if (recBlob.size > 6 * 1024 * 1024) {
       toast.error("Запись слишком длинная (макс ~1 минута)");
       return;
@@ -238,7 +225,6 @@ export function VoiceView() {
         data: {
           audio: base64,
           mime: recBlob.type || "audio/webm",
-          channelId: voiceCh,
         },
       });
       toast.success("Голосовое отправлено в войс");
@@ -407,24 +393,8 @@ export function VoiceView() {
           <Mic className="size-4 text-accent" />
           Голосовое сообщение
         </div>
-        <div className="grid gap-2">
-          <Label htmlFor="voice-ch">Канал озвучки</Label>
-          <select
-            id="voice-ch"
-            value={voiceCh}
-            onChange={(e) => setVoiceCh(e.target.value)}
-            className="h-9 w-full rounded-md border border-border bg-elevated px-3 text-sm text-fg outline-none focus:ring-1 focus:ring-accent"
-          >
-            {voiceChannels.length === 0 ? <option value="">Каналы не загружены</option> : null}
-            {voiceChannels.map((c) => (
-              <option key={c.id} value={c.id}>
-                🔊 {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {!recording && !recBlob ? (
             <Button onClick={() => void startRec()}>
               <Mic />
@@ -470,7 +440,7 @@ export function VoiceView() {
           ) : null}
         </div>
         <p className="mt-2 text-xs text-subtle">
-          До ~1 минуты. Запись идёт в браузере, потом уходит боту — он воспроизведёт её в выбранном канале.
+          До ~1 минуты. Запись идёт в браузере, потом уходит боту — он воспроизведёт её там, где сидит.
         </p>
       </div>
 
