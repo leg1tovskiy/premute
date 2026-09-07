@@ -317,11 +317,11 @@ export const sayFn = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// Голосовое сообщение с сайта (запись с микрофона) -> бот играет в войсе.
+// Голосовое сообщение с сайта (запись с микрофона) -> бот играет в войсе, где сидит.
 // Аудио приходит base64 (webm/opus), ~1.5 МБ на минуту — в лимиты Vercel влезает.
 export const voiceRecordFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((d: { audio: string; mime?: string; channelId?: string }) => d)
+  .validator((d: { audio: string; mime?: string }) => d)
   .handler(async ({ context, data }): Promise<{ ok: true }> => {
     const { getStaff, writeLog } = await import("./server/staff");
     const me = await getStaff(context.userId);
@@ -335,7 +335,7 @@ export const voiceRecordFn = createServerFn({ method: "POST" })
     const d = await import("./server/discord");
     const actor = me.displayName || me.email || context.userId;
     const buffer = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-    await d.botVoiceUpload(buffer.buffer as ArrayBuffer, mime, data.channelId || "", actor);
+    await d.botVoiceUpload(buffer.buffer as ArrayBuffer, mime, "", actor);
     await writeLog(context.userId, "voice_record", `${Math.round(bytes / 1024)} КБ ${mime}`);
     return { ok: true };
   });
