@@ -156,6 +156,17 @@ export const moderateFn = createServerFn({ method: "POST" })
     return { ok: true, message: labels[data.action] };
   });
 
+export const listVoiceChannelsFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((_d: unknown) => ({}))
+  .handler(async ({ context, data: _data }): Promise<VoiceChannel[]> => {
+    const { getStaff } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.canVoice) throw new Error("Нет доступа.");
+    const { listVoiceChannels } = await import("./server/discord");
+    return listVoiceChannels();
+  });
+
 export const listTextChannelsFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((_d: unknown) => ({}))
@@ -303,6 +314,29 @@ export const sayFn = createServerFn({ method: "POST" })
       actor,
     });
     await writeLog(context.userId, "say", text);
+    return { ok: true };
+  });
+
+// Голосовое сообщение с сайта (запись с микрофона) -> бот играет в войсе.
+// Аудио приходит base64 (webm/opus), ~1.5 МБ на минуту — в лимиты Vercel влезает.
+export const voiceRecordFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { audio: string; mime?: string; channelId?: string }) => d)
+  .handler(async ({ context, data }): Promise<{ ok: true }> => {
+    const { getStaff, writeLog } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.canVoice) throw new Error("Нет доступа к озвучиванию.");
+    const mime = data.mime && data.mime.startsWith("audio/") ? data.mime : "audio/webm";
+    const base64 = String(data.audio || "").replace(/^data:[^,]*,/, "");
+    if (!base64) throw new Error("Пустая запись.");
+    const bytes = Math.floor((base64.length * 3) / 4);
+    if (bytes < 1000) throw new Error("Слишком короткая запись.");
+    if (bytes > 6 * 1024 * 1024) throw new Error("Запись слишком длинная (макс ~6 МБ, около минуты).");
+    const d = await import("./server/discord");
+    const actor = me.displayName || me.email || context.userId;
+    const buffer = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    await d.botVoiceUpload(buffer.buffer as ArrayBuffer, mime, data.channelId || "", actor);
+    await writeLog(context.userId, "voice_record", `${Math.round(bytes / 1024)} КБ ${mime}`);
     return { ok: true };
   });
 
