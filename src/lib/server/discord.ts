@@ -192,6 +192,53 @@ export async function sendBotDm(targetId: string, content: string) {
   await discord("POST", `/channels/${dm.id}/messages`, { content: content.slice(0, 1900) });
 }
 
+// Отложенная отправка «от имени бота»: планирует задачу у бота, он отправляет по таймеру.
+// when — эпоха (мс). Бот берёт на себя таймер и переживает перезапуск.
+export async function scheduleBotSend(opts: {
+  place: "dm" | "channel";
+  userId?: string;
+  channelId?: string;
+  text: string;
+  mention: "none" | "user" | "everyone";
+  sign: boolean;
+  actor: string;
+  when: number;
+}): Promise<{ when: number }> {
+  const body = {
+    secret: panelSecret(),
+    op: "schedule_send",
+    actor: opts.actor.slice(0, 80),
+    place: opts.place,
+    userId: opts.userId,
+    channelId: opts.channelId,
+    text: opts.text.slice(0, 1500),
+    mention: opts.mention,
+    sign: opts.sign,
+    when: opts.when,
+  };
+  const post = async (url: string) => {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(8000),
+    });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; when?: number };
+    if (res.ok && json.ok) return { ok: true as const, when: Number(json.when) || opts.when };
+    if (json.error) throw new DiscordError(json.error, res.status);
+    throw new DiscordError(`Panel HTTP ${res.status}`, res.status);
+  };
+  try {
+    return await post(`${PANEL_BOT_URL}/panel`);
+  } catch (e) {
+    if (e instanceof DiscordError) throw e;
+    // Бот временно недоступен — дублируем запрос в лог-канал, бот его подхватит (PMCMD).
+    const { secret: _s, ...pub } = body;
+    await sendChannelMessage(DISCORD_LOG_CHANNEL_ID, `PMCMD${JSON.stringify(pub)}`);
+    return { when: opts.when };
+  }
+}
+
 export async function sendWarn(targetId: string, reason: string, actorTag: string) {
   assertPunishable(targetId);
   const text =
