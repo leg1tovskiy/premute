@@ -6,12 +6,48 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { botSendFn, listTextChannelsFn, playSoundFn, sayFn, searchMembersVoiceFn, voiceRecordFn } from "@/lib/fn";
+import { botSendFn, botScheduleSendFn, listTextChannelsFn, playSoundFn, sayFn, searchMembersVoiceFn, voiceRecordFn } from "@/lib/fn";
 import { SOUNDS } from "@/lib/constants";
 import type { GuildMember, VoiceChannel } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type MemberHit = { m: GuildMember; pick: () => void };
+
+type ScheduleParts = { year: number; month: number; day: number; hour: number; minute: number };
+
+const MONTH_NAMES = ["Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"];
+
+// Текущее время в МСК (UTC+3, без DST) как локальные календарные поля.
+function mskNow(): Date {
+  const off = -new Date().getTimezoneOffset() / 60;
+  return new Date(Date.now() + (3 - off) * 3600 * 1000);
+}
+
+// Поля даты/времени «через час по МСК» — стартовое значение для планировщика.
+function defaultSchedule(): ScheduleParts {
+  const d = new Date(mskNow().getTime() + 3600 * 1000);
+  return {
+    year: d.getUTCFullYear(),
+    month: d.getUTCMonth() + 1,
+    day: d.getUTCDate(),
+    hour: d.getUTCHours(),
+    minute: d.getUTCMinutes(),
+  };
+}
+
+// МСК (дата без таймзоны) -> эпоха (мс). MSK = UTC+3 всегда.
+function partsToWhen(p: ScheduleParts): number {
+  return Date.UTC(p.year, p.month - 1, p.day, p.hour - 3, p.minute);
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+function fmtSched(p: ScheduleParts): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(p.day)}.${pad(p.month)}.${p.year} в ${pad(p.hour)}:${pad(p.minute)} МСК`;
+}
 
 function MemberSearch({ onPick }: { onPick: (m: GuildMember) => void }) {
   const [query, setQuery] = useState("");
@@ -126,6 +162,8 @@ export function VoiceView() {
   const [mentionTarget, setMentionTarget] = useState<GuildMember | null>(null);
   const [sign, setSign] = useState(false);
   const [msg, setMsg] = useState("");
+  const [later, setLater] = useState(false);
+  const [sched, setSched] = useState<ScheduleParts>(defaultSchedule);
 
   useEffect(() => {
     let alive = true;
@@ -300,18 +338,40 @@ export function VoiceView() {
     }
     setBusy("send");
     try {
-      await botSendFn({
-        data: {
-          place,
-          userId: place === "dm" ? dmTarget?.id : mention === "user" ? mentionTarget?.id : undefined,
-          channelId: place === "channel" ? channelId : undefined,
-          text: t,
-          mention: place === "channel" ? mention : "none",
-          sign,
-        },
-      });
-      toast.success("Отправлено от имени бота");
-      setMsg("");
+      if (later) {
+        const when = partsToWhen(sched);
+        if (when <= Date.now()) {
+          toast.error("Время уже прошло — укажи будущую дату и время (по МСК)");
+          return;
+        }
+        await botScheduleSendFn({
+          data: {
+            place,
+            userId: place === "dm" ? dmTarget?.id : mention === "user" ? mentionTarget?.id : undefined,
+            channelId: place === "channel" ? channelId : undefined,
+            text: t,
+            mention: place === "channel" ? mention : "none",
+            sign,
+            when,
+          },
+        });
+        toast.success(`Запланировано: ${fmtSched(sched)}`);
+        setMsg("");
+        setLater(false);
+      } else {
+        await botSendFn({
+          data: {
+            place,
+            userId: place === "dm" ? dmTarget?.id : mention === "user" ? mentionTarget?.id : undefined,
+            channelId: place === "channel" ? channelId : undefined,
+            text: t,
+            mention: place === "channel" ? mention : "none",
+            sign,
+          },
+        });
+        toast.success("Отправлено от имени бота");
+        setMsg("");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Не удалось отправить");
     } finally {
@@ -538,12 +598,102 @@ export function VoiceView() {
           )}
         </div>
 
-        <div className="mt-4 flex items-center gap-2">
-          <Switch checked={sign} onCheckedChange={setSign} id="say-sign" />
-          <Label htmlFor="say-sign" className="cursor-pointer text-xs">
-            Подписать (указать от кого)
-          </Label>
+        <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+          <div className="flex items-center gap-2">
+            <Switch checked={sign} onCheckedChange={setSign} id="say-sign" />
+            <Label htmlFor="say-sign" className="cursor-pointer text-xs">
+              Подписать (указать от кого)
+            </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch checked={later} onCheckedChange={setLater} id="say-later" />
+            <Label htmlFor="say-later" className="cursor-pointer text-xs">
+              Отправить позже
+            </Label>
+          </div>
         </div>
+
+        {later ? (
+          <div className="mt-4 rounded-md border border-border bg-elevated/60 p-4">
+            <Label className="text-xs">Дата и время отправки</Label>
+            <div className="mt-2 grid grid-cols-5 gap-2">
+              <select
+                aria-label="День"
+                value={sched.day}
+                onChange={(e) => setSched((s) => ({ ...s, day: Number(e.target.value) }))}
+                className="h-9 rounded-md border border-border bg-elevated px-2 text-sm text-fg outline-none focus:ring-1 focus:ring-accent"
+              >
+                {Array.from({ length: daysInMonth(sched.year, sched.month) }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Месяц"
+                value={sched.month}
+                onChange={(e) =>
+                  setSched((s) => {
+                    const n = { ...s, month: Number(e.target.value) };
+                    return { ...n, day: Math.min(n.day, daysInMonth(n.year, n.month)) };
+                  })
+                }
+                className="h-9 rounded-md border border-border bg-elevated px-2 text-sm text-fg outline-none focus:ring-1 focus:ring-accent"
+              >
+                {MONTH_NAMES.map((name, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Год"
+                value={sched.year}
+                onChange={(e) =>
+                  setSched((s) => {
+                    const n = { ...s, year: Number(e.target.value) };
+                    return { ...n, day: Math.min(n.day, daysInMonth(n.year, n.month)) };
+                  })
+                }
+                className="h-9 rounded-md border border-border bg-elevated px-2 text-sm text-fg outline-none focus:ring-1 focus:ring-accent"
+              >
+                {Array.from({ length: 2 }, (_, i) => mskNow().getUTCFullYear() + i).map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Час"
+                value={sched.hour}
+                onChange={(e) => setSched((s) => ({ ...s, hour: Number(e.target.value) }))}
+                className="h-9 rounded-md border border-border bg-elevated px-2 text-sm text-fg outline-none focus:ring-1 focus:ring-accent"
+              >
+                {Array.from({ length: 24 }, (_, i) => i).map((h) => (
+                  <option key={h} value={h}>
+                    {String(h).padStart(2, "0")}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Минуты"
+                value={sched.minute}
+                onChange={(e) => setSched((s) => ({ ...s, minute: Number(e.target.value) }))}
+                className="h-9 rounded-md border border-border bg-elevated px-2 text-sm text-fg outline-none focus:ring-1 focus:ring-accent"
+              >
+                {Array.from({ length: 60 }, (_, i) => i).map((m) => (
+                  <option key={m} value={m}>
+                    {String(m).padStart(2, "0")}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="mt-2 text-xs text-subtle">
+              Время — по Московскому времени (МСК). Отправка запланируется на бота и выполнится в указанный
+              момент, даже если ты закроешь вкладку.
+            </p>
+          </div>
+        ) : null}
 
         <div className="mt-4">
           <Textarea
@@ -556,7 +706,7 @@ export function VoiceView() {
             <span className="text-xs tabular-nums text-subtle">{msg.length}/1500</span>
             <Button disabled={busy === "send" || !msg.trim()} onClick={() => void sendMsg()}>
               {busy === "send" ? <Loader2 className="animate-spin" /> : <Send />}
-              Отправить
+              {later ? "Отправить позже" : "Отправить"}
             </Button>
           </div>
         </div>
