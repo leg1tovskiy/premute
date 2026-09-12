@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Loader2, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { Loader2, Pencil, Plus, Search, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ export function ModsView() {
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState({ name: "", rank: 1, discord: "" });
   const [recounting, setRecounting] = useState(false);
+  const [search, setSearch] = useState("");
 
   async function load() {
     setLoading(true);
@@ -47,6 +48,18 @@ export function ModsView() {
       ),
     [mods],
   );
+
+  const query = search.trim().toLowerCase();
+
+  const visible = useMemo(() => {
+    if (!query) return sorted;
+    return sorted.filter(
+      (m) =>
+        m.name.toLowerCase().includes(query) ||
+        m.steamid.includes(query) ||
+        (m.discord || "").toLowerCase().includes(query),
+    );
+  }, [sorted, query]);
 
   async function add(e: FormEvent) {
     e.preventDefault();
@@ -201,12 +214,24 @@ export function ModsView() {
         </Button>
       </form>
 
+      <div className="relative mb-4">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-subtle" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Поиск: ник, SteamID64 или Discord"
+          className="pl-9"
+        />
+      </div>
+
       <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-[var(--shadow-panel)]">
-        {sorted.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-muted">Список пуст.</p>
+        {visible.length === 0 ? (
+          <p className="px-5 py-10 text-center text-sm text-muted">
+            {query ? "Никого не найдено" : "Список пуст."}
+          </p>
         ) : (
           <ul className="divide-y divide-border">
-            {sorted.map((m) => {
+            {visible.map((m) => {
               const on = editing === m.steamid;
               return (
                 <li key={m.steamid} className="px-4 py-4 sm:px-5">
@@ -306,7 +331,7 @@ export function ModsView() {
       </div>
       <p className="mt-4 flex items-center gap-2 text-xs text-subtle">
         <Users className="size-3.5" />
-        {sorted.length} в списке · состав синхронизируется с ботом
+        {query ? `${visible.length} из ${sorted.length} в списке` : `${sorted.length} в списке`} · состав синхронизируется с ботом
       </p>
     </div>
   );

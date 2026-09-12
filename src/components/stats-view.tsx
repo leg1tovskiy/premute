@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Gamepad2, Hammer, Loader2, RefreshCw, Unlock, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getStatsFn, moderatorOnlineFn } from "@/lib/fn";
-import { RANK_SHORT } from "@/lib/constants";
+import { RANK_SHORT, fearProfileUrl } from "@/lib/constants";
 import type { StatsPayload } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -169,7 +169,14 @@ export function StatsView() {
                   {i + 1}.
                 </span>
                 <p className="min-w-0 flex-1 truncate font-medium">
-                  {m.name}
+                  <a
+                    href={fearProfileUrl(m.steamid)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:underline"
+                  >
+                    {m.name}
+                  </a>
                   <span className="ml-1.5 font-normal text-muted">
                     ({m.rank ? RANK_SHORT[m.rank] ?? "—" : "—"})
                   </span>

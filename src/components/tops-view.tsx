@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Hammer, Loader2, RefreshCw, Trophy, Unlock, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getStatsFn } from "@/lib/fn";
-import { RANK_SHORT } from "@/lib/constants";
+import { RANK_SHORT, fearProfileUrl } from "@/lib/constants";
 import type { ModRow, StatsPayload } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -132,7 +132,18 @@ export function TopsView() {
         <div className="mt-6 rounded-lg border border-gold/40 bg-elevated px-5 py-4 text-center shadow-[var(--shadow-panel)] sm:px-6">
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-gold">ТОП 1 прошлого месяца. Поздравляем</p>
           <p className="mt-2 text-lg font-semibold tracking-tight">
-            {data.lastMonthTop.name}
+            {data.lastMonthTop.steamid ? (
+              <a
+                href={fearProfileUrl(data.lastMonthTop.steamid)}
+                target="_blank"
+                rel="noreferrer"
+                className="hover:underline"
+              >
+                {data.lastMonthTop.name}
+              </a>
+            ) : (
+              data.lastMonthTop.name
+            )}
             <span className="ml-1.5 text-sm font-normal text-muted">
               ({RANK_SHORT[Number(data.lastMonthTop.rank ?? 0)] ?? "мод"}) · {data.lastMonthTop.total}
             </span>
@@ -155,7 +166,14 @@ export function TopsView() {
                 <div className="flex items-center gap-2.5">
                   <PlaceMedal place={(i + 1) as 1 | 2 | 3} />
                   <p className="min-w-0 flex-1 truncate font-medium">
-                    {m.name}
+                    <a
+                      href={fearProfileUrl(m.steamid)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hover:underline"
+                    >
+                      {m.name}
+                    </a>
                     <span className="ml-1.5 font-normal text-muted">
                       ({RANK_SHORT[rankOf(m)] ?? "—"})
                     </span>
