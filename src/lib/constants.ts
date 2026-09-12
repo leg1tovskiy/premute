@@ -17,6 +17,10 @@ export const RANK_TITLE: Record<number, string> = {
   5: "Стафф",
 };
 
+export function fearProfileUrl(steamid: string): string {
+  return `https://fearproject.ru/profile/${steamid}`;
+}
+
 export const SOUNDS = [
   { id: "eye", file: "eye.mp3", label: "Eye" },
   { id: "koza1", file: "koza1.mp3", label: "Koza 1" },
