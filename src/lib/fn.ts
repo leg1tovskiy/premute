@@ -235,6 +235,54 @@ export const botSendFn = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const botScheduleSendFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(
+    (d: {
+      place: "dm" | "channel";
+      userId?: string;
+      channelId?: string;
+      text: string;
+      mention: "none" | "user" | "everyone";
+      sign: boolean;
+      when: number;
+    }) => d,
+  )
+  .handler(async ({ context, data }): Promise<{ ok: true; when: number }> => {
+    const { getStaff, writeLog } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.canVoice) throw new Error("Нет доступа к отправке сообщений.");
+    const text = data.text.trim().slice(0, 1500);
+    if (!text) throw new Error("Пустой текст.");
+    const when = Number(data.when);
+    if (!Number.isFinite(when) || when <= Date.now()) throw new Error("Время отправки уже прошло.");
+    if (when - Date.now() > 366 * 24 * 3600 * 1000) throw new Error("Не дальше чем на год вперёд.");
+    const d = await import("./server/discord");
+    const actor = me.displayName || me.email || context.userId;
+    let who = "";
+    if (data.place === "dm") {
+      if (!data.userId) throw new Error("Не выбран получатель.");
+      const m = await d.fetchGuildMember(data.userId);
+      who = `ЛС → **${m ? m.nick || m.globalName || m.username : data.userId}**`;
+    } else {
+      if (!data.channelId) throw new Error("Не выбран канал.");
+      const chans = await d.listTextChannels();
+      const ch = chans.find((c) => c.id === data.channelId);
+      who = `канал → **#${ch?.name ?? data.channelId}**${data.mention === "everyone" ? " (@everyone)" : ""}`;
+    }
+    const msk = new Intl.DateTimeFormat("ru-RU", {
+      timeZone: "Europe/Moscow",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(when));
+    const scheduled = await d.scheduleBotSend({ ...data, text, actor, when });
+    await writeLog(context.userId, "bot-schedule", `${who} • ${text.slice(0, 100)} • на ${msk} МСК`);
+    return { ok: true, when: scheduled.when };
+  });
+
 export const moderatorOnlineFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((d: { ids: string[] }) => d)
