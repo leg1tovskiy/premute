@@ -6,6 +6,7 @@ import {
   PROTECTED_USER_IDS,
   DISCORD_VOICE_CHANNEL_ID,
   PANEL_BOT_URL,
+  STATS_WORKER_URL,
 } from "./config";
 import { createHash } from "node:crypto";
 import type { GuildMember, RosterMod, RosterPayload, VoiceChannel } from "@/lib/types";
@@ -349,7 +350,7 @@ export async function playInVoice(opts: {
   }
 }
 
-export async function fetchBotStatsCache(): Promise<{
+export async function fetchWorkerStats(): Promise<{
   month?: string;
   updatedAt?: number;
   totals?: {
@@ -374,13 +375,13 @@ export async function fetchBotStatsCache(): Promise<{
   }>;
 } | null> {
   try {
-    const res = await fetch(`${PANEL_BOT_URL}/panel/stats?s=${encodeURIComponent(panelSecret())}`, {
+    const res = await fetch(`${STATS_WORKER_URL}/stats?s=${encodeURIComponent(panelSecret())}`, {
       signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) return null;
     const json = (await res.json()) as { ok?: boolean; cache?: Record<string, unknown> };
     if (!json.ok || !json.cache) return null;
-    return json.cache as NonNullable<Awaited<ReturnType<typeof fetchBotStatsCache>>>;
+    return json.cache as NonNullable<Awaited<ReturnType<typeof fetchWorkerStats>>>;
   } catch {
     return null;
   }
@@ -418,13 +419,14 @@ export async function fetchBotLogs(): Promise<{ ts: number; text: string }[] | n
 
 export type OnlineInfo = { server: string; nickname: string; map: string | null };
 
-// Кто из модеров сейчас в игре на серверах fearproject.ru (по SteamID, кэш у бота 30 сек).
-export async function fetchBotOnline(ids: string[]): Promise<Record<string, OnlineInfo> | null> {
+// Кто из модеров сейчас в игре на серверах fearproject.ru (по SteamID).
+// Источник — воркер статистики на VPS (кэш серверов 30 сек), НЕ бот.
+export async function fetchWorkerOnline(ids: string[]): Promise<Record<string, OnlineInfo> | null> {
   const list = ids.map((s) => s.trim()).filter((s) => /^\d{17}$/.test(s)).slice(0, 200);
   if (!list.length) return {};
   try {
     const res = await fetch(
-      `${PANEL_BOT_URL}/panel/online?s=${encodeURIComponent(panelSecret())}&ids=${encodeURIComponent(list.join(","))}`,
+      `${STATS_WORKER_URL}/online?s=${encodeURIComponent(panelSecret())}&ids=${encodeURIComponent(list.join(","))}`,
       { signal: AbortSignal.timeout(8000) },
     );
     if (!res.ok) return null;

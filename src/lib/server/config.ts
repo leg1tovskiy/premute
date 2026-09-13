@@ -20,5 +20,9 @@ export const DISCORD_VOICE_CHANNEL_ID = "1354480785411014926";
 export const FEAR_API = "https://fearproject.ru/api/punishments";
 export const MSK_OFFSET_SEC = 3 * 3600;
 
-/** Live Discord bot on the VPS — voice playback + stats cache. */
+/** Live Discord bot on the VPS — voice playback + panel ops. */
 export const PANEL_BOT_URL = "http://64.188.66.194:3847";
+
+/** Отдельный воркер статистики на VPS: считает статы/онлайн с fearproject.ru
+ * независимо от бота и отдаёт сайту по HTTP (порт 3848). */
+export const STATS_WORKER_URL = "http://64.188.66.194:3848";

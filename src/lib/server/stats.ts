@@ -218,12 +218,13 @@ async function fromSeed(): Promise<StatsPayload> {
 export async function loadStats(opts: { refresh?: boolean } = {}): Promise<StatsPayload> {
   const cached = await readDbCache();
   const age = cached ? Date.now() / 1000 - cached.updatedAt : Infinity;
-  if (cached && !opts.refresh && age < 12 * 60) return { ...cached, stale: false };
+  // воркер на VPS обновляет статистику каждые 10 минут — сверяемся с ним на том же интервале
+  if (cached && !opts.refresh && age < 10 * 60) return { ...cached, stale: false };
 
-  const fromBot = async (): Promise<StatsPayload | null> => {
+  const fromWorker = async (): Promise<StatsPayload | null> => {
     try {
-      const { fetchBotStatsCache } = await import("./discord");
-      const bot = await fetchBotStatsCache();
+      const { fetchWorkerStats } = await import("./discord");
+      const bot = await fetchWorkerStats();
       if (!bot?.moderators?.length) return null;
       const roster = await loadMods();
       const source = bot.moderators?.length ? bot.moderators : roster;
@@ -264,8 +265,8 @@ export async function loadStats(opts: { refresh?: boolean } = {}): Promise<Stats
   };
 
   if (!opts.refresh) {
-    const bot = await fromBot();
-    const fallback = cached ?? bot ?? (await fromSeed());
+    const worker = await fromWorker();
+    const fallback = cached ?? worker ?? (await fromSeed());
     if (!cached) {
       try {
         await writeDbCache({ ...fallback, stale: true });
@@ -273,13 +274,13 @@ export async function loadStats(opts: { refresh?: boolean } = {}): Promise<Stats
         /* ignore */
       }
     }
-    return { ...fallback, stale: !bot };
+    return { ...fallback, stale: !worker };
   }
 
-  const botFresh = await fromBot();
-  if (botFresh) {
-    await writeDbCache(botFresh);
-    return botFresh;
+  const workerFresh = await fromWorker();
+  if (workerFresh) {
+    await writeDbCache(workerFresh);
+    return workerFresh;
   }
 
   try {
