@@ -291,9 +291,9 @@ export const moderatorOnlineFn = createServerFn({ method: "POST" })
       const { getStaff } = await import("./server/staff");
       const me = await getStaff(context.userId);
       if (!me?.caps.canStats) throw new Error("Нет доступа к статистике.");
-      const { fetchBotOnline } = await import("./server/discord");
+      const { fetchWorkerOnline } = await import("./server/discord");
       const ids = (data.ids || []).map((s) => String(s || "").trim()).filter((s) => /^\d{17}$/.test(s)).slice(0, 200);
-      const res = await fetchBotOnline(ids);
+      const res = await fetchWorkerOnline(ids);
       return res || {};
     },
   );
