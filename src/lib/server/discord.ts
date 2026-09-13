@@ -9,7 +9,7 @@ import {
   STATS_WORKER_URL,
 } from "./config";
 import { createHash } from "node:crypto";
-import type { GuildMember, RosterMod, RosterPayload, VoiceChannel } from "@/lib/types";
+import type { BackupsPayload, GuildMember, RosterMod, RosterPayload, VoiceChannel } from "@/lib/types";
 
 const API = "https://discord.com/api/v10";
 
@@ -365,8 +365,8 @@ export async function fetchWorkerStats(): Promise<{
     steamid: string;
     rank: number | null;
     norma: { week: number; month: number } | null;
-    bans: number;
-    mutes: number;
+    bans: number | null;
+    mutes: number | null;
     total: number;
     weekTotal: number;
     removed: number;
@@ -385,6 +385,48 @@ export async function fetchWorkerStats(): Promise<{
   } catch {
     return null;
   }
+}
+
+type WorkerBackupBody =
+  | { steamid: string; bans: number; mutes: number }
+  | { steamid: string; total: number };
+
+export async function fetchWorkerBackups(): Promise<BackupsPayload["backups"] | null> {
+  try {
+    const res = await fetch(`${STATS_WORKER_URL}/backups?s=${encodeURIComponent(panelSecret())}`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { ok?: boolean; backups?: BackupsPayload["backups"] };
+    if (!json.ok || !json.backups) return null;
+    return json.backups;
+  } catch {
+    return null;
+  }
+}
+
+export async function sendWorkerBackup(body: WorkerBackupBody): Promise<BackupsPayload["backups"]> {
+  const res = await fetch(`${STATS_WORKER_URL}/backup?s=${encodeURIComponent(panelSecret())}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(5000),
+  });
+  const json = (await res.json().catch(() => null)) as { ok?: boolean; backups?: BackupsPayload["backups"]; error?: string } | null;
+  if (res.ok && json?.ok && json.backups) return json.backups;
+  throw new Error(json?.error ? `Воркер: ${json.error}` : `worker HTTP ${res.status}`);
+}
+
+export async function clearWorkerBackup(steamid: string): Promise<BackupsPayload["backups"]> {
+  const res = await fetch(`${STATS_WORKER_URL}/unbackup?s=${encodeURIComponent(panelSecret())}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ steamid }),
+    signal: AbortSignal.timeout(5000),
+  });
+  const json = (await res.json().catch(() => null)) as { ok?: boolean; backups?: BackupsPayload["backups"]; error?: string } | null;
+  if (res.ok && json?.ok && json.backups) return json.backups;
+  throw new Error(json?.error ? `Воркер: ${json.error}` : `worker HTTP ${res.status}`);
 }
 
 export async function fetchBotRoster(): Promise<RosterPayload | null> {

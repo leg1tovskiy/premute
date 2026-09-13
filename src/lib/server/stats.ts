@@ -95,7 +95,7 @@ function toPayload(args: {
     const c = completion(m);
     return { ...m, pct: c.pct, done: c.done };
   });
-  moderators.sort((a, b) => b.total - a.total || b.bans - a.bans || a.name.localeCompare(b.name, "ru"));
+  moderators.sort((a, b) => b.total - a.total || (b.bans ?? 0) - (a.bans ?? 0) || a.name.localeCompare(b.name, "ru"));
   return { month: args.month, updatedAt: args.updatedAt, totals: args.totals, moderators, stale: args.stale };
 }
 
@@ -236,8 +236,8 @@ export async function loadStats(opts: { refresh?: boolean } = {}): Promise<Stats
           steamid: m.steamid,
           rank: m.rank ?? s?.rank ?? null,
           norma: m.norma ?? s?.norma ?? null,
-          bans: Number(s?.bans || 0),
-          mutes: Number(s?.mutes || 0),
+          bans: s?.bans ?? null,
+          mutes: s?.mutes ?? null,
           total: Number(s?.total || 0),
           weekTotal: Number(s?.weekTotal || 0),
           removed: Number(s?.removed || 0),
@@ -246,8 +246,8 @@ export async function loadStats(opts: { refresh?: boolean } = {}): Promise<Stats
         };
       });
       const totals = bot.totals || {
-        bans: moderators.reduce((a, m) => a + m.bans, 0),
-        mutes: moderators.reduce((a, m) => a + m.mutes, 0),
+        bans: moderators.reduce((a, m) => a + (m.bans ?? 0), 0),
+        mutes: moderators.reduce((a, m) => a + (m.mutes ?? 0), 0),
         total: moderators.reduce((a, m) => a + m.total, 0),
         removed: moderators.reduce((a, m) => a + m.removed, 0),
         excluded: moderators.reduce((a, m) => a + m.excluded, 0),
