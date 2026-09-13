@@ -57,6 +57,13 @@ export type RosterPayload = {
   recounting?: boolean;
 };
 
+export type LastOnlineInfo = {
+  ts: number;
+  server: string | null;
+  nickname: string | null;
+  map: string | null;
+};
+
 export type ModRow = {
   name: string;
   steamid: string;
@@ -69,6 +76,7 @@ export type ModRow = {
   removed: number;
   excluded: number;
   lastSeenName: string | null;
+  lastOnline: LastOnlineInfo | null;
   pct: number | null;
   done: boolean;
   backup?: BackupEntry | null;
