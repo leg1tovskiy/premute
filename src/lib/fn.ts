@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware } from "@/lib/auth/middleware";
 import type {
+  BackupsPayload,
   DiscordClaim,
   GuildMember,
   LogEntry,
@@ -476,4 +477,66 @@ export const deleteModFn = createServerFn({ method: "POST" })
     const remaining = await deleteRosterMod(steamid);
     await writeLog(context.userId, "mod_del", steamid);
     return { moderators: remaining, ranks: bundledRanks() };
+  });
+
+export const getBackupsFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }): Promise<BackupsPayload> => {
+    const { getStaff } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.canMods) throw new Error("Нет доступа к составу модераторов.");
+    const { fetchWorkerBackups } = await import("./server/discord");
+    const backups = await fetchWorkerBackups();
+    if (!backups) throw new Error("Воркер статистики недоступен.");
+    return { backups };
+  });
+
+export const setBackupFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(
+    (d: { steamid: string; bans?: number | null; mutes?: number | null; total?: number | null }) => d,
+  )
+  .handler(async ({ context, data }): Promise<BackupsPayload> => {
+    const { getStaff, writeLog } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.isOwner) throw new Error("Ручное восстановление — только для владельцев сайта.");
+    const steamid = String(data.steamid || "").trim();
+    if (!STEAMID_RE.test(steamid)) throw new Error("SteamID64 — 17 цифр.");
+    const clean = (v: number | null | undefined): number | null => {
+      if (v == null) return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.abs(Math.trunc(n)) : null;
+    };
+    const bans = clean(data.bans);
+    const mutes = clean(data.mutes);
+    const total = clean(data.total);
+    if (bans != null || mutes != null) {
+      if (bans == null || mutes == null) throw new Error("Баны и муты задаются вместе (общее = их сумма).");
+    } else if (total == null) {
+      throw new Error("Заполните баны и муты или только общее.");
+    }
+    const { sendWorkerBackup } = await import("./server/discord");
+    const payload: { steamid: string; bans: number; mutes: number } | { steamid: string; total: number } =
+      bans != null && mutes != null
+        ? { steamid, bans, mutes }
+        : { steamid, total: (total ?? 0) as number };
+    const backups = await sendWorkerBackup(payload);
+    const logLine = bans != null && mutes != null ? `${bans}/${mutes}` : `total=${total}`;
+    await writeLog(context.userId, "mod_backup", `${steamid} ${logLine}`);
+    return { backups };
+  });
+
+export const unsetBackupFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { steamid: string }) => d)
+  .handler(async ({ context, data }): Promise<BackupsPayload> => {
+    const { getStaff, writeLog } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.isOwner) throw new Error("Ручное восстановление — только для владельцев сайта.");
+    const steamid = String(data.steamid || "").trim();
+    if (!STEAMID_RE.test(steamid)) throw new Error("SteamID64 — 17 цифр.");
+    const { clearWorkerBackup } = await import("./server/discord");
+    const backups = await clearWorkerBackup(steamid);
+    await writeLog(context.userId, "mod_backup_clear", steamid);
+    return { backups };
   });

@@ -62,8 +62,8 @@ export type ModRow = {
   steamid: string;
   rank: number | null;
   norma: { week: number; month: number } | null;
-  bans: number;
-  mutes: number;
+  bans: number | null;
+  mutes: number | null;
   total: number;
   weekTotal: number;
   removed: number;
@@ -71,6 +71,21 @@ export type ModRow = {
   lastSeenName: string | null;
   pct: number | null;
   done: boolean;
+  backup?: BackupEntry | null;
+};
+
+export type BackupEntry = {
+  setAt: number;
+  bans: number | null;
+  mutes: number | null;
+  total: number | null;
+};
+
+export type BackupsPayload = {
+  backups: {
+    month: string;
+    entries: Record<string, BackupEntry>;
+  };
 };
 
 export type LastMonthTop = {
