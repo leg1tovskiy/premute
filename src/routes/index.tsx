@@ -95,7 +95,7 @@ function Home() {
         ) : tab === "console" && profile.caps.canConsole ? (
           <ConsoleView />
         ) : tab === "mods" && profile.caps.canMods ? (
-          <ModsView />
+          <ModsView isOwner={profile.caps.isOwner} />
         ) : tab === "admin" && profile.caps.canAdmin ? (
           <AdminView me={profile} />
         ) : (
