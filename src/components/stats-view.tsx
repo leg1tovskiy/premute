@@ -240,13 +240,13 @@ function Count({
   tone,
 }: {
   icon: typeof Hammer;
-  n: number;
+  n: number | null;
   tone?: string;
 }) {
   return (
     <span className={cn("inline-flex items-center gap-1", tone)}>
       <Icon className="size-3.5" />
-      {n}
+      {n ?? "?"}
     </span>
   );
 }

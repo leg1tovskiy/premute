@@ -183,7 +183,7 @@ export function TopsView() {
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 pl-8 text-sm tabular-nums text-muted">
                   <span className="inline-flex items-center gap-1 text-danger">
                     <Hammer className="size-3.5" />
-                    {m.bans}
+                    {m.bans ?? "?"}
                   </span>
                   <span className="inline-flex items-center gap-1">
                     <Unlock className="size-3.5" />
@@ -191,7 +191,7 @@ export function TopsView() {
                   </span>
                   <span className="inline-flex items-center gap-1 text-warn">
                     <VolumeX className="size-3.5" />
-                    {m.mutes}
+                    {m.mutes ?? "?"}
                   </span>
                 </div>
               </li>
