@@ -64,6 +64,52 @@ function currentWeekStart(now = new Date()) {
   return Date.UTC(msk.getUTCFullYear(), msk.getUTCMonth(), msk.getUTCDate() - day) / 1000 - MSK_OFFSET_SEC;
 }
 
+async function fetchSteamAvatar(steamid: string): Promise<string | null> {
+  if (!/^\d{17}$/.test(steamid)) return null;
+  try {
+    const res = await fetch(`https://steamcommunity.com/profiles/${steamid}/?xml=1`, {
+      headers: { "User-Agent": "premute/1.0 (stats avatars)", Accept: "application/xml" },
+      signal: AbortSignal.timeout(7000),
+    });
+    if (!res.ok) return null;
+    const xml = await res.text();
+    const pick = (tag: string) => {
+      const found = xml.match(new RegExp(`<${tag}><!\\[CDATA\\[([^\\]]+)\\]\\]></${tag}>`));
+      return found?.[1]?.trim() || null;
+    };
+    const url = pick("avatarMedium") || pick("avatarFull") || pick("avatarIcon");
+    return url && url.startsWith("https://") ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchSteamAvatars(ids: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const queue = [...new Set(ids)].filter((id) => /^\d{17}$/.test(id));
+  for (let i = 0; i < queue.length; i += 6) {
+    const batch = queue.slice(i, i + 6);
+    const rows = await Promise.allSettled(batch.map(async (id) => ({ id, url: await fetchSteamAvatar(id) })));
+    for (const row of rows) {
+      if (row.status === "fulfilled" && row.value.url) out.set(row.value.id, row.value.url);
+    }
+  }
+  return out;
+}
+
+async function attachSteamAvatars<T extends { steamid: string; avatar?: string | null }>(
+  moderators: T[],
+  prev?: StatsPayload | null,
+): Promise<T[]> {
+  const prevBySteam = new Map((prev?.moderators || []).map((m) => [m.steamid, m.avatar ?? null] as const));
+  const missing = moderators.map((m) => m.steamid).filter((id) => !prevBySteam.get(id));
+  const fetched = missing.length ? await fetchSteamAvatars(missing) : new Map<string, string>();
+  for (const mod of moderators) {
+    mod.avatar = prevBySteam.get(mod.steamid) ?? fetched.get(mod.steamid) ?? null;
+  }
+  return moderators;
+}
+
 function monthLabel(now = new Date()) {
   const s = now.toLocaleString("ru-RU", { month: "long", year: "numeric", timeZone: "Europe/Moscow" });
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -190,6 +236,7 @@ async function fromSeed(): Promise<StatsPayload> {
       name: (s?.name && s.name !== m.steamid ? s.name : m.name) || m.steamid,
       steamid: m.steamid,
       discord: m.discord,
+      avatar: null,
       rank: m.rank,
       norma: m.norma,
       bans: Number(s?.bans || 0),
@@ -239,6 +286,7 @@ export async function loadStats(opts: { refresh?: boolean } = {}): Promise<Stats
           name: (s?.name && s.name !== m.steamid ? s.name : m.name) || m.steamid,
           steamid: m.steamid,
           discord: discordBySteam.get(m.steamid) ?? null,
+          avatar: null,
           rank: m.rank ?? s?.rank ?? null,
           norma: m.norma ?? s?.norma ?? null,
           bans: s?.bans ?? null,
@@ -273,6 +321,9 @@ export async function loadStats(opts: { refresh?: boolean } = {}): Promise<Stats
   if (!opts.refresh) {
     const worker = await fromWorker();
     const fallback = cached ?? worker ?? (await fromSeed());
+    if (fallback !== cached) {
+      fallback.moderators = await attachSteamAvatars(fallback.moderators, cached);
+    }
     if (!cached) {
       try {
         await writeDbCache({ ...fallback, stale: true });
@@ -285,6 +336,7 @@ export async function loadStats(opts: { refresh?: boolean } = {}): Promise<Stats
 
   const workerFresh = await fromWorker();
   if (workerFresh) {
+    workerFresh.moderators = await attachSteamAvatars(workerFresh.moderators, cached);
     await writeDbCache(workerFresh);
     return workerFresh;
   }
@@ -306,6 +358,7 @@ export async function loadStats(opts: { refresh?: boolean } = {}): Promise<Stats
           excluded: 0,
           lastSeenName: null as string | null,
           lastOnline: null,
+          avatar: null as string | null,
         },
       ]),
     );
@@ -350,7 +403,7 @@ export async function loadStats(opts: { refresh?: boolean } = {}): Promise<Stats
       month: monthLabel(),
       updatedAt: Math.floor(Date.now() / 1000),
       totals,
-      moderators,
+      moderators: await attachSteamAvatars(moderators, cached),
       stale: false,
     });
     await writeDbCache(payload);
@@ -358,6 +411,8 @@ export async function loadStats(opts: { refresh?: boolean } = {}): Promise<Stats
   } catch (e) {
     console.error("[stats] refresh failed:", e instanceof Error ? e.message : e);
     if (cached) return { ...cached, stale: true };
-    return await fromSeed();
+    const seed = await fromSeed();
+    seed.moderators = await attachSteamAvatars(seed.moderators, cached);
+    return seed;
   }
 }
