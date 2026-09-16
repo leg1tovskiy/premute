@@ -1,8 +1,9 @@
-import { type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  Loader2,
   Power,
   ScrollText,
   Shield,
@@ -14,7 +15,8 @@ import {
 } from "lucide-react";
 import { UserButton } from "@/lib/auth/gates";
 import { ThemeSelect } from "@/components/theme-provider";
-import type { Caps } from "@/lib/types";
+import { getStatsFn } from "@/lib/fn";
+import type { Caps, StaffProfile, StatsPayload } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 
 export type Tab =
@@ -120,35 +122,130 @@ export function PanelShell({
   );
 }
 
-export function HomeTiles({ caps, onTab }: { caps: Caps; onTab: (t: Tab) => void }) {
+function fmtMonth(ym: string) {
+  const d = new Date(`${ym}-01T00:00:00`);
+  if (Number.isNaN(d.getTime())) return ym;
+  return d.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+}
+
+export function HomeTiles({ profile, onTab }: { profile: StaffProfile; onTab: (t: Tab) => void }) {
+  const caps = profile.caps;
   const tiles = TAB_ITEMS.filter((i) => tabAllowed(i.id, caps));
+
+  const [stats, setStats] = useState<StatsPayload | null>(null);
+  const [statsLoading, setStatsLoading] = useState<boolean>(caps.canStats);
+
+  useEffect(() => {
+    if (!caps.canStats) return;
+    let cancelled = false;
+    void getStatsFn({ data: { refresh: false } })
+      .then((s) => {
+        if (!cancelled) setStats(s);
+      })
+      .catch(() => {
+        /* на главной пропускаем тихо */
+      })
+      .finally(() => {
+        if (!cancelled) setStatsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [caps.canStats]);
+
+  const hour = new Date().getHours();
+  const greeting = hour < 5 ? "Доброй ночи" : hour < 12 ? "Доброе утро" : hour < 18 ? "Добрый день" : "Добрый вечер";
+  const name = profile.displayName || profile.tag || "модератор";
+  const roleLine = profile.isOwner ? "Владелец панели" : profile.isBotOwner ? "Владелец бота" : "Модератор сервера";
+  const initial = (name.trim().charAt(0) || "?").toUpperCase();
+
+  const quick = stats?.totals
+    ? [
+        { label: "Баны", value: stats.totals.bans },
+        { label: "Муты", value: stats.totals.mutes },
+        { label: "Разбаны", value: stats.totals.removed },
+        { label: "Всего", value: stats.totals.total },
+      ]
+    : [];
+
   return (
     <section className="mx-auto w-full max-w-none px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Кабинет</h1>
-        <p className="mt-1 text-sm text-muted">Выберите раздел, чтобы открыть его</p>
-      </div>
-      <div className="flex flex-wrap justify-center gap-3">
-        {tiles.map((i) => {
-          const Icon = i.icon;
-          return (
-            <button
-              key={i.id}
-              type="button"
-              onClick={() => onTab(i.id)}
-              className="group flex w-full items-center gap-3 rounded-md border border-border bg-surface p-4 text-left transition-colors hover:border-accent/40 hover:bg-elevated sm:w-[calc(50%-0.375rem)] lg:w-[calc(33.3333%-0.5rem)] 2xl:w-[calc(25%-0.5625rem)]"
-            >
-              <span className="grid size-10 shrink-0 place-items-center rounded-sm border border-border bg-elevated text-accent transition-colors group-hover:border-accent/40">
-                <Icon className="size-4" />
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-medium text-fg">{i.label}</span>
-                <span className="block truncate text-xs text-muted">{i.desc}</span>
-              </span>
-              <ChevronRight className="ml-auto size-4 shrink-0 text-subtle transition-transform group-hover:translate-x-0.5" />
-            </button>
-          );
-        })}
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center gap-3">
+          {profile.image ? (
+            <img src={profile.image} alt="" className="size-12 shrink-0 rounded-full border border-border object-cover" />
+          ) : (
+            <span className="grid size-12 shrink-0 place-items-center rounded-full border border-border bg-elevated text-lg font-semibold text-fg">
+              {initial}
+            </span>
+          )}
+          <div className="min-w-0">
+            <h1 className="truncate text-xl font-semibold tracking-tight sm:text-2xl">
+              {greeting}, {name}
+            </h1>
+            <p className="mt-0.5 text-sm text-muted">{roleLine}</p>
+          </div>
+        </div>
+
+        {caps.canStats ? (
+          <div className="rounded-2xl border border-border bg-surface p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-fg">Выдано наказаний</h2>
+              <div className="flex items-center gap-3">
+                {stats ? <span className="text-xs text-muted capitalize">{fmtMonth(stats.month)}</span> : null}
+                <button
+                  type="button"
+                  onClick={() => onTab("stats")}
+                  className="inline-flex h-8 items-center gap-1 rounded-sm border border-border bg-elevated px-2.5 text-xs text-muted transition-colors hover:text-fg"
+                >
+                  Подробнее
+                  <ChevronRight className="size-3.5" />
+                </button>
+              </div>
+            </div>
+            {stats ? (
+              <div className="mt-4 grid grid-cols-2 gap-3 min-[560px]:grid-cols-4">
+                {quick.map((it) => (
+                  <div key={it.label} className="rounded-xl border border-border bg-elevated/60 px-3 py-3 text-center">
+                    <p className="text-2xl font-bold tabular-nums leading-none text-fg">{it.value}</p>
+                    <p className="mt-1.5 text-xs text-muted">{it.label}</p>
+                  </div>
+                ))}
+              </div>
+            ) : statsLoading ? (
+              <div className="mt-4 flex items-center justify-center gap-2 py-6 text-sm text-muted">
+                <Loader2 className="size-4 animate-spin" />
+                Загружаю статистику
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">Разделы</h2>
+          <div className="mt-3 flex flex-wrap justify-center gap-3">
+            {tiles.map((i) => {
+              const Icon = i.icon;
+              return (
+                <button
+                  key={i.id}
+                  type="button"
+                  onClick={() => onTab(i.id)}
+                  className="group flex w-full items-center gap-3 rounded-md border border-border bg-surface p-4 text-left transition-colors hover:border-accent/40 hover:bg-elevated sm:w-[calc(50%-0.375rem)] lg:w-[calc(33.3333%-0.5rem)] 2xl:w-[calc(25%-0.5625rem)]"
+                >
+                  <span className="grid size-10 shrink-0 place-items-center rounded-sm border border-border bg-elevated text-accent transition-colors group-hover:border-accent/40">
+                    <Icon className="size-4" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-fg">{i.label}</span>
+                    <span className="block truncate text-xs text-muted">{i.desc}</span>
+                  </span>
+                  <ChevronRight className="ml-auto size-4 shrink-0 text-subtle transition-transform group-hover:translate-x-0.5" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </section>
   );
