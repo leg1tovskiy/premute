@@ -49,10 +49,10 @@ function MetricTile({
   valueClassName?: string;
 }) {
   return (
-    <div className={cn("rounded-xl border p-3 text-center", className)}>
-      <p className={cn("text-2xl font-bold tabular-nums leading-none", valueClassName)}>{value}</p>
-      <p className="mt-2 text-[11px] font-medium leading-tight text-muted">{label}</p>
-      {sub ? <p className="mt-1 text-[10px] leading-tight text-subtle">{sub}</p> : null}
+    <div className={cn("rounded-2xl border px-3 py-4 text-center", className)}>
+      <p className={cn("text-3xl font-bold tabular-nums leading-none", valueClassName)}>{value}</p>
+      <p className="mt-2 text-xs font-medium leading-tight text-muted">{label}</p>
+      {sub ? <p className="mt-1 text-[11px] leading-tight text-subtle">{sub}</p> : null}
     </div>
   );
 }
@@ -75,7 +75,7 @@ function ModeratorCard({
   const ratioTone = monthTarget == null ? "text-muted" : monthDone ? "text-success" : "text-danger";
 
   return (
-    <article className="flex min-w-0 flex-col rounded-2xl border border-border bg-black/60 p-4 shadow-[var(--shadow-panel)]">
+    <article className="flex min-w-0 flex-col rounded-2xl border border-border bg-black/60 p-5 shadow-[var(--shadow-panel)]">
       <div className="flex items-center gap-3">
         <span
           aria-hidden="true"
@@ -100,7 +100,7 @@ function ModeratorCard({
         <OnlineBadges info={info} />
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-3 min-[560px]:grid-cols-4">
         <MetricTile
           value={m.bans ?? "—"}
           label="Банов выдано"
@@ -231,7 +231,7 @@ export function StatsView() {
   const period = monthPeriodSec(data.updatedAt);
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-10">
+    <div className="mx-auto w-full max-w-none px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">FearProject</p>
@@ -266,7 +266,7 @@ export function StatsView() {
           <h2 className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Модераторы</h2>
           <p className="text-xs tabular-nums text-subtle">{data.moderators.length}</p>
         </div>
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
           {data.moderators.map((m) => (
             <ModeratorCard
               key={m.steamid}
