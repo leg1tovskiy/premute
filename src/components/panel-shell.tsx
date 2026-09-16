@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import {
   BarChart3,
+  ChevronLeft,
   ChevronRight,
   Power,
   ScrollText,
@@ -63,10 +64,12 @@ function tabAllowed(id: Exclude<Tab, "home">, caps: Caps): boolean {
 }
 
 export function PanelShell({
+  tab,
   onTab,
   tag,
   children,
 }: {
+  tab: Tab;
   onTab: (t: Tab) => void;
   tag?: string | null;
   children: ReactNode;
@@ -89,6 +92,17 @@ export function PanelShell({
               <span className="block text-sm font-semibold leading-none">PremuteBOT</span>
             </span>
           </button>
+
+          {tab !== "home" ? (
+            <button
+              type="button"
+              onClick={() => onTab("home")}
+              className="inline-flex h-8 shrink-0 items-center gap-1 rounded-sm border border-border bg-elevated px-2 text-xs font-medium text-muted transition-colors hover:text-fg"
+            >
+              <ChevronLeft className="size-3.5" />
+              Главная
+            </button>
+          ) : null}
 
           <div className="flex min-w-0 flex-1 items-center justify-end gap-2 [&_>div>span]:hidden [&_button]:h-8 [&_button]:rounded-sm [&_button]:border [&_button]:border-border [&_button]:bg-elevated [&_button]:px-2 [&_button]:text-xs [&_button]:text-muted">
             {tag ? (
@@ -114,7 +128,7 @@ export function HomeTiles({ caps, onTab }: { caps: Caps; onTab: (t: Tab) => void
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Кабинет</h1>
         <p className="mt-1 text-sm text-muted">Выберите раздел, чтобы открыть его</p>
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+      <div className="flex flex-wrap justify-center gap-3">
         {tiles.map((i) => {
           const Icon = i.icon;
           return (
@@ -122,7 +136,7 @@ export function HomeTiles({ caps, onTab }: { caps: Caps; onTab: (t: Tab) => void
               key={i.id}
               type="button"
               onClick={() => onTab(i.id)}
-              className="group flex items-center gap-3 rounded-md border border-border bg-surface p-4 text-left transition-colors hover:border-accent/40 hover:bg-elevated"
+              className="group flex w-full items-center gap-3 rounded-md border border-border bg-surface p-4 text-left transition-colors hover:border-accent/40 hover:bg-elevated sm:w-[calc(50%-0.375rem)] lg:w-[calc(33.3333%-0.5rem)] 2xl:w-[calc(25%-0.5625rem)]"
             >
               <span className="grid size-10 shrink-0 place-items-center rounded-sm border border-border bg-elevated text-accent transition-colors group-hover:border-accent/40">
                 <Icon className="size-4" />
