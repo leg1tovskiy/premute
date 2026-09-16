@@ -27,14 +27,6 @@ function fmtDay(sec: number) {
   }).format(new Date(sec * 1000));
 }
 
-const MSK_OFFSET_SEC = 3 * 3600;
-
-function monthPeriodSec(updatedAtSec: number) {
-  const msk = new Date(updatedAtSec * 1000 + MSK_OFFSET_SEC * 1000);
-  const start = Date.UTC(msk.getUTCFullYear(), msk.getUTCMonth(), 1) / 1000 - MSK_OFFSET_SEC;
-  return { start, end: updatedAtSec };
-}
-
 function MetricTile({
   value,
   label,
@@ -49,9 +41,9 @@ function MetricTile({
   valueClassName?: string;
 }) {
   return (
-    <div className={cn("rounded-2xl border px-3 py-4 text-center", className)}>
-      <p className={cn("text-3xl font-bold tabular-nums leading-none", valueClassName)}>{value}</p>
-      <p className="mt-2 text-xs font-medium leading-tight text-muted">{label}</p>
+    <div className={cn("flex flex-col items-center justify-center rounded-2xl border px-3 py-3 text-center", className)}>
+      <p className={cn("text-2xl font-bold tabular-nums leading-none", valueClassName)}>{value}</p>
+      <p className="mt-1.5 text-xs font-medium leading-tight text-muted">{label}</p>
       {sub ? <p className="mt-1 text-[11px] leading-tight text-subtle">{sub}</p> : null}
     </div>
   );
@@ -60,13 +52,9 @@ function MetricTile({
 function ModeratorCard({
   m,
   info,
-  periodStart,
-  periodEnd,
 }: {
   m: StatsPayload["moderators"][number];
   info?: OnlineInfo;
-  periodStart: number;
-  periodEnd: number;
 }) {
   const handle = m.discord && m.discord !== m.name ? m.discord : m.name;
   const initial = (handle.trim().charAt(0) || "?").toUpperCase();
@@ -75,14 +63,23 @@ function ModeratorCard({
   const ratioTone = monthTarget == null ? "text-muted" : monthDone ? "text-success" : "text-danger";
 
   return (
-    <article className="flex min-w-0 flex-col rounded-2xl border border-border bg-black/60 p-5 shadow-[var(--shadow-panel)]">
+    <article className="flex min-w-0 flex-col rounded-2xl border border-border bg-black/60 p-4 shadow-[var(--shadow-panel)]">
       <div className="flex items-center gap-3">
-        <span
-          aria-hidden="true"
-          className="grid size-11 shrink-0 place-items-center rounded-full bg-elevated text-base font-semibold text-fg"
-        >
-          {initial}
-        </span>
+        {m.avatar ? (
+          <img
+            src={m.avatar}
+            alt=""
+            loading="lazy"
+            className="size-11 shrink-0 rounded-full object-cover"
+          />
+        ) : (
+          <span
+            aria-hidden="true"
+            className="grid size-11 shrink-0 place-items-center rounded-full bg-elevated text-base font-semibold text-fg"
+          >
+            {initial}
+          </span>
+        )}
         <div className="min-w-0 flex-1">
           <a
             href={fearProfileUrl(m.steamid)}
@@ -100,7 +97,7 @@ function ModeratorCard({
         <OnlineBadges info={info} />
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 min-[560px]:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-2 min-[560px]:grid-cols-4">
         <MetricTile
           value={m.bans ?? "—"}
           label="Банов выдано"
@@ -115,8 +112,7 @@ function ModeratorCard({
         />
         <MetricTile
           value={m.total}
-          label="Выдано за период"
-          sub={`${fmtDay(periodStart)} — ${fmtDay(periodEnd)}`}
+          label="Выдано за текущий месяц"
           className="border-border bg-elevated/70"
           valueClassName="text-fg"
         />
@@ -228,7 +224,6 @@ export function StatsView() {
     { label: "Муты", value: data.totals.mutes, icon: VolumeX, tone: "text-warn" },
     { label: "Всего", value: data.totals.total, icon: null, tone: "text-fg" },
   ];
-  const period = monthPeriodSec(data.updatedAt);
 
   return (
     <div className="mx-auto w-full max-w-none px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
@@ -272,8 +267,6 @@ export function StatsView() {
               key={m.steamid}
               m={m}
               info={online[m.steamid]}
-              periodStart={period.start}
-              periodEnd={period.end}
             />
           ))}
         </div>
