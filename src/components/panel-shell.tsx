@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import { BarChart3, Power, ScrollText, Shield, ShieldCheck, SquareTerminal, Trophy, Users, Volume2 } from "lucide-react";
 import { UserButton } from "@/lib/auth/gates";
+import { ThemeSelect } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 import type { Caps } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +91,7 @@ export function PanelShell({
                 {tag}
               </Badge>
             ) : null}
+            <ThemeSelect />
             <UserButton />
           </div>
         </div>

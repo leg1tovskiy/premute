@@ -60,7 +60,7 @@ function ModeratorCard({
   const initial = (handle.trim().charAt(0) || "?").toUpperCase();
   const monthTarget = m.norma?.month ?? null;
   const monthDone = monthTarget != null && monthTarget > 0 && m.total >= monthTarget;
-  const ratioTone = monthTarget == null ? "text-muted" : monthDone ? "text-success" : "text-danger";
+  const ratioTone = monthTarget == null ? "text-muted" : monthDone ? "text-accent" : "text-muted";
 
   return (
     <article className="flex min-w-0 flex-col rounded-2xl border border-border bg-black/60 p-4 shadow-[var(--shadow-panel)]">
@@ -101,14 +101,14 @@ function ModeratorCard({
         <MetricTile
           value={m.bans ?? "—"}
           label="Банов выдано"
-          className="border-warn/30 bg-warn/10"
-          valueClassName="text-warn"
+          className="border-border bg-elevated/60"
+          valueClassName="text-fg"
         />
         <MetricTile
           value={m.mutes ?? "—"}
           label="Мутов выдано"
-          className="border-violet-400/30 bg-violet-400/10"
-          valueClassName="text-violet-300"
+          className="border-border bg-elevated/60"
+          valueClassName="text-fg"
         />
         <MetricTile
           value={m.total}
@@ -219,10 +219,10 @@ export function StatsView() {
   if (!data) return null;
 
   const tiles = [
-    { label: "Баны", value: data.totals.bans, icon: Hammer, tone: "text-danger" },
-    { label: "Разбаны", value: data.totals.removed, icon: Unlock, tone: "text-muted" },
-    { label: "Муты", value: data.totals.mutes, icon: VolumeX, tone: "text-warn" },
-    { label: "Всего", value: data.totals.total, icon: null, tone: "text-fg" },
+    { label: "Баны", value: data.totals.bans, icon: Hammer },
+    { label: "Разбаны", value: data.totals.removed, icon: Unlock },
+    { label: "Муты", value: data.totals.mutes, icon: VolumeX },
+    { label: "Всего", value: data.totals.total, icon: null },
   ];
 
   return (
@@ -249,9 +249,9 @@ export function StatsView() {
           <div key={c.label} className="rounded-md border border-border bg-surface p-4 shadow-[var(--shadow-panel)]">
             <div className="flex items-center justify-between text-muted">
               <span className="text-xs font-medium uppercase tracking-wider">{c.label}</span>
-              {c.icon ? <c.icon className={cn("size-4", c.tone)} /> : null}
+              {c.icon ? <c.icon className="size-4 text-muted" /> : null}
             </div>
-            <p className={cn("mt-2 text-3xl font-semibold tabular-nums tracking-tight", c.tone)}>{c.value}</p>
+            <p className="mt-2 text-3xl font-semibold tabular-nums tracking-tight text-fg">{c.value}</p>
           </div>
         ))}
       </div>
@@ -277,7 +277,7 @@ export function StatsView() {
             {tiles.map((t) => (
               <div key={t.label}>
                 <dt className="text-xs text-subtle">{t.label}</dt>
-                <dd className={cn("mt-1 text-xl font-semibold tabular-nums", t.tone)}>{t.value}</dd>
+                <dd className="mt-1 text-xl font-semibold tabular-nums text-fg">{t.value}</dd>
               </div>
             ))}
           </dl>
@@ -299,7 +299,7 @@ export function StatsView() {
 function OnlineBadges({ info }: { info?: OnlineInfo }) {
   if (!info) return null;
   return (
-    <span className="ml-auto mr-2 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
+    <span className="ml-auto mr-2 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
       <Gamepad2 className="size-3.5" />
       <span className="max-w-44 truncate" title={info.map ? `${info.server} · ${info.map}` : info.server}>
         {info.server}
