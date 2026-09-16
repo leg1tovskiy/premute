@@ -70,6 +70,7 @@ function Home() {
   return (
     <>
       <PanelShell
+        tab={waiting ? "home" : tab}
         tag={profile.tag}
         onTab={(t) => {
           if (waiting) return;
