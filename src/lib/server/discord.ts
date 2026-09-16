@@ -372,6 +372,7 @@ export async function fetchWorkerStats(): Promise<{
     removed: number;
     excluded: number;
     lastSeenName: string | null;
+    lastOnline: { ts: number; server: string | null; nickname: string | null; map: string | null } | null;
   }>;
 } | null> {
   try {

@@ -26,6 +26,7 @@ function loadSeed(): Seed {
 type Mod = {
   steamid: string;
   name: string;
+  discord: string | null;
   rank: number | null;
   norma: { week: number; month: number } | null;
 };
@@ -36,7 +37,7 @@ function loadModsFrom(roster: RosterMod[]): Mod[] {
   return roster.map((m) => {
     const r = byRank.get(m.rank ?? -1);
     const norma = r && (r.week > 0 || r.month > 0) ? { week: r.week, month: r.month } : null;
-    return { steamid: m.steamid, name: m.name, rank: m.rank ?? null, norma };
+    return { steamid: m.steamid, name: m.name, discord: m.discord ?? null, rank: m.rank ?? null, norma };
   });
 }
 
@@ -188,6 +189,7 @@ async function fromSeed(): Promise<StatsPayload> {
     return {
       name: (s?.name && s.name !== m.steamid ? s.name : m.name) || m.steamid,
       steamid: m.steamid,
+      discord: m.discord,
       rank: m.rank,
       norma: m.norma,
       bans: Number(s?.bans || 0),
@@ -197,6 +199,7 @@ async function fromSeed(): Promise<StatsPayload> {
       removed: Number(s?.removed || 0),
       excluded: Number(s?.excluded || 0),
       lastSeenName: s?.lastSeenName ?? null,
+      lastOnline: s?.lastOnline ?? null,
     };
   });
   const totals = seed.totals || {
@@ -228,12 +231,14 @@ export async function loadStats(opts: { refresh?: boolean } = {}): Promise<Stats
       if (!bot?.moderators?.length) return null;
       const roster = await loadMods();
       const source = bot.moderators?.length ? bot.moderators : roster;
+      const discordBySteam = new Map(roster.map((r) => [r.steamid, r.discord]));
       const byId = new Map(bot.moderators.map((m) => [m.steamid, m]));
       const moderators = source.map((m) => {
         const s = byId.get(m.steamid);
         return {
           name: (s?.name && s.name !== m.steamid ? s.name : m.name) || m.steamid,
           steamid: m.steamid,
+          discord: discordBySteam.get(m.steamid) ?? null,
           rank: m.rank ?? s?.rank ?? null,
           norma: m.norma ?? s?.norma ?? null,
           bans: s?.bans ?? null,
@@ -243,6 +248,7 @@ export async function loadStats(opts: { refresh?: boolean } = {}): Promise<Stats
           removed: Number(s?.removed || 0),
           excluded: Number(s?.excluded || 0),
           lastSeenName: s?.lastSeenName ?? null,
+          lastOnline: s?.lastOnline ?? null,
         };
       });
       const totals = bot.totals || {
@@ -299,6 +305,7 @@ export async function loadStats(opts: { refresh?: boolean } = {}): Promise<Stats
           removed: 0,
           excluded: 0,
           lastSeenName: null as string | null,
+          lastOnline: null,
         },
       ]),
     );
