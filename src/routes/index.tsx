@@ -6,7 +6,7 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getMe } from "@/lib/fn";
 import type { StaffProfile } from "@/lib/types";
 import { LoginScreen } from "@/components/login-screen";
-import { HomeHero, PanelShell, type Tab } from "@/components/panel-shell";
+import { HomeTiles, PanelShell, type Tab } from "@/components/panel-shell";
 import { WaitingView } from "@/components/waiting-view";
 import { StatsView } from "@/components/stats-view";
 import { TopsView } from "@/components/tops-view";
@@ -70,9 +70,7 @@ function Home() {
   return (
     <>
       <PanelShell
-        caps={profile.caps}
         tag={profile.tag}
-        tab={waiting ? "home" : tab}
         onTab={(t) => {
           if (waiting) return;
           setTab(t);
@@ -99,7 +97,7 @@ function Home() {
         ) : tab === "admin" && profile.caps.canAdmin ? (
           <AdminView me={profile} />
         ) : (
-          <HomeHero />
+          <HomeTiles caps={profile.caps} onTab={setTab} />
         )}
       </PanelShell>
       <Toaster
