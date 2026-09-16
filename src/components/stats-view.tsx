@@ -27,11 +27,118 @@ function fmtDay(sec: number) {
   }).format(new Date(sec * 1000));
 }
 
-function placeTone(i: number) {
-  if (i === 0) return "text-gold";
-  if (i === 1) return "text-silver";
-  if (i === 2) return "text-bronze";
-  return "text-subtle";
+const MSK_OFFSET_SEC = 3 * 3600;
+
+function monthPeriodSec(updatedAtSec: number) {
+  const msk = new Date(updatedAtSec * 1000 + MSK_OFFSET_SEC * 1000);
+  const start = Date.UTC(msk.getUTCFullYear(), msk.getUTCMonth(), 1) / 1000 - MSK_OFFSET_SEC;
+  return { start, end: updatedAtSec };
+}
+
+function MetricTile({
+  value,
+  label,
+  sub,
+  className,
+  valueClassName,
+}: {
+  value: number | string;
+  label: string;
+  sub?: string;
+  className?: string;
+  valueClassName?: string;
+}) {
+  return (
+    <div className={cn("rounded-xl border p-3 text-center", className)}>
+      <p className={cn("text-2xl font-bold tabular-nums leading-none", valueClassName)}>{value}</p>
+      <p className="mt-2 text-[11px] font-medium leading-tight text-muted">{label}</p>
+      {sub ? <p className="mt-1 text-[10px] leading-tight text-subtle">{sub}</p> : null}
+    </div>
+  );
+}
+
+function ModeratorCard({
+  m,
+  info,
+  periodStart,
+  periodEnd,
+}: {
+  m: StatsPayload["moderators"][number];
+  info?: OnlineInfo;
+  periodStart: number;
+  periodEnd: number;
+}) {
+  const handle = m.discord && m.discord !== m.name ? m.discord : m.name;
+  const initial = (handle.trim().charAt(0) || "?").toUpperCase();
+  const monthTarget = m.norma?.month ?? null;
+  const monthDone = monthTarget != null && monthTarget > 0 && m.total >= monthTarget;
+  const ratioTone = monthTarget == null ? "text-muted" : monthDone ? "text-success" : "text-danger";
+
+  return (
+    <article className="flex min-w-0 flex-col rounded-2xl border border-border bg-black/60 p-4 shadow-[var(--shadow-panel)]">
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="grid size-11 shrink-0 place-items-center rounded-full bg-elevated text-base font-semibold text-fg"
+        >
+          {initial}
+        </span>
+        <div className="min-w-0 flex-1">
+          <a
+            href={fearProfileUrl(m.steamid)}
+            target="_blank"
+            rel="noreferrer"
+            className="block truncate text-[15px] font-semibold leading-tight hover:underline"
+          >
+            {handle}
+          </a>
+          <p className="mt-0.5 truncate font-mono text-[11px] text-subtle">
+            {m.steamid}
+            {m.rank ? ` · ${RANK_SHORT[m.rank] ?? "—"}` : ""}
+          </p>
+        </div>
+        <OnlineBadges info={info} />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <MetricTile
+          value={m.bans ?? "—"}
+          label="Банов выдано"
+          className="border-warn/30 bg-warn/10"
+          valueClassName="text-warn"
+        />
+        <MetricTile
+          value={m.mutes ?? "—"}
+          label="Мутов выдано"
+          className="border-violet-400/30 bg-violet-400/10"
+          valueClassName="text-violet-300"
+        />
+        <MetricTile
+          value={m.total}
+          label="Выдано за период"
+          sub={`${fmtDay(periodStart)} — ${fmtDay(periodEnd)}`}
+          className="border-border bg-elevated/70"
+          valueClassName="text-fg"
+        />
+        <MetricTile
+          value={m.removed ?? "—"}
+          label="Снято · за период"
+          className="border-border bg-elevated/70"
+          valueClassName="text-fg"
+        />
+      </div>
+
+      <div className="mt-2 flex items-center justify-between rounded-xl border border-border bg-elevated/60 px-3 py-2 text-xs">
+        <span className="font-medium uppercase tracking-[0.18em] text-muted">Норма</span>
+        <span className="tabular-nums text-muted">
+          Мес{" "}
+          <span className={cn("font-semibold", ratioTone)}>
+            {m.total}/{monthTarget ?? "—"}
+          </span>
+        </span>
+      </div>
+    </article>
+  );
 }
 
 export function StatsView() {
@@ -121,9 +228,10 @@ export function StatsView() {
     { label: "Муты", value: data.totals.mutes, icon: VolumeX, tone: "text-warn" },
     { label: "Всего", value: data.totals.total, icon: null, tone: "text-fg" },
   ];
+  const period = monthPeriodSec(data.updatedAt);
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-10">
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-10">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">FearProject</p>
@@ -153,64 +261,24 @@ export function StatsView() {
         ))}
       </div>
 
-      <section className="relative mt-6 overflow-hidden rounded-lg border border-border bg-surface shadow-[var(--shadow-panel)]">
-        <div className="absolute inset-y-0 left-0 w-1 bg-embed" aria-hidden="true" />
-        <div className="px-5 py-4 sm:px-6">
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Модераторы</p>
+      <section className="mt-8">
+        <div className="flex items-end justify-between px-1">
+          <h2 className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Модераторы</h2>
+          <p className="text-xs tabular-nums text-subtle">{data.moderators.length}</p>
         </div>
-        <ol>
-          {data.moderators.map((m, i) => (
-            <li
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {data.moderators.map((m) => (
+            <ModeratorCard
               key={m.steamid}
-              className="border-t border-border px-5 py-3.5 sm:px-6"
-            >
-              <div className="flex items-baseline gap-2">
-                <span className={cn("w-6 shrink-0 text-sm font-semibold tabular-nums", placeTone(i))}>
-                  {i + 1}.
-                </span>
-                <p className="min-w-0 flex-1 truncate font-medium">
-                  <a
-                    href={fearProfileUrl(m.steamid)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:underline"
-                  >
-                    {m.name}
-                  </a>
-                  <span className="ml-1.5 font-normal text-muted">
-                    ({m.rank ? RANK_SHORT[m.rank] ?? "—" : "—"})
-                  </span>
-                </p>
-                <OnlineBadges info={online[m.steamid]} />
-                {m.pct != null ? (
-                  <span
-                    className={cn(
-                      "shrink-0 text-sm tabular-nums",
-                      m.done ? "text-success" : "text-muted",
-                    )}
-                  >
-                    {m.pct}%{m.done ? " ✓" : ""}
-                  </span>
-                ) : null}
-              </div>
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 pl-8 text-sm tabular-nums text-muted">
-                <Count icon={Hammer} n={m.bans} tone="text-danger" />
-                <Count icon={Unlock} n={m.removed} />
-                <Count icon={VolumeX} n={m.mutes} tone="text-warn" />
-                <span className="font-semibold text-fg">= {m.total}</span>
-              </div>
-              {m.pct != null ? (
-                <div className="mt-2 h-1 overflow-hidden rounded-full bg-elevated pl-0 sm:ml-8">
-                  <div
-                    className={cn("h-full rounded-full", m.done ? "bg-success" : "bg-accent")}
-                    style={{ width: `${Math.min(100, Math.max(2, m.pct))}%` }}
-                  />
-                </div>
-              ) : null}
-            </li>
+              m={m}
+              info={online[m.steamid]}
+              periodStart={period.start}
+              periodEnd={period.end}
+            />
           ))}
-        </ol>
-        <div className="border-t border-border px-5 py-5 sm:px-6">
+        </div>
+        <div className="mt-6 overflow-hidden rounded-lg border border-border bg-surface shadow-[var(--shadow-panel)]">
+          <div className="border-t border-border px-5 py-5 sm:px-6">
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Итого</p>
           <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {tiles.map((t) => (
@@ -229,25 +297,9 @@ export function StatsView() {
           <span className="mx-1.5">·</span>
           Обновлено {fmtMsk(data.updatedAt)} МСК
         </p>
+        </div>
       </section>
     </div>
-  );
-}
-
-function Count({
-  icon: Icon,
-  n,
-  tone,
-}: {
-  icon: typeof Hammer;
-  n: number | null;
-  tone?: string;
-}) {
-  return (
-    <span className={cn("inline-flex items-center gap-1", tone)}>
-      <Icon className="size-3.5" />
-      {n ?? "?"}
-    </span>
   );
 }
 
