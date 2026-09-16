@@ -67,6 +67,7 @@ export type LastOnlineInfo = {
 export type ModRow = {
   name: string;
   steamid: string;
+  discord: string | null;
   rank: number | null;
   norma: { week: number; month: number } | null;
   bans: number | null;
