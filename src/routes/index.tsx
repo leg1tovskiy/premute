@@ -98,7 +98,7 @@ function Home() {
         ) : tab === "admin" && profile.caps.canAdmin ? (
           <AdminView me={profile} />
         ) : (
-          <HomeTiles caps={profile.caps} onTab={setTab} />
+          <HomeTiles profile={profile} onTab={setTab} />
         )}
       </PanelShell>
       <Toaster
