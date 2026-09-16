@@ -1,8 +1,18 @@
 import { type ReactNode } from "react";
-import { BarChart3, Power, ScrollText, Shield, ShieldCheck, SquareTerminal, Trophy, Users, Volume2 } from "lucide-react";
+import {
+  BarChart3,
+  ChevronRight,
+  Power,
+  ScrollText,
+  Shield,
+  ShieldCheck,
+  SquareTerminal,
+  Trophy,
+  Users,
+  Volume2,
+} from "lucide-react";
 import { UserButton } from "@/lib/auth/gates";
 import { ThemeSelect } from "@/components/theme-provider";
-import { cn } from "@/lib/utils";
 import type { Caps } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 
@@ -18,31 +28,49 @@ export type Tab =
   | "mods"
   | "admin";
 
+const TAB_ITEMS: { id: Exclude<Tab, "home">; label: string; desc: string; icon: typeof BarChart3 }[] = [
+  { id: "stats", label: "Стата", desc: "Статистика модераторов", icon: BarChart3 },
+  { id: "tops", label: "Топы", desc: "Рейтинг модераторов", icon: Trophy },
+  { id: "moderation", label: "Модер", desc: "Наказания и модерация", icon: ShieldCheck },
+  { id: "voice", label: "Голос", desc: "Озвучка", icon: Volume2 },
+  { id: "logs", label: "Логи", desc: "Журнал событий", icon: ScrollText },
+  { id: "power", label: "Питание", desc: "Управление ботом", icon: Power },
+  { id: "console", label: "Консоль", desc: "Команды бота", icon: SquareTerminal },
+  { id: "mods", label: "Моды", desc: "Состав команды", icon: Users },
+  { id: "admin", label: "Админ", desc: "Настройки панели", icon: Shield },
+];
+
+function tabAllowed(id: Exclude<Tab, "home">, caps: Caps): boolean {
+  switch (id) {
+    case "stats":
+    case "tops":
+      return caps.canStats;
+    case "moderation":
+      return caps.canModeration;
+    case "voice":
+      return caps.canVoice;
+    case "logs":
+      return caps.canLogs;
+    case "power":
+      return caps.canPower;
+    case "console":
+      return caps.canConsole;
+    case "mods":
+      return caps.canMods;
+    case "admin":
+      return caps.canAdmin;
+  }
+}
+
 export function PanelShell({
-  caps,
-  tab,
   onTab,
   tag,
   children,
 }: {
-  caps: Caps;
-  tab: Tab;
   onTab: (t: Tab) => void;
   tag?: string | null;
   children: ReactNode;
 }) {
-  const items: { id: Tab; label: string; icon: typeof BarChart3; show: boolean }[] = [
-    { id: "stats", label: "Стата", icon: BarChart3, show: caps.canStats },
-    { id: "tops", label: "Топы", icon: Trophy, show: caps.canStats },
-    { id: "moderation", label: "Модер", icon: ShieldCheck, show: caps.canModeration },
-    { id: "voice", label: "Голос", icon: Volume2, show: caps.canVoice },
-    { id: "logs", label: "Логи", icon: ScrollText, show: caps.canLogs },
-    { id: "power", label: "Питание", icon: Power, show: caps.canPower },
-    { id: "console", label: "Консоль", icon: SquareTerminal, show: caps.canConsole },
-    { id: "mods", label: "Моды", icon: Users, show: caps.canMods },
-    { id: "admin", label: "Админ", icon: Shield, show: caps.canAdmin },
-  ];
-
   return (
     <div className="min-h-dvh bg-bg text-fg">
       <header className="sticky top-0 z-20 border-b border-border bg-bg/85 backdrop-blur-md">
@@ -50,42 +78,19 @@ export function PanelShell({
           <button
             type="button"
             onClick={() => onTab("home")}
-            className="flex shrink-0 items-center gap-2"
+            className="flex shrink-0 cursor-pointer items-center gap-2"
           >
-            <span className="grid size-8 place-items-center rounded-sm border border-accent/40 bg-elevated text-sm font-semibold tracking-tight">
-              P
-            </span>
-            <span className="hidden text-left sm:block">
+            <img
+              src="/logo.png"
+              alt="PremuteBOT logo"
+              className="size-8 shrink-0 rounded-sm border border-border object-cover"
+            />
+            <span className="text-left">
               <span className="block text-sm font-semibold leading-none">PremuteBOT</span>
             </span>
           </button>
 
-          <nav className="flex min-w-0 flex-1 flex-nowrap items-center justify-center gap-0.5 overflow-x-auto">
-            {items
-              .filter((i) => i.show)
-              .map((i) => {
-                const Icon = i.icon;
-                const active = tab === i.id;
-                return (
-                  <button
-                    key={i.id}
-                    type="button"
-                    onClick={() => onTab(i.id)}
-                    className={cn(
-                      "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-sm px-2.5 text-xs font-medium transition-colors sm:text-sm",
-                      active
-                        ? "bg-elevated text-fg"
-                        : "text-muted hover:bg-elevated/70 hover:text-fg",
-                    )}
-                  >
-                    <Icon className="size-3.5" />
-                    {i.label}
-                  </button>
-                );
-              })}
-          </nav>
-
-          <div className="flex shrink-0 items-center justify-end gap-2 [&_>div>span]:hidden [&_button]:h-8 [&_button]:rounded-sm [&_button]:border [&_button]:border-border [&_button]:bg-elevated [&_button]:px-2 [&_button]:text-xs [&_button]:text-muted">
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-2 [&_>div>span]:hidden [&_button]:h-8 [&_button]:rounded-sm [&_button]:border [&_button]:border-border [&_button]:bg-elevated [&_button]:px-2 [&_button]:text-xs [&_button]:text-muted">
             {tag ? (
               <Badge className="max-w-[9rem] truncate normal-case tracking-normal" tone="accent">
                 {tag}
@@ -101,19 +106,36 @@ export function PanelShell({
   );
 }
 
-export function HomeHero() {
+export function HomeTiles({ caps, onTab }: { caps: Caps; onTab: (t: Tab) => void }) {
+  const tiles = TAB_ITEMS.filter((i) => tabAllowed(i.id, caps));
   return (
-    <section className="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center px-4 py-16 text-center">
-      <span className="mb-6 grid size-12 place-items-center rounded-sm border border-accent/40 bg-elevated text-lg font-semibold">
-        P
-      </span>
-      <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-        Приветствую в панели управления бота PremuteBOT
-      </h1>
-      <p className="mt-4 text-sm leading-relaxed text-muted">
-        Вкладки сверху — статистика модераторов FEAR, наказания на сервере, озвучка, логи и
-        управление питанием бота.
-      </p>
+    <section className="mx-auto w-full max-w-none px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Кабинет</h1>
+        <p className="mt-1 text-sm text-muted">Выберите раздел, чтобы открыть его</p>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+        {tiles.map((i) => {
+          const Icon = i.icon;
+          return (
+            <button
+              key={i.id}
+              type="button"
+              onClick={() => onTab(i.id)}
+              className="group flex items-center gap-3 rounded-md border border-border bg-surface p-4 text-left transition-colors hover:border-accent/40 hover:bg-elevated"
+            >
+              <span className="grid size-10 shrink-0 place-items-center rounded-sm border border-border bg-elevated text-accent transition-colors group-hover:border-accent/40">
+                <Icon className="size-4" />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium text-fg">{i.label}</span>
+                <span className="block truncate text-xs text-muted">{i.desc}</span>
+              </span>
+              <ChevronRight className="ml-auto size-4 shrink-0 text-subtle transition-transform group-hover:translate-x-0.5" />
+            </button>
+          );
+        })}
+      </div>
     </section>
   );
 }
