@@ -124,6 +124,15 @@
 }
 
 @layer utilities {
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   .login-grid {
     background-image:
       linear-gradient(to right, color-mix(in oklab, var(--color-fg) 4.5%, transparent) 1px, transparent 1px),

@@ -82,6 +82,33 @@ export type ModRow = {
   pct: number | null;
   done: boolean;
   backup?: BackupEntry | null;
+  /** Постоянный слаг для ссылки /<slug> (появляется после withSlugs). */
+  slug?: string;
+};
+
+export type PunishmentRecord = {
+  id: number;
+  kind: "ban" | "mute";
+  adminSteamid: string;
+  player: string;
+  playerSteamid: string;
+  reason: string | null;
+  created: number;
+  expires: number;
+  durationLabel: string | null;
+  status: number;
+  counted: boolean;
+  excluded: boolean;
+  unpunishAdmin: string | null;
+};
+
+export type ModDetails = {
+  month: string;
+  updatedAt: number;
+  monthStart: number | null;
+  monthEnd: number | null;
+  moderator: ModRow & { slug: string };
+  records: PunishmentRecord[];
 };
 
 export type BackupEntry = {

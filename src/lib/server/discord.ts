@@ -9,7 +9,7 @@ import {
   STATS_WORKER_URL,
 } from "./config";
 import { createHash } from "node:crypto";
-import type { BackupsPayload, GuildMember, RosterMod, RosterPayload, VoiceChannel } from "@/lib/types";
+import type { BackupsPayload, GuildMember, PunishmentRecord, RosterMod, RosterPayload, VoiceChannel } from "@/lib/types";
 
 const API = "https://discord.com/api/v10";
 
@@ -391,6 +391,30 @@ export async function fetchWorkerStats(): Promise<{
 type WorkerBackupBody =
   | { steamid: string; bans: number; mutes: number }
   | { steamid: string; total: number };
+
+export type WorkerPunishments = {
+  month?: string;
+  monthStart?: number;
+  monthEnd?: number;
+  updatedAt?: number;
+  moderator?: Record<string, unknown>;
+  records?: PunishmentRecord[];
+};
+
+export async function fetchWorkerPunishments(steamid: string): Promise<WorkerPunishments | null> {
+  try {
+    const res = await fetch(
+      `${STATS_WORKER_URL}/punishments?steamid=${encodeURIComponent(steamid)}&s=${encodeURIComponent(panelSecret())}`,
+      { signal: AbortSignal.timeout(8000) },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as WorkerPunishments & { ok?: boolean };
+    if (!json.ok) return null;
+    return json;
+  } catch {
+    return null;
+  }
+}
 
 export async function fetchWorkerBackups(): Promise<BackupsPayload["backups"] | null> {
   try {

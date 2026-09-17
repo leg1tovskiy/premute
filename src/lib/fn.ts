@@ -5,6 +5,7 @@ import type {
   DiscordClaim,
   GuildMember,
   LogEntry,
+  ModDetails,
   RosterPayload,
   StaffListItem,
   StaffProfile,
@@ -93,8 +94,42 @@ export const getStatsFn = createServerFn({ method: "POST" })
     if (!me?.caps.canStats) throw new Error("Нет доступа к статистике.");
     const { loadStats } = await import("./server/stats");
     const { attachLastMonthTop } = await import("./server/tops");
+    const { withSlugs } = await import("./server/mod-slugs");
     const stats = await loadStats({ refresh: Boolean(data?.refresh) });
+    stats.moderators = await withSlugs(stats.moderators);
     return attachLastMonthTop(stats);
+  });
+
+export const getModDetailsFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { slug: string }) => d)
+  .handler(async ({ context, data }): Promise<ModDetails | null> => {
+    const { getStaff } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.canStats) throw new Error("Нет доступа к статистике.");
+    const slug = String(data.slug || "").slice(0, 64);
+    if (!slug) return null;
+    const { loadStats } = await import("./server/stats");
+    const { withSlugs, findBySlug, normalizeSlug } = await import("./server/mod-slugs");
+    const { fetchWorkerPunishments } = await import("./server/discord");
+    const stats = await loadStats({});
+    const mods = await withSlugs(stats.moderators);
+    const needle = normalizeSlug(slug);
+    let mod = mods.find((m) => m.slug === needle);
+    if (!mod) {
+      const steamid = await findBySlug(needle);
+      if (steamid) mod = mods.find((m) => m.steamid === steamid);
+    }
+    if (!mod) return null;
+    const worker = await fetchWorkerPunishments(mod.steamid);
+    return {
+      month: stats.month,
+      updatedAt: stats.updatedAt,
+      monthStart: worker?.monthStart ?? null,
+      monthEnd: worker?.monthEnd ?? null,
+      moderator: mod,
+      records: worker?.records ?? [],
+    };
   });
 
 export const searchMembersFn = createServerFn({ method: "POST" })

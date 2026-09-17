@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Gamepad2, Hammer, Loader2, RefreshCw, Unlock, VolumeX } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { ChevronRight, Gamepad2, Hammer, Loader2, RefreshCw, Unlock, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ModeratorsChart } from "@/components/stats-chart";
 import { CardsSkeleton, PageHeaderSkeleton, Skeleton } from "@/components/skeletons";
@@ -135,6 +136,17 @@ function ModeratorCard({
           </span>
         </span>
       </div>
+
+      {m.slug ? (
+        <Link
+          to="/$slug"
+          params={{ slug: m.slug }}
+          className="mt-2 inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-sm border border-border bg-elevated text-xs font-medium text-muted transition-colors hover:border-accent/40 hover:text-fg"
+        >
+          Подробнее
+          <ChevronRight className="size-3.5" />
+        </Link>
+      ) : null}
     </article>
   );
 }

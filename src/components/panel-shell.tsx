@@ -63,7 +63,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
             <span className="hidden text-sm font-semibold leading-none sm:block">PremuteBOT</span>
           </Link>
 
-          <nav className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto md:flex" aria-label="Разделы">
+          <nav className="no-scrollbar hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto md:flex" aria-label="Разделы">
             <Link
               to="/"
               className={cn(navItem, pathname === "/" && navItemActive)}
@@ -116,7 +116,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
         className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-bg/95 backdrop-blur-md md:hidden"
         aria-label="Разделы"
       >
-        <div className="flex items-stretch overflow-x-auto">
+        <div className="no-scrollbar flex items-stretch overflow-x-auto">
           <Link
             to="/"
             className={cn(
