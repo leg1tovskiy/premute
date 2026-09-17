@@ -185,6 +185,20 @@ export type SystemStatus = {
   checkedAt: number;
 };
 
+export type SuspiciousPlayer = {
+  steamid: string;
+  nickname: string;
+  server: string;
+  map: string | null;
+  avatar: string | null;
+  playtime: number;
+  kills: number;
+  deaths: number;
+  kd: number;
+  rank: number | null;
+  value: number;
+};
+
 export type GuildMember = {
   id: string;
   username: string;

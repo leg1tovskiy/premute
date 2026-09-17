@@ -17,6 +17,7 @@ import type {
   PunishmentRecord,
   RosterMod,
   RosterPayload,
+  SuspiciousPlayer,
   VoiceChannel,
 } from "@/lib/types";
 
@@ -477,6 +478,23 @@ export async function fetchBotAlive(): Promise<boolean> {
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+export async function fetchWorkerSuspicious(): Promise<{
+  updatedAt?: number;
+  players?: SuspiciousPlayer[];
+} | null> {
+  try {
+    const res = await fetch(`${STATS_WORKER_URL}/suspicious?s=${encodeURIComponent(panelSecret())}`, {
+      signal: AbortSignal.timeout(25000),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { ok?: boolean; updatedAt?: number; players?: SuspiciousPlayer[] };
+    if (!json.ok) return null;
+    return json;
+  } catch {
+    return null;
   }
 }
 

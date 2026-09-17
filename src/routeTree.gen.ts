@@ -20,6 +20,7 @@ import { Route as PanelModerationRouteImport } from './routes/_panel.moderation'
 import { Route as PanelModsRouteImport } from './routes/_panel.mods'
 import { Route as PanelPowerRouteImport } from './routes/_panel.power'
 import { Route as PanelStatsRouteImport } from './routes/_panel.stats'
+import { Route as PanelSuspiciousRouteImport } from './routes/_panel.suspicious'
 import { Route as PanelTopsRouteImport } from './routes/_panel.tops'
 import { Route as PanelVoiceRouteImport } from './routes/_panel.voice'
 import { Route as PanelPlayerSteamidRouteImport } from './routes/_panel.player.$steamid'
@@ -79,6 +80,11 @@ const PanelStatsRoute = PanelStatsRouteImport.update({
   path: '/stats',
   getParentRoute: () => PanelRoute,
 } as any)
+const PanelSuspiciousRoute = PanelSuspiciousRouteImport.update({
+  id: '/suspicious',
+  path: '/suspicious',
+  getParentRoute: () => PanelRoute,
+} as any)
 const PanelTopsRoute = PanelTopsRouteImport.update({
   id: '/tops',
   path: '/tops',
@@ -111,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/mods': typeof PanelModsRoute
   '/power': typeof PanelPowerRoute
   '/stats': typeof PanelStatsRoute
+  '/suspicious': typeof PanelSuspiciousRoute
   '/tops': typeof PanelTopsRoute
   '/voice': typeof PanelVoiceRoute
   '/player/$steamid': typeof PanelPlayerSteamidRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/mods': typeof PanelModsRoute
   '/power': typeof PanelPowerRoute
   '/stats': typeof PanelStatsRoute
+  '/suspicious': typeof PanelSuspiciousRoute
   '/tops': typeof PanelTopsRoute
   '/voice': typeof PanelVoiceRoute
   '/': typeof PanelIndexRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/_panel/mods': typeof PanelModsRoute
   '/_panel/power': typeof PanelPowerRoute
   '/_panel/stats': typeof PanelStatsRoute
+  '/_panel/suspicious': typeof PanelSuspiciousRoute
   '/_panel/tops': typeof PanelTopsRoute
   '/_panel/voice': typeof PanelVoiceRoute
   '/_panel/': typeof PanelIndexRoute
@@ -163,6 +172,7 @@ export interface FileRouteTypes {
     | '/mods'
     | '/power'
     | '/stats'
+    | '/suspicious'
     | '/tops'
     | '/voice'
     | '/player/$steamid'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/mods'
     | '/power'
     | '/stats'
+    | '/suspicious'
     | '/tops'
     | '/voice'
     | '/'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/_panel/mods'
     | '/_panel/power'
     | '/_panel/stats'
+    | '/_panel/suspicious'
     | '/_panel/tops'
     | '/_panel/voice'
     | '/_panel/'
@@ -287,6 +299,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PanelStatsRouteImport
       parentRoute: typeof PanelRoute
     }
+    '/_panel/suspicious': {
+      id: '/_panel/suspicious'
+      path: '/suspicious'
+      fullPath: '/suspicious'
+      preLoaderRoute: typeof PanelSuspiciousRouteImport
+      parentRoute: typeof PanelRoute
+    }
     '/_panel/tops': {
       id: '/_panel/tops'
       path: '/tops'
@@ -327,6 +346,7 @@ interface PanelRouteChildren {
   PanelModsRoute: typeof PanelModsRoute
   PanelPowerRoute: typeof PanelPowerRoute
   PanelStatsRoute: typeof PanelStatsRoute
+  PanelSuspiciousRoute: typeof PanelSuspiciousRoute
   PanelTopsRoute: typeof PanelTopsRoute
   PanelVoiceRoute: typeof PanelVoiceRoute
   PanelIndexRoute: typeof PanelIndexRoute
@@ -342,6 +362,7 @@ const PanelRouteChildren: PanelRouteChildren = {
   PanelModsRoute: PanelModsRoute,
   PanelPowerRoute: PanelPowerRoute,
   PanelStatsRoute: PanelStatsRoute,
+  PanelSuspiciousRoute: PanelSuspiciousRoute,
   PanelTopsRoute: PanelTopsRoute,
   PanelVoiceRoute: PanelVoiceRoute,
   PanelIndexRoute: PanelIndexRoute,

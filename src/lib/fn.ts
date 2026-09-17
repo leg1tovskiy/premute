@@ -12,6 +12,7 @@ import type {
   StaffListItem,
   StaffProfile,
   StatsPayload,
+  SuspiciousPlayer,
   SystemStatus,
   VoiceChannel,
 } from "@/lib/types";
@@ -353,6 +354,18 @@ export const getPlayerRecordsFn = createServerFn({ method: "POST" })
     const { fetchWorkerPlayer } = await import("./server/discord");
     const res = await fetchWorkerPlayer(steamid);
     return { month: res?.month ?? null, records: res?.records ?? [] };
+  });
+
+export const getSuspiciousFn = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }): Promise<{ updatedAt: number | null; players: SuspiciousPlayer[] }> => {
+    const { getStaff } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.canModeration) throw new Error("Нет доступа.");
+    const { fetchWorkerSuspicious } = await import("./server/discord");
+    const data = await fetchWorkerSuspicious();
+    if (!data) throw new Error("Воркер статистики недоступен.");
+    return { updatedAt: data.updatedAt ?? null, players: data.players ?? [] };
   });
 
 export const getSystemStatusFn = createServerFn({ method: "GET" })
