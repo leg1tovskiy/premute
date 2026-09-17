@@ -256,17 +256,25 @@ export function ModDetailsView() {
               {records.map((r) => {
                 const st = recordStatus(r);
                 return (
-                  <li
-                    key={r.id}
-                    className="flex items-center gap-3 px-4 py-3 sm:px-5"
-                    title={r.reason || undefined}
-                  >
+                  <li key={r.id} className="flex items-center gap-3 px-4 py-3 sm:px-5">
                     <span className="grid size-9 shrink-0 place-items-center rounded-full bg-elevated text-xs font-medium">
                       {(r.player.trim().charAt(0) || "?").toUpperCase()}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{r.player}</p>
+                      <a
+                        href={fearProfileUrl(r.playerSteamid)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block truncate text-sm font-medium hover:underline"
+                      >
+                        {r.player}
+                      </a>
                       <p className="truncate font-mono text-[11px] text-subtle">{r.playerSteamid}</p>
+                      {r.reason ? (
+                        <p className="mt-1 line-clamp-2 text-xs leading-snug text-muted" title={r.reason}>
+                          {r.reason}
+                        </p>
+                      ) : null}
                     </div>
                     <Badge tone={r.kind === "ban" ? "danger" : "warn"} className="shrink-0">
                       {r.kind === "ban" ? "Бан" : "Мут"}
