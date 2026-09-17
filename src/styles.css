@@ -49,6 +49,18 @@
   --color-accent-fg: #101114;
 }
 
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #f3f4f7;
+  --color-surface: #ffffff;
+  --color-elevated: #e8eaf0;
+  --color-fg: #17191e;
+  --color-muted: #5b616b;
+  --color-subtle: #878e99;
+  --color-accent: #2f6fed;
+  --color-accent-fg: #ffffff;
+}
+
 :root[data-theme="midnight"] {
   --color-bg: #090e18;
   --color-surface: #0f1729;

@@ -1,9 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Loader2, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { PageHeaderSkeleton, RowsSkeleton } from "@/components/skeletons";
 import { listStaffFn, setStaffPerms } from "@/lib/fn";
 import { ROOT_DISCORD_ID } from "@/lib/constants";
 import type { StaffListItem, StaffProfile } from "@/lib/types";
@@ -63,9 +64,11 @@ export function AdminView({ me }: { me: StaffProfile }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center text-muted">
-        <Loader2 className="mr-2 size-5 animate-spin" />
-        Загружаю пользователей
+      <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-10">
+        <PageHeaderSkeleton />
+        <div className="mt-8">
+          <RowsSkeleton rows={4} />
+        </div>
       </div>
     );
   }

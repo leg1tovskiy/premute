@@ -1,115 +1,107 @@
 import { useEffect, useState, type ReactNode } from "react";
-import {
-  BarChart3,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  Power,
-  ScrollText,
-  Shield,
-  ShieldCheck,
-  SquareTerminal,
-  Trophy,
-  Users,
-  Volume2,
-} from "lucide-react";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { ChevronRight, Command, Home, Search } from "lucide-react";
 import { UserButton } from "@/lib/auth/gates";
 import { ThemeSelect } from "@/components/theme-provider";
+import { usePalette } from "@/components/command-palette";
+import { Skeleton } from "@/components/skeletons";
+import { allowedTabs } from "@/lib/tabs";
+import { usePanel } from "@/lib/panel";
 import { getStatsFn } from "@/lib/fn";
-import type { Caps, StaffProfile, StatsPayload } from "@/lib/types";
+import type { StatsPayload } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
-export type Tab =
-  | "home"
-  | "stats"
-  | "tops"
-  | "moderation"
-  | "voice"
-  | "logs"
-  | "power"
-  | "console"
-  | "mods"
-  | "admin";
+const navItem =
+  "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-sm border border-transparent px-2.5 text-xs font-medium text-muted transition-colors hover:bg-elevated hover:text-fg";
+const navItemActive = "border-border bg-elevated text-fg";
 
-const TAB_ITEMS: { id: Exclude<Tab, "home">; label: string; desc: string; icon: typeof BarChart3 }[] = [
-  { id: "stats", label: "Стата", desc: "Статистика модераторов", icon: BarChart3 },
-  { id: "tops", label: "Топы", desc: "Рейтинг модераторов", icon: Trophy },
-  { id: "moderation", label: "Модер", desc: "Наказания и модерация", icon: ShieldCheck },
-  { id: "voice", label: "Голос", desc: "Озвучка", icon: Volume2 },
-  { id: "logs", label: "Логи", desc: "Журнал событий", icon: ScrollText },
-  { id: "power", label: "Питание", desc: "Управление ботом", icon: Power },
-  { id: "console", label: "Консоль", desc: "Команды бота", icon: SquareTerminal },
-  { id: "mods", label: "Моды", desc: "Состав команды", icon: Users },
-  { id: "admin", label: "Админ", desc: "Настройки панели", icon: Shield },
-];
+export function PanelShell({ children }: { children: ReactNode }) {
+  const { profile } = usePanel();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const setPaletteOpen = usePalette((s) => s.setOpen);
+  const tabs = allowedTabs(profile.caps);
 
-function tabAllowed(id: Exclude<Tab, "home">, caps: Caps): boolean {
-  switch (id) {
-    case "stats":
-    case "tops":
-      return caps.canStats;
-    case "moderation":
-      return caps.canModeration;
-    case "voice":
-      return caps.canVoice;
-    case "logs":
-      return caps.canLogs;
-    case "power":
-      return caps.canPower;
-    case "console":
-      return caps.canConsole;
-    case "mods":
-      return caps.canMods;
-    case "admin":
-      return caps.canAdmin;
-  }
-}
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = e.target as HTMLElement | null;
+      if (
+        el &&
+        (el.tagName === "INPUT" ||
+          el.tagName === "TEXTAREA" ||
+          el.tagName === "SELECT" ||
+          el.isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === "Escape") {
+        if (pathname !== "/") void navigate({ to: "/" });
+        return;
+      }
+      const n = Number(e.key);
+      if (Number.isInteger(n) && n >= 1 && n <= 9) {
+        const dest = tabs[n - 1];
+        if (dest) void navigate({ to: dest.to });
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [navigate, pathname, tabs]);
 
-export function PanelShell({
-  tab,
-  onTab,
-  tag,
-  children,
-}: {
-  tab: Tab;
-  onTab: (t: Tab) => void;
-  tag?: string | null;
-  children: ReactNode;
-}) {
   return (
     <div className="min-h-dvh bg-bg text-fg">
       <header className="sticky top-0 z-20 border-b border-border bg-bg/85 backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-none flex-nowrap items-center gap-2 overflow-hidden px-3 py-2">
-          <button
-            type="button"
-            onClick={() => onTab("home")}
-            className="flex shrink-0 cursor-pointer items-center gap-2"
-          >
+        <div className="mx-auto flex w-full max-w-[1440px] items-center gap-2 px-3 py-2 sm:px-4">
+          <Link to="/" className="flex shrink-0 items-center gap-2">
             <img
               src="/logo.png"
               alt="PremuteBOT logo"
               className="size-8 shrink-0 rounded-sm border border-border object-cover"
             />
-            <span className="text-left">
-              <span className="block text-sm font-semibold leading-none">PremuteBOT</span>
-            </span>
-          </button>
+            <span className="hidden text-sm font-semibold leading-none sm:block">PremuteBOT</span>
+          </Link>
 
-          {tab !== "home" ? (
+          <nav className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto md:flex" aria-label="Разделы">
+            <Link
+              to="/"
+              className={cn(navItem, pathname === "/" && navItemActive)}
+              title="Главная · Esc"
+            >
+              <Home className="size-3.5" />
+              Главная
+            </Link>
+            {tabs.map((t, i) => {
+              const Icon = t.icon;
+              return (
+                <Link
+                  key={t.id}
+                  to={t.to}
+                  className={cn(navItem, pathname === t.to && navItemActive)}
+                  title={`${t.desc} · ${i + 1}`}
+                >
+                  <Icon className="size-3.5" />
+                  {t.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="ml-auto flex min-w-0 items-center gap-2 [&_>div>span:not(.sr-only)]:max-w-[7rem] [&_>div>span:not(.sr-only)]:truncate [&_button]:h-8">
             <button
               type="button"
-              onClick={() => onTab("home")}
-              className="inline-flex h-8 shrink-0 items-center gap-1 rounded-sm border border-border bg-elevated px-2 text-xs font-medium text-muted transition-colors hover:text-fg"
+              onClick={() => setPaletteOpen(true)}
+              title="Палитра команд (Ctrl/⌘ + K)"
+              className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-sm border border-border bg-elevated px-2 text-xs text-muted transition-colors hover:text-fg"
             >
-              <ChevronLeft className="size-3.5" />
-              Главная
+              <Search className="size-3.5 md:hidden" />
+              <Command className="hidden size-3.5 md:block" />
+              <span className="hidden md:inline">K</span>
             </button>
-          ) : null}
-
-          <div className="flex min-w-0 flex-1 items-center justify-end gap-2 [&_>div>span]:hidden [&_button]:h-8 [&_button]:rounded-sm [&_button]:border [&_button]:border-border [&_button]:bg-elevated [&_button]:px-2 [&_button]:text-xs [&_button]:text-muted">
-            {tag ? (
-              <Badge className="max-w-[9rem] truncate normal-case tracking-normal" tone="accent">
-                {tag}
+            {profile.tag ? (
+              <Badge className="hidden max-w-[9rem] truncate normal-case tracking-normal sm:inline-flex" tone="accent">
+                {profile.tag}
               </Badge>
             ) : null}
             <ThemeSelect />
@@ -117,7 +109,42 @@ export function PanelShell({
           </div>
         </div>
       </header>
-      <main>{children}</main>
+
+      <main className="pb-20 md:pb-0">{children}</main>
+
+      <nav
+        className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-bg/95 backdrop-blur-md md:hidden"
+        aria-label="Разделы"
+      >
+        <div className="flex items-stretch overflow-x-auto">
+          <Link
+            to="/"
+            className={cn(
+              "flex min-w-[4.25rem] flex-1 flex-col items-center gap-1 px-2 py-2 text-[10px] font-medium text-muted",
+              pathname === "/" && "text-accent",
+            )}
+          >
+            <Home className="size-4" />
+            Главная
+          </Link>
+          {tabs.map((t) => {
+            const Icon = t.icon;
+            return (
+              <Link
+                key={t.id}
+                to={t.to}
+                className={cn(
+                  "flex min-w-[4.25rem] flex-1 flex-col items-center gap-1 px-2 py-2 text-[10px] font-medium text-muted",
+                  pathname === t.to && "text-accent",
+                )}
+              >
+                <Icon className="size-4" />
+                {t.label}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
@@ -128,9 +155,10 @@ function fmtMonth(ym: string) {
   return d.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
 }
 
-export function HomeTiles({ profile, onTab }: { profile: StaffProfile; onTab: (t: Tab) => void }) {
+export function HomeTiles() {
+  const { profile } = usePanel();
   const caps = profile.caps;
-  const tiles = TAB_ITEMS.filter((i) => tabAllowed(i.id, caps));
+  const tiles = allowedTabs(caps);
 
   const [stats, setStats] = useState<StatsPayload | null>(null);
   const [statsLoading, setStatsLoading] = useState<boolean>(caps.canStats);
@@ -169,7 +197,7 @@ export function HomeTiles({ profile, onTab }: { profile: StaffProfile; onTab: (t
     : [];
 
   return (
-    <section className="mx-auto w-full max-w-none px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
+    <section className="mx-auto w-full max-w-[1440px] px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
       <div className="flex flex-col gap-6">
         <div className="flex items-center gap-3">
           {profile.image ? (
@@ -193,14 +221,13 @@ export function HomeTiles({ profile, onTab }: { profile: StaffProfile; onTab: (t
               <h2 className="text-sm font-semibold text-fg">Выдано наказаний</h2>
               <div className="flex items-center gap-3">
                 {stats ? <span className="text-xs text-muted capitalize">{fmtMonth(stats.month)}</span> : null}
-                <button
-                  type="button"
-                  onClick={() => onTab("stats")}
+                <Link
+                  to="/stats"
                   className="inline-flex h-8 items-center gap-1 rounded-sm border border-border bg-elevated px-2.5 text-xs text-muted transition-colors hover:text-fg"
                 >
                   Подробнее
                   <ChevronRight className="size-3.5" />
-                </button>
+                </Link>
               </div>
             </div>
             {stats ? (
@@ -213,9 +240,10 @@ export function HomeTiles({ profile, onTab }: { profile: StaffProfile; onTab: (t
                 ))}
               </div>
             ) : statsLoading ? (
-              <div className="mt-4 flex items-center justify-center gap-2 py-6 text-sm text-muted">
-                <Loader2 className="size-4 animate-spin" />
-                Загружаю статистику
+              <div className="mt-4 grid grid-cols-2 gap-3 min-[560px]:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-[4.5rem] rounded-xl" />
+                ))}
               </div>
             ) : null}
           </div>
@@ -227,10 +255,9 @@ export function HomeTiles({ profile, onTab }: { profile: StaffProfile; onTab: (t
             {tiles.map((i) => {
               const Icon = i.icon;
               return (
-                <button
+                <Link
                   key={i.id}
-                  type="button"
-                  onClick={() => onTab(i.id)}
+                  to={i.to}
                   className="group flex w-full items-center gap-3 rounded-md border border-border bg-surface p-4 text-left transition-colors hover:border-accent/40 hover:bg-elevated sm:w-[calc(50%-0.375rem)] lg:w-[calc(33.3333%-0.5rem)] 2xl:w-[calc(25%-0.5625rem)]"
                 >
                   <span className="grid size-10 shrink-0 place-items-center rounded-sm border border-border bg-elevated text-accent transition-colors group-hover:border-accent/40">
@@ -241,7 +268,7 @@ export function HomeTiles({ profile, onTab }: { profile: StaffProfile; onTab: (t
                     <span className="block truncate text-xs text-muted">{i.desc}</span>
                   </span>
                   <ChevronRight className="ml-auto size-4 shrink-0 text-subtle transition-transform group-hover:translate-x-0.5" />
-                </button>
+                </Link>
               );
             })}
           </div>

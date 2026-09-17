@@ -2,6 +2,15 @@ import { useMemo, useState, type FormEvent } from "react";
 import { Ban, Loader2, Search, ShieldAlert, UserMinus, VolumeX, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogActions,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +39,7 @@ export function ModerationView() {
   const [duration, setDuration] = useState(MUTE_PRESETS[0].ms);
   const [customDur, setCustomDur] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const customParsed = customDur.trim() ? parseMuteDuration(customDur) : null;
 
   async function search(e?: FormEvent) {
@@ -82,6 +92,18 @@ export function ModerationView() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function requestSubmit() {
+    if (!target) {
+      toast.error("Выберите участника");
+      return;
+    }
+    if (action === "ban" || action === "kick") {
+      setConfirmOpen(true);
+      return;
+    }
+    void submit();
   }
 
   return (
@@ -216,11 +238,34 @@ export function ModerationView() {
           </div>
         ) : null}
 
-        <Button className="mt-6 w-full sm:w-auto" disabled={busy || !target} onClick={() => void submit()}>
+        <Button className="mt-6 w-full sm:w-auto" disabled={busy || !target} onClick={requestSubmit}>
           {busy ? <Loader2 className="animate-spin" /> : null}
           Выполнить
         </Button>
       </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogTitle>
+            {action === "ban" ? "Забанить" : "Кикнуть"} {display ?? "участника"}?
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            Действие выполнит бот в Discord и запишет его в лог-канал.
+            {reason.trim() ? ` Причина: ${reason.trim()}` : " Причина не указана."}
+          </AlertDialogDescription>
+          <AlertDialogActions>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmOpen(false);
+                void submit();
+              }}
+            >
+              {action === "ban" ? "Забанить" : "Кикнуть"}
+            </AlertDialogAction>
+          </AlertDialogActions>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

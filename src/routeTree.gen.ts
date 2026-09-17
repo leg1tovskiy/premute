@@ -9,19 +9,78 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as PanelRouteImport } from './routes/_panel'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PanelIndexRouteImport } from './routes/_panel.index'
+import { Route as PanelAdminRouteImport } from './routes/_panel.admin'
+import { Route as PanelConsoleRouteImport } from './routes/_panel.console'
+import { Route as PanelLogsRouteImport } from './routes/_panel.logs'
+import { Route as PanelModerationRouteImport } from './routes/_panel.moderation'
+import { Route as PanelModsRouteImport } from './routes/_panel.mods'
+import { Route as PanelPowerRouteImport } from './routes/_panel.power'
+import { Route as PanelStatsRouteImport } from './routes/_panel.stats'
+import { Route as PanelTopsRouteImport } from './routes/_panel.tops'
+import { Route as PanelVoiceRouteImport } from './routes/_panel.voice'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const PanelRoute = PanelRouteImport.update({
+  id: '/_panel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PanelIndexRoute = PanelIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelAdminRoute = PanelAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelConsoleRoute = PanelConsoleRouteImport.update({
+  id: '/console',
+  path: '/console',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelLogsRoute = PanelLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelModerationRoute = PanelModerationRouteImport.update({
+  id: '/moderation',
+  path: '/moderation',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelModsRoute = PanelModsRouteImport.update({
+  id: '/mods',
+  path: '/mods',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelPowerRoute = PanelPowerRouteImport.update({
+  id: '/power',
+  path: '/power',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelStatsRoute = PanelStatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelTopsRoute = PanelTopsRouteImport.update({
+  id: '/tops',
+  path: '/tops',
+  getParentRoute: () => PanelRoute,
+} as any)
+const PanelVoiceRoute = PanelVoiceRouteImport.update({
+  id: '/voice',
+  path: '/voice',
+  getParentRoute: () => PanelRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
@@ -30,42 +89,108 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof PanelIndexRoute
   '/login': typeof LoginRoute
+  '/admin': typeof PanelAdminRoute
+  '/console': typeof PanelConsoleRoute
+  '/logs': typeof PanelLogsRoute
+  '/moderation': typeof PanelModerationRoute
+  '/mods': typeof PanelModsRoute
+  '/power': typeof PanelPowerRoute
+  '/stats': typeof PanelStatsRoute
+  '/tops': typeof PanelTopsRoute
+  '/voice': typeof PanelVoiceRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/admin': typeof PanelAdminRoute
+  '/console': typeof PanelConsoleRoute
+  '/logs': typeof PanelLogsRoute
+  '/moderation': typeof PanelModerationRoute
+  '/mods': typeof PanelModsRoute
+  '/power': typeof PanelPowerRoute
+  '/stats': typeof PanelStatsRoute
+  '/tops': typeof PanelTopsRoute
+  '/voice': typeof PanelVoiceRoute
+  '/': typeof PanelIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_panel': typeof PanelRouteWithChildren
   '/login': typeof LoginRoute
+  '/_panel/admin': typeof PanelAdminRoute
+  '/_panel/console': typeof PanelConsoleRoute
+  '/_panel/logs': typeof PanelLogsRoute
+  '/_panel/moderation': typeof PanelModerationRoute
+  '/_panel/mods': typeof PanelModsRoute
+  '/_panel/power': typeof PanelPowerRoute
+  '/_panel/stats': typeof PanelStatsRoute
+  '/_panel/tops': typeof PanelTopsRoute
+  '/_panel/voice': typeof PanelVoiceRoute
+  '/_panel/': typeof PanelIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/admin'
+    | '/console'
+    | '/logs'
+    | '/moderation'
+    | '/mods'
+    | '/power'
+    | '/stats'
+    | '/tops'
+    | '/voice'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/api/auth/$'
-  id: '__root__' | '/' | '/login' | '/api/auth/$'
+  to:
+    | '/login'
+    | '/admin'
+    | '/console'
+    | '/logs'
+    | '/moderation'
+    | '/mods'
+    | '/power'
+    | '/stats'
+    | '/tops'
+    | '/voice'
+    | '/'
+    | '/api/auth/$'
+  id:
+    | '__root__'
+    | '/_panel'
+    | '/login'
+    | '/_panel/admin'
+    | '/_panel/console'
+    | '/_panel/logs'
+    | '/_panel/moderation'
+    | '/_panel/mods'
+    | '/_panel/power'
+    | '/_panel/stats'
+    | '/_panel/tops'
+    | '/_panel/voice'
+    | '/_panel/'
+    | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  PanelRoute: typeof PanelRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
+    '/_panel': {
+      id: '/_panel'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof PanelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -74,6 +199,76 @@ declare module '@tanstack/react-router' {
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_panel/': {
+      id: '/_panel/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof PanelIndexRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/admin': {
+      id: '/_panel/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof PanelAdminRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/console': {
+      id: '/_panel/console'
+      path: '/console'
+      fullPath: '/console'
+      preLoaderRoute: typeof PanelConsoleRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/logs': {
+      id: '/_panel/logs'
+      path: '/logs'
+      fullPath: '/logs'
+      preLoaderRoute: typeof PanelLogsRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/moderation': {
+      id: '/_panel/moderation'
+      path: '/moderation'
+      fullPath: '/moderation'
+      preLoaderRoute: typeof PanelModerationRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/mods': {
+      id: '/_panel/mods'
+      path: '/mods'
+      fullPath: '/mods'
+      preLoaderRoute: typeof PanelModsRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/power': {
+      id: '/_panel/power'
+      path: '/power'
+      fullPath: '/power'
+      preLoaderRoute: typeof PanelPowerRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/stats': {
+      id: '/_panel/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof PanelStatsRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/tops': {
+      id: '/_panel/tops'
+      path: '/tops'
+      fullPath: '/tops'
+      preLoaderRoute: typeof PanelTopsRouteImport
+      parentRoute: typeof PanelRoute
+    }
+    '/_panel/voice': {
+      id: '/_panel/voice'
+      path: '/voice'
+      fullPath: '/voice'
+      preLoaderRoute: typeof PanelVoiceRouteImport
+      parentRoute: typeof PanelRoute
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -85,8 +280,36 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface PanelRouteChildren {
+  PanelAdminRoute: typeof PanelAdminRoute
+  PanelConsoleRoute: typeof PanelConsoleRoute
+  PanelLogsRoute: typeof PanelLogsRoute
+  PanelModerationRoute: typeof PanelModerationRoute
+  PanelModsRoute: typeof PanelModsRoute
+  PanelPowerRoute: typeof PanelPowerRoute
+  PanelStatsRoute: typeof PanelStatsRoute
+  PanelTopsRoute: typeof PanelTopsRoute
+  PanelVoiceRoute: typeof PanelVoiceRoute
+  PanelIndexRoute: typeof PanelIndexRoute
+}
+
+const PanelRouteChildren: PanelRouteChildren = {
+  PanelAdminRoute: PanelAdminRoute,
+  PanelConsoleRoute: PanelConsoleRoute,
+  PanelLogsRoute: PanelLogsRoute,
+  PanelModerationRoute: PanelModerationRoute,
+  PanelModsRoute: PanelModsRoute,
+  PanelPowerRoute: PanelPowerRoute,
+  PanelStatsRoute: PanelStatsRoute,
+  PanelTopsRoute: PanelTopsRoute,
+  PanelVoiceRoute: PanelVoiceRoute,
+  PanelIndexRoute: PanelIndexRoute,
+}
+
+const PanelRouteWithChildren = PanelRoute._addFileChildren(PanelRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  PanelRoute: PanelRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }

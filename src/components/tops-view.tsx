@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Hammer, Loader2, RefreshCw, Trophy, Unlock, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageHeaderSkeleton, RowsSkeleton } from "@/components/skeletons";
 import { getStatsFn } from "@/lib/fn";
 import { RANK_SHORT, fearProfileUrl } from "@/lib/constants";
 import type { ModRow, StatsPayload } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 const TOP_RANKS = new Set([1, 2]);
-
 function fmtMsk(sec: number) {
   return new Intl.DateTimeFormat("ru-RU", {
     timeZone: "Europe/Moscow",
@@ -77,7 +76,6 @@ export function TopsView() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const rows = useMemo(() => {
@@ -91,9 +89,9 @@ export function TopsView() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center text-muted">
-        <Loader2 className="mr-2 size-5 animate-spin" />
-        Собираю топ модераторов
+      <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-10">
+        <PageHeaderSkeleton />
+        <RowsSkeleton rows={3} />
       </div>
     );
   }

@@ -3,8 +3,18 @@ import { ArchiveRestore, Loader2, Pencil, Plus, Search, Trash2, Users } from "lu
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogActions,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeaderSkeleton, RowsSkeleton } from "@/components/skeletons";
 import { deleteModFn, getBackupsFn, listModsFn, setBackupFn, unsetBackupFn, upsertModFn } from "@/lib/fn";
 import { RANK_TITLE } from "@/lib/constants";
 import type { BackupsPayload, BackupEntry, RosterMod, RosterRank } from "@/lib/types";
@@ -24,6 +34,7 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
   const [recounting, setRecounting] = useState(false);
   const [search, setSearch] = useState("");
   const [backups, setBackups] = useState<Record<string, BackupEntry>>({});
+  const [pendingRemove, setPendingRemove] = useState<RosterMod | null>(null);
 
   async function load() {
     setLoading(true);
@@ -130,7 +141,6 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
   }
 
   async function remove(m: RosterMod) {
-    if (!window.confirm(`Убрать ${m.name} из списка?`)) return;
     setSaving(true);
     try {
       const next = await deleteModFn({ data: { steamid: m.steamid } });
@@ -145,9 +155,11 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center text-muted">
-        <Loader2 className="mr-2 size-5 animate-spin" />
-        Загружаю состав
+      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:py-10">
+        <PageHeaderSkeleton />
+        <div className="mt-8">
+          <RowsSkeleton rows={6} />
+        </div>
       </div>
     );
   }
@@ -328,7 +340,7 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
                           size="sm"
                           variant="ghost"
                           className="text-danger hover:text-danger"
-                          onClick={() => void remove(m)}
+                          onClick={() => setPendingRemove(m)}
                           disabled={saving}
                         >
                           <Trash2 />
@@ -356,6 +368,27 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
         <Users className="size-3.5" />
         {query ? `${visible.length} из ${sorted.length} в списке` : `${sorted.length} в списке`} · состав синхронизируется с ботом
       </p>
+
+      <AlertDialog open={pendingRemove !== null} onOpenChange={(open) => !open && setPendingRemove(null)}>
+        <AlertDialogContent>
+          <AlertDialogTitle>Убрать {pendingRemove?.name} из списка?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Бот удалит модератора из состава, а статистика перестанет учитывать его наказания.
+          </AlertDialogDescription>
+          <AlertDialogActions>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const m = pendingRemove;
+                setPendingRemove(null);
+                if (m) void remove(m);
+              }}
+            >
+              Убрать
+            </AlertDialogAction>
+          </AlertDialogActions>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

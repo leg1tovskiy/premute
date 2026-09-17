@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Gamepad2, Hammer, Loader2, RefreshCw, Unlock, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ModeratorsChart } from "@/components/stats-chart";
+import { CardsSkeleton, PageHeaderSkeleton, Skeleton } from "@/components/skeletons";
 import { getStatsFn, moderatorOnlineFn } from "@/lib/fn";
 import { RANK_SHORT, fearProfileUrl } from "@/lib/constants";
 import type { StatsPayload } from "@/lib/types";
@@ -63,7 +65,7 @@ function ModeratorCard({
   const ratioTone = monthTarget == null ? "text-muted" : monthDone ? "text-accent" : "text-muted";
 
   return (
-    <article className="flex min-w-0 flex-col rounded-2xl border border-border bg-black/60 p-4 shadow-[var(--shadow-panel)]">
+    <article className="flex min-w-0 flex-col rounded-2xl border border-border bg-surface p-4 shadow-[var(--shadow-panel)]">
       <div className="flex items-center gap-3">
         {m.avatar ? (
           <img
@@ -198,9 +200,14 @@ export function StatsView() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center text-muted">
-        <Loader2 className="mr-2 size-5 animate-spin" />
-        Собираю статистику FEAR
+      <div className="mx-auto w-full max-w-[1440px] px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
+        <PageHeaderSkeleton />
+        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-md" />
+          ))}
+        </div>
+        <CardsSkeleton count={6} />
       </div>
     );
   }
@@ -226,7 +233,7 @@ export function StatsView() {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-none px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
+    <div className="mx-auto w-full max-w-[1440px] px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">FearProject</p>
@@ -256,11 +263,18 @@ export function StatsView() {
         ))}
       </div>
 
+      <ModeratorsChart mods={data.moderators} />
+
       <section className="mt-8">
         <div className="flex items-end justify-between px-1">
           <h2 className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Модераторы</h2>
           <p className="text-xs tabular-nums text-subtle">{data.moderators.length}</p>
         </div>
+        {data.moderators.length === 0 ? (
+          <p className="mt-5 rounded-lg border border-border bg-surface px-5 py-10 text-center text-sm text-muted">
+            В этом месяце наказаний ещё нет.
+          </p>
+        ) : (
         <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
           {data.moderators.map((m) => (
             <ModeratorCard
@@ -270,6 +284,7 @@ export function StatsView() {
             />
           ))}
         </div>
+        )}
         <div className="mt-6 overflow-hidden rounded-lg border border-border bg-surface shadow-[var(--shadow-panel)]">
           <div className="border-t border-border px-5 py-5 sm:px-6">
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Итого</p>
