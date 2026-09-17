@@ -84,6 +84,10 @@ export type ModRow = {
   backup?: BackupEntry | null;
   /** Постоянный слаг для ссылки /<slug> (появляется после withSlugs). */
   slug?: string;
+  /** Итог модератора за прошлый месяц (из архива). */
+  prevTotal?: number | null;
+  /** Лучший месяц модератора по итогам архива. */
+  best?: { month: string; total: number } | null;
 };
 
 export type PunishmentRecord = {
@@ -146,6 +150,39 @@ export type StatsPayload = {
   stale: boolean;
   isMonthFirst?: boolean;
   lastMonthTop?: LastMonthTop | null;
+  /** Итоги прошлого месяца из архива (если есть). */
+  prevTotals?: {
+    month: string;
+    bans: number;
+    mutes: number;
+    total: number;
+    removed: number;
+    excluded: number;
+  } | null;
+  /** Топ-3 модераторов по месяцам из архива (для истории топов). */
+  history?: Array<{
+    month: string;
+    top: Array<{ name: string; total: number; rank: number | null }>;
+  }>;
+};
+
+export type DailyPoint = {
+  date: string;
+  bans: number;
+  mutes: number;
+  total: number;
+};
+
+export type PlayerRecord = PunishmentRecord & {
+  adminName: string;
+  adminRank: number | null;
+};
+
+export type SystemStatus = {
+  worker: boolean;
+  bot: boolean;
+  workerUpdatedAt: number | null;
+  checkedAt: number;
 };
 
 export type GuildMember = {

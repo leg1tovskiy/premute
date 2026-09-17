@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Hammer, Loader2, RefreshCw, Trophy, Unlock, VolumeX } from "lucide-react";
+import { Hammer, History, Loader2, RefreshCw, Trophy, Unlock, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeaderSkeleton, RowsSkeleton } from "@/components/skeletons";
 import { getStatsFn } from "@/lib/fn";
 import { RANK_SHORT, fearProfileUrl } from "@/lib/constants";
 import type { ModRow, StatsPayload } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const TOP_RANKS = new Set([1, 2]);
 function fmtMsk(sec: number) {
@@ -202,6 +203,39 @@ export function TopsView() {
           Обновлено {fmtMsk(data.updatedAt)} МСК
         </p>
       </section>
+
+      {data.history && data.history.length ? (
+        <section className="mt-6 overflow-hidden rounded-lg border border-border bg-surface shadow-[var(--shadow-panel)]">
+          <div className="flex items-center gap-2 px-5 py-4 sm:px-6">
+            <History className="size-4 text-accent" />
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+              Топы прошлых месяцев
+            </p>
+          </div>
+          <ul className="divide-y divide-border">
+            {data.history.map((h) => (
+              <li key={h.month} className="px-5 py-3 sm:px-6">
+                <p className="text-xs text-subtle">{h.month}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                  {h.top.length ? (
+                    h.top.map((t, i) => (
+                      <span key={`${t.name}-${i}`} className="inline-flex items-center gap-1.5">
+                        <span className={cn("font-mono text-xs", i === 0 ? "text-gold" : "text-subtle")}>
+                          {i + 1}.
+                        </span>
+                        <span className="font-medium">{t.name}</span>
+                        <span className="tabular-nums text-muted">{t.total}</span>
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-subtle">нет данных</span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }

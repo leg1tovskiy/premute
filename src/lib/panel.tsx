@@ -30,3 +30,9 @@ export function RequireCap({ cap, children }: { cap: keyof Caps; children: React
   if (!profile.caps[cap]) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
+
+export function RequireAnyCap({ caps, children }: { caps: Array<keyof Caps>; children: ReactNode }) {
+  const { profile } = usePanel();
+  if (!caps.some((c) => profile.caps[c])) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}

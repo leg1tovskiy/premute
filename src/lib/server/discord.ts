@@ -9,7 +9,16 @@ import {
   STATS_WORKER_URL,
 } from "./config";
 import { createHash } from "node:crypto";
-import type { BackupsPayload, GuildMember, PunishmentRecord, RosterMod, RosterPayload, VoiceChannel } from "@/lib/types";
+import type {
+  BackupsPayload,
+  DailyPoint,
+  GuildMember,
+  PlayerRecord,
+  PunishmentRecord,
+  RosterMod,
+  RosterPayload,
+  VoiceChannel,
+} from "@/lib/types";
 
 const API = "https://discord.com/api/v10";
 
@@ -413,6 +422,61 @@ export async function fetchWorkerPunishments(steamid: string): Promise<WorkerPun
     return json;
   } catch {
     return null;
+  }
+}
+
+export async function fetchWorkerDaily(): Promise<{ month?: string; days?: DailyPoint[] } | null> {
+  try {
+    const res = await fetch(`${STATS_WORKER_URL}/daily?s=${encodeURIComponent(panelSecret())}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { ok?: boolean; month?: string; days?: DailyPoint[] };
+    if (!json.ok) return null;
+    return json;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchWorkerPlayer(
+  steamid: string,
+): Promise<{ month?: string; records?: PlayerRecord[] } | null> {
+  try {
+    const res = await fetch(
+      `${STATS_WORKER_URL}/player?steamid=${encodeURIComponent(steamid)}&s=${encodeURIComponent(panelSecret())}`,
+      { signal: AbortSignal.timeout(8000) },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as { ok?: boolean; month?: string; records?: PlayerRecord[] };
+    if (!json.ok) return null;
+    return json;
+  } catch {
+    return null;
+  }
+}
+
+/** Воркер статистики жив? Заодно отдаёт время последнего обновления данных. */
+export async function fetchWorkerHealth(): Promise<{ ok: boolean; updatedAt: number | null }> {
+  try {
+    const res = await fetch(`${STATS_WORKER_URL}/health`, { signal: AbortSignal.timeout(3500) });
+    if (!res.ok) return { ok: false, updatedAt: null };
+    const json = (await res.json()) as { ok?: boolean; updatedAt?: number | null };
+    return { ok: Boolean(json.ok), updatedAt: json.updatedAt ?? null };
+  } catch {
+    return { ok: false, updatedAt: null };
+  }
+}
+
+/** Панель бота отвечает? (лёгкий авторизованный запрос). */
+export async function fetchBotAlive(): Promise<boolean> {
+  try {
+    const res = await fetch(`${PANEL_BOT_URL}/panel/mods?s=${encodeURIComponent(panelSecret())}`, {
+      signal: AbortSignal.timeout(3500),
+    });
+    return res.ok;
+  } catch {
+    return false;
   }
 }
 

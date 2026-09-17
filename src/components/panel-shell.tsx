@@ -4,6 +4,8 @@ import { ChevronRight, Command, Home, Search } from "lucide-react";
 import { UserButton } from "@/lib/auth/gates";
 import { ThemeSelect } from "@/components/theme-provider";
 import { usePalette } from "@/components/command-palette";
+import { NotificationBell } from "@/components/notification-bell";
+import { StatusIndicator } from "@/components/status-indicator";
 import { Skeleton } from "@/components/skeletons";
 import { allowedTabs } from "@/lib/tabs";
 import { usePanel } from "@/lib/panel";
@@ -89,6 +91,8 @@ export function PanelShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="ml-auto flex min-w-0 items-center gap-2 [&_>div>span:not(.sr-only)]:max-w-[7rem] [&_>div>span:not(.sr-only)]:truncate [&_button]:h-8">
+            <StatusIndicator />
+            <NotificationBell />
             <button
               type="button"
               onClick={() => setPaletteOpen(true)}

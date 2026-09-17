@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, Gamepad2, Hammer, Loader2, RefreshCw, Unlock, VolumeX } from "lucide-react";
+import { ChevronRight, Download, Gamepad2, Hammer, Loader2, RefreshCw, Unlock, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ModeratorsChart } from "@/components/stats-chart";
+import { DailyChart } from "@/components/daily-chart";
+import { downloadCsv } from "@/lib/csv";
 import { CardsSkeleton, PageHeaderSkeleton, Skeleton } from "@/components/skeletons";
 import { getStatsFn, moderatorOnlineFn } from "@/lib/fn";
 import { RANK_SHORT, fearProfileUrl } from "@/lib/constants";
@@ -137,6 +139,13 @@ function ModeratorCard({
         </span>
       </div>
 
+      {m.prevTotal != null || m.best ? (
+        <p className="mt-2 text-center text-[11px] text-subtle">
+          {m.prevTotal != null ? `Прошлый месяц: ${m.prevTotal}` : null}
+          {m.best ? `${m.prevTotal != null ? " · " : ""}Лучший: ${m.best.total} (${m.best.month})` : null}
+        </p>
+      ) : null}
+
       {m.slug ? (
         <Link
           to="/$slug"
@@ -210,6 +219,12 @@ export function StatsView() {
     };
   }, []);
 
+  // Автообновление раз в 5 минут (тихо, без спиннера).
+  useEffect(() => {
+    const t = setInterval(() => void load(true), 5 * 60_000);
+    return () => clearInterval(t);
+  }, []);
+
   if (loading) {
     return (
       <div className="mx-auto w-full max-w-[1440px] px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
@@ -236,13 +251,34 @@ export function StatsView() {
   }
 
   if (!data) return null;
+  const payload = data;
 
   const tiles = [
-    { label: "Баны", value: data.totals.bans, icon: Hammer },
-    { label: "Разбаны", value: data.totals.removed, icon: Unlock },
-    { label: "Муты", value: data.totals.mutes, icon: VolumeX },
-    { label: "Всего", value: data.totals.total, icon: null },
-  ];
+    { key: "bans", label: "Баны", value: data.totals.bans, icon: Hammer },
+    { key: "removed", label: "Разбаны", value: data.totals.removed, icon: Unlock },
+    { key: "mutes", label: "Муты", value: data.totals.mutes, icon: VolumeX },
+    { key: "total", label: "Всего", value: data.totals.total, icon: null },
+  ] as const;
+  const prevTotals = data.prevTotals ?? null;
+
+  function exportCsv() {
+    downloadCsv(`stats-${payload.month}.csv`, [
+      ["Ник", "SteamID", "Ранг", "Баны", "Муты", "Всего", "Снято", "Норма месяц", "Прошлый месяц", "Лучший месяц", "Лучший итог"],
+      ...payload.moderators.map((m) => [
+        m.name,
+        m.steamid,
+        m.rank ?? "",
+        m.bans ?? "",
+        m.mutes ?? "",
+        m.total,
+        m.removed,
+        m.norma?.month ?? "",
+        m.prevTotal ?? "",
+        m.best?.month ?? "",
+        m.best?.total ?? "",
+      ]),
+    ]);
+  }
 
   return (
     <div className="mx-auto w-full max-w-[1440px] px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
@@ -257,23 +293,40 @@ export function StatsView() {
             {data.stale ? " · кэш" : ""} · обновлено {fmtMsk(data.updatedAt)} МСК
           </p>
         </div>
-        <Button variant="secondary" onClick={() => void load(true)} disabled={refreshing}>
-          {refreshing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
-          Обновить
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={() => void load(true)} disabled={refreshing}>
+            {refreshing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+            Обновить
+          </Button>
+          <Button variant="secondary" onClick={exportCsv} title="Экспорт статистики в CSV">
+            <Download />
+            CSV
+          </Button>
+        </div>
       </header>
 
       <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {tiles.map((c) => (
-          <div key={c.label} className="rounded-md border border-border bg-surface p-4 shadow-[var(--shadow-panel)]">
-            <div className="flex items-center justify-between text-muted">
-              <span className="text-xs font-medium uppercase tracking-wider">{c.label}</span>
-              {c.icon ? <c.icon className="size-4 text-muted" /> : null}
+        {tiles.map((c) => {
+          const prev = prevTotals ? prevTotals[c.key] : null;
+          const delta = prev != null ? c.value - prev : null;
+          return (
+            <div key={c.label} className="rounded-md border border-border bg-surface p-4 shadow-[var(--shadow-panel)]">
+              <div className="flex items-center justify-between text-muted">
+                <span className="text-xs font-medium uppercase tracking-wider">{c.label}</span>
+                {c.icon ? <c.icon className="size-4 text-muted" /> : null}
+              </div>
+              <p className="mt-2 text-3xl font-semibold tabular-nums tracking-tight text-fg">{c.value}</p>
+              {delta != null ? (
+                <p className="mt-1 text-[11px] text-subtle">
+                  {delta > 0 ? `+${delta}` : delta < 0 ? `−${Math.abs(delta)}` : "±0"} к прошлому месяцу
+                </p>
+              ) : null}
             </div>
-            <p className="mt-2 text-3xl font-semibold tabular-nums tracking-tight text-fg">{c.value}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
+
+      <DailyChart />
 
       <ModeratorsChart mods={data.moderators} />
 

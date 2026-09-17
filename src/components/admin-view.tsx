@@ -1,18 +1,41 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Shield } from "lucide-react";
+import { Download, Loader2, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { PageHeaderSkeleton, RowsSkeleton } from "@/components/skeletons";
-import { listStaffFn, setStaffPerms } from "@/lib/fn";
+import { exportBackupFn, listStaffFn, setStaffPerms } from "@/lib/fn";
 import { ROOT_DISCORD_ID } from "@/lib/constants";
 import type { StaffListItem, StaffProfile } from "@/lib/types";
 
 export function AdminView({ me }: { me: StaffProfile }) {
   const [rows, setRows] = useState<StaffListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [backingUp, setBackingUp] = useState(false);
   const meIsMainOwner = me.userId === ROOT_DISCORD_ID || me.discordId === ROOT_DISCORD_ID;
+
+  async function downloadBackup() {
+    setBackingUp(true);
+    try {
+      const data = await exportBackupFn();
+      const blob = new Blob([data.json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `premute-backup-${new Date(data.generatedAt * 1000).toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Резервная копия скачана");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Не удалось выгрузить копию");
+    } finally {
+      setBackingUp(false);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -205,6 +228,19 @@ export function AdminView({ me }: { me: StaffProfile }) {
           </ul>
         )}
       </div>
+
+      <section className="mt-8 rounded-lg border border-border bg-surface p-5 shadow-[var(--shadow-panel)]">
+        <h2 className="text-sm font-semibold">Резервная копия базы</h2>
+        <p className="mt-1 max-w-2xl text-sm text-muted">
+          Выгрузка в JSON: staff, слаги модераторов, архив статистики, кэш, лог действий и
+          пользователи. Neon хранит собственные резервные копии (PITR), а эта выгрузка — быстрый
+          ручной снимок на случай отката.
+        </p>
+        <Button className="mt-4" variant="secondary" disabled={backingUp} onClick={() => void downloadBackup()}>
+          {backingUp ? <Loader2 className="animate-spin" /> : <Download />}
+          Скачать JSON
+        </Button>
+      </section>
     </div>
   );
 }

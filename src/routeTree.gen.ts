@@ -22,6 +22,7 @@ import { Route as PanelPowerRouteImport } from './routes/_panel.power'
 import { Route as PanelStatsRouteImport } from './routes/_panel.stats'
 import { Route as PanelTopsRouteImport } from './routes/_panel.tops'
 import { Route as PanelVoiceRouteImport } from './routes/_panel.voice'
+import { Route as PanelPlayerSteamidRouteImport } from './routes/_panel.player.$steamid'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const PanelRoute = PanelRouteImport.update({
@@ -88,6 +89,11 @@ const PanelVoiceRoute = PanelVoiceRouteImport.update({
   path: '/voice',
   getParentRoute: () => PanelRoute,
 } as any)
+const PanelPlayerSteamidRoute = PanelPlayerSteamidRouteImport.update({
+  id: '/player/$steamid',
+  path: '/player/$steamid',
+  getParentRoute: () => PanelRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/stats': typeof PanelStatsRoute
   '/tops': typeof PanelTopsRoute
   '/voice': typeof PanelVoiceRoute
+  '/player/$steamid': typeof PanelPlayerSteamidRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/tops': typeof PanelTopsRoute
   '/voice': typeof PanelVoiceRoute
   '/': typeof PanelIndexRoute
+  '/player/$steamid': typeof PanelPlayerSteamidRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/_panel/tops': typeof PanelTopsRoute
   '/_panel/voice': typeof PanelVoiceRoute
   '/_panel/': typeof PanelIndexRoute
+  '/_panel/player/$steamid': typeof PanelPlayerSteamidRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
@@ -156,6 +165,7 @@ export interface FileRouteTypes {
     | '/stats'
     | '/tops'
     | '/voice'
+    | '/player/$steamid'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -171,6 +181,7 @@ export interface FileRouteTypes {
     | '/tops'
     | '/voice'
     | '/'
+    | '/player/$steamid'
     | '/api/auth/$'
   id:
     | '__root__'
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/_panel/tops'
     | '/_panel/voice'
     | '/_panel/'
+    | '/_panel/player/$steamid'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
@@ -289,6 +301,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PanelVoiceRouteImport
       parentRoute: typeof PanelRoute
     }
+    '/_panel/player/$steamid': {
+      id: '/_panel/player/$steamid'
+      path: '/player/$steamid'
+      fullPath: '/player/$steamid'
+      preLoaderRoute: typeof PanelPlayerSteamidRouteImport
+      parentRoute: typeof PanelRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -311,6 +330,7 @@ interface PanelRouteChildren {
   PanelTopsRoute: typeof PanelTopsRoute
   PanelVoiceRoute: typeof PanelVoiceRoute
   PanelIndexRoute: typeof PanelIndexRoute
+  PanelPlayerSteamidRoute: typeof PanelPlayerSteamidRoute
 }
 
 const PanelRouteChildren: PanelRouteChildren = {
@@ -325,6 +345,7 @@ const PanelRouteChildren: PanelRouteChildren = {
   PanelTopsRoute: PanelTopsRoute,
   PanelVoiceRoute: PanelVoiceRoute,
   PanelIndexRoute: PanelIndexRoute,
+  PanelPlayerSteamidRoute: PanelPlayerSteamidRoute,
 }
 
 const PanelRouteWithChildren = PanelRoute._addFileChildren(PanelRouteChildren)

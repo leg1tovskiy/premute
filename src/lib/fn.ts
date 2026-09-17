@@ -2,14 +2,17 @@ import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware } from "@/lib/auth/middleware";
 import type {
   BackupsPayload,
+  DailyPoint,
   DiscordClaim,
   GuildMember,
   LogEntry,
   ModDetails,
+  PlayerRecord,
   RosterPayload,
   StaffListItem,
   StaffProfile,
   StatsPayload,
+  SystemStatus,
   VoiceChannel,
 } from "@/lib/types";
 
@@ -97,7 +100,15 @@ export const getStatsFn = createServerFn({ method: "POST" })
     const { withSlugs } = await import("./server/mod-slugs");
     const stats = await loadStats({ refresh: Boolean(data?.refresh) });
     stats.moderators = await withSlugs(stats.moderators);
-    return attachLastMonthTop(stats);
+    const withTop = await attachLastMonthTop(stats);
+    const { snapshotStats, applyComparison } = await import("./server/archive");
+    try {
+      await snapshotStats(withTop);
+      return await applyComparison(withTop);
+    } catch {
+      // архив ещё не создан (миграция не применена) — отдаём как есть
+      return withTop;
+    }
   });
 
 export const getModDetailsFn = createServerFn({ method: "POST" })
@@ -317,6 +328,72 @@ export const botScheduleSendFn = createServerFn({ method: "POST" })
     const scheduled = await d.scheduleBotSend({ ...data, text, actor, when });
     await writeLog(context.userId, "bot-schedule", `${who} • ${text.slice(0, 100)} • на ${msk} МСК`);
     return { ok: true, when: scheduled.when };
+  });
+
+export const getDailyStatsFn = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }): Promise<DailyPoint[]> => {
+    const { getStaff } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.canStats) throw new Error("Нет доступа к статистике.");
+    const { fetchWorkerDaily } = await import("./server/discord");
+    const data = await fetchWorkerDaily();
+    return data?.days ?? [];
+  });
+
+export const getPlayerRecordsFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { steamid: string }) => d)
+  .handler(async ({ context, data }): Promise<{ month: string | null; records: PlayerRecord[] }> => {
+    const { getStaff } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.canStats && !me?.caps.canModeration) throw new Error("Нет доступа.");
+    const steamid = String(data.steamid || "").trim();
+    if (!/^\d{17}$/.test(steamid)) throw new Error("SteamID64 — 17 цифр.");
+    const { fetchWorkerPlayer } = await import("./server/discord");
+    const res = await fetchWorkerPlayer(steamid);
+    return { month: res?.month ?? null, records: res?.records ?? [] };
+  });
+
+export const getSystemStatusFn = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async (): Promise<SystemStatus> => {
+    const { fetchWorkerHealth, fetchBotAlive } = await import("./server/discord");
+    const [worker, bot] = await Promise.all([fetchWorkerHealth(), fetchBotAlive()]);
+    return {
+      worker: worker.ok,
+      bot,
+      workerUpdatedAt: worker.updatedAt,
+      checkedAt: Math.floor(Date.now() / 1000),
+    };
+  });
+
+export const exportBackupFn = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }): Promise<{ generatedAt: number; json: string }> => {
+    const { getStaff } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.isOwner) throw new Error("Резервная копия — только для владельцев сайта.");
+    const { getSql } = await import("./db");
+    const sql = await getSql();
+    const tables: Record<string, unknown[]> = {};
+    const dump = async (name: string, query: Promise<unknown[]>) => {
+      try {
+        tables[name] = await query;
+      } catch {
+        tables[name] = [];
+      }
+    };
+    await dump("staff", sql`select * from staff order by created_at`);
+    await dump("mod_slugs", sql`select * from mod_slugs order by created_at`);
+    await dump("mod_roster", sql`select * from mod_roster`);
+    await dump("stats_archive", sql`select * from stats_archive order by month_key`);
+    await dump("stats_cache", sql`select * from stats_cache`);
+    await dump("action_log", sql`select * from action_log order by created_at desc limit 5000`);
+    await dump("discord_claims", sql`select * from discord_claims order by created_at desc limit 2000`);
+    await dump("users", sql`select "id", "name", "email", "image", "createdAt" from "user" order by "createdAt"`);
+    const generatedAt = Math.floor(Date.now() / 1000);
+    return { generatedAt, json: JSON.stringify({ generatedAt, tables }, null, 2) };
   });
 
 export const moderatorOnlineFn = createServerFn({ method: "POST" })

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
-import { ChevronLeft, Hammer, RefreshCw, Unlock, VolumeX } from "lucide-react";
+import { ChevronLeft, Download, ExternalLink, Hammer, RefreshCw, Search, Unlock, VolumeX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { PageHeaderSkeleton, RowsSkeleton, Skeleton } from "@/components/skeletons";
 import { getModDetailsFn } from "@/lib/fn";
+import { downloadCsv } from "@/lib/csv";
 import { RANK_SHORT, fearProfileUrl } from "@/lib/constants";
 import type { ModDetails, PunishmentRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -16,6 +18,21 @@ function fmtDate(sec: number) {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
+    }).format(new Date(sec * 1000));
+  } catch {
+    return "—";
+  }
+}
+
+function fmtDateTime(sec: number) {
+  try {
+    return new Intl.DateTimeFormat("ru-RU", {
+      timeZone: "Europe/Moscow",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     }).format(new Date(sec * 1000));
   } catch {
     return "—";
@@ -69,6 +86,8 @@ export function ModDetailsView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [kind, setKind] = useState<"all" | "ban" | "mute">("all");
+  const [status, setStatus] = useState<"all" | "active" | "expired" | "removed">("all");
+  const [search, setSearch] = useState("");
 
   async function load() {
     setLoading(true);
@@ -90,9 +109,23 @@ export function ModDetailsView() {
 
   const records = useMemo(() => {
     if (!data) return [];
-    const rows = [...data.records].sort((a, b) => b.created - a.created);
-    return kind === "all" ? rows : rows.filter((r) => r.kind === kind);
-  }, [data, kind]);
+    const q = search.trim().toLowerCase();
+    const now = Math.floor(Date.now() / 1000);
+    return [...data.records]
+      .sort((a, b) => b.created - a.created)
+      .filter((r) => {
+        if (kind !== "all" && r.kind !== kind) return false;
+        const st =
+          r.unpunishAdmin || r.status === 2
+            ? "removed"
+            : r.expires && r.expires <= now
+              ? "expired"
+              : "active";
+        if (status !== "all" && st !== status) return false;
+        if (!q) return true;
+        return r.player.toLowerCase().includes(q) || (r.reason || "").toLowerCase().includes(q);
+      });
+  }, [data, kind, status, search]);
 
   if (loading) {
     return (
@@ -172,17 +205,25 @@ export function ModDetailsView() {
             </span>
           )}
           <div className="min-w-0 flex-1">
-            <a
-              href={fearProfileUrl(m.steamid)}
-              target="_blank"
-              rel="noreferrer"
+            <Link
+              to="/player/$steamid"
+              params={{ steamid: m.steamid }}
               className="block truncate text-xl font-semibold leading-tight hover:underline"
             >
               {handle}
-            </a>
-            <p className="mt-0.5 truncate font-mono text-xs text-subtle">
-              {m.steamid}
-              {m.rank ? ` · ${RANK_SHORT[m.rank] ?? "—"}` : ""}
+            </Link>
+            <p className="mt-0.5 flex items-center gap-1.5 truncate font-mono text-xs text-subtle">
+              <span className="truncate">{m.steamid}</span>
+              {m.rank ? <span>· {RANK_SHORT[m.rank] ?? "—"}</span> : null}
+              <a
+                href={fearProfileUrl(m.steamid)}
+                target="_blank"
+                rel="noreferrer"
+                title="Профиль на FearProject"
+                className="inline-flex shrink-0 text-subtle transition-colors hover:text-fg"
+              >
+                <ExternalLink className="size-3" />
+              </a>
             </p>
           </div>
         </div>
@@ -218,7 +259,7 @@ export function ModDetailsView() {
           <h2 className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
             Все наказания за период
           </h2>
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {(
               [
                 { id: "all", label: "Все" },
@@ -240,10 +281,68 @@ export function ModDetailsView() {
                 {f.label}
               </button>
             ))}
+            <span className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
+            {(
+              [
+                { id: "all", label: "Любой статус" },
+                { id: "active", label: "Активные" },
+                { id: "expired", label: "Истёкшие" },
+                { id: "removed", label: "Снятые" },
+              ] as const
+            ).map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setStatus(f.id)}
+                className={cn(
+                  "h-7 rounded-sm border px-2.5 text-xs font-medium transition-colors",
+                  status === f.id
+                    ? "border-border bg-elevated text-fg"
+                    : "border-transparent text-muted hover:text-fg",
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7"
+              onClick={() =>
+                data &&
+                downloadCsv(`mod-${m.steamid}.csv`, [
+                  ["Дата", "Игрок", "SteamID игрока", "Тип", "Срок", "Статус", "Причина"],
+                  ...records.map((r) => [
+                    fmtDateTime(r.created),
+                    r.player,
+                    r.playerSteamid,
+                    r.kind === "ban" ? "Бан" : "Мут",
+                    r.durationLabel || "",
+                    recordStatus(r).label,
+                    r.reason || "",
+                  ]),
+                ])
+              }
+              disabled={!records.length}
+              title="Экспорт наказаний в CSV"
+            >
+              <Download className="size-3.5" />
+              CSV
+            </Button>
             <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => void load()}>
               <RefreshCw className="size-3.5" />
             </Button>
           </div>
+        </div>
+
+        <div className="relative mt-3">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-subtle" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Поиск по игроку или причине"
+            className="h-9 pl-9"
+          />
         </div>
 
         <div className="mt-3 overflow-hidden rounded-lg border border-border bg-surface shadow-[var(--shadow-panel)]">

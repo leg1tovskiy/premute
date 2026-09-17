@@ -1,6 +1,8 @@
-import { useMemo, useState, type FormEvent } from "react";
-import { Ban, Loader2, Search, ShieldAlert, UserMinus, VolumeX, Volume2 } from "lucide-react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Link, useSearch } from "@tanstack/react-router";
+import { Ban, ExternalLink, History, Loader2, Search, ShieldAlert, UserMinus, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -14,9 +16,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { moderateFn, searchMembersFn } from "@/lib/fn";
+import { getPlayerRecordsFn, moderateFn, searchMembersFn } from "@/lib/fn";
 import { MUTE_PRESETS, parseMuteDuration } from "@/lib/constants";
-import type { GuildMember } from "@/lib/types";
+import type { GuildMember, PlayerRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type Action = "ban" | "kick" | "mute" | "warn" | "unmute";
@@ -29,7 +31,52 @@ const ACTIONS: { id: Action; label: string; icon: typeof Ban; danger?: boolean }
   { id: "unmute", label: "Размут", icon: Volume2 },
 ];
 
+const COMMON_REASONS = [
+  "Игрок использовал читы",
+  "Оскорбления родных",
+  "Неадекватное поведение",
+  "Реклама / спам",
+  "Обход наказания",
+  "Игрок не указал социальную сеть",
+];
+
+const RECENT_KEY = "premute-recent-reasons";
+
+function loadRecentReasons(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    const arr = raw ? (JSON.parse(raw) as unknown) : [];
+    return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === "string").slice(0, 5) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentReason(reason: string) {
+  const r = reason.trim();
+  if (!r) return;
+  try {
+    const next = [r, ...loadRecentReasons().filter((x) => x !== r)].slice(0, 5);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  } catch {
+    /* ignore */
+  }
+}
+
+function fmtShortDate(sec: number) {
+  try {
+    return new Intl.DateTimeFormat("ru-RU", {
+      timeZone: "Europe/Moscow",
+      day: "2-digit",
+      month: "2-digit",
+    }).format(new Date(sec * 1000));
+  } catch {
+    return "—";
+  }
+}
+
 export function ModerationView() {
+  const { target: presetTarget } = useSearch({ from: "/_panel/moderation" });
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<GuildMember[]>([]);
   const [searching, setSearching] = useState(false);
@@ -40,13 +87,21 @@ export function ModerationView() {
   const [customDur, setCustomDur] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [recentReasons, setRecentReasons] = useState<string[]>([]);
+  const [history, setHistory] = useState<PlayerRecord[] | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const customParsed = customDur.trim() ? parseMuteDuration(customDur) : null;
 
-  async function search(e?: FormEvent) {
+  useEffect(() => {
+    setRecentReasons(loadRecentReasons());
+  }, []);
+
+  async function search(e?: FormEvent, preset?: string) {
     e?.preventDefault();
+    const text = preset ?? query;
     setSearching(true);
     try {
-      const rows = await searchMembersFn({ data: { query } });
+      const rows = await searchMembersFn({ data: { query: text } });
       setHits(rows);
       if (rows.length === 1) setTarget(rows[0]);
     } catch (err) {
@@ -55,6 +110,37 @@ export function ModerationView() {
       setSearching(false);
     }
   }
+
+  // Переход «Наказать» со страницы игрока: подставляем SteamID и ищем сразу.
+  useEffect(() => {
+    if (!presetTarget) return;
+    setQuery(presetTarget);
+    void search(undefined, presetTarget);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetTarget]);
+
+  // История выбранного игрока — чтобы видеть, за что и когда его уже наказывали.
+  useEffect(() => {
+    if (!target) {
+      setHistory(null);
+      return;
+    }
+    let alive = true;
+    setHistoryLoading(true);
+    void getPlayerRecordsFn({ data: { steamid: target.id } })
+      .then((res) => {
+        if (alive) setHistory(res.records);
+      })
+      .catch(() => {
+        if (alive) setHistory(null);
+      })
+      .finally(() => {
+        if (alive) setHistoryLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [target]);
 
   const display = useMemo(() => {
     if (!target) return null;
@@ -86,6 +172,8 @@ export function ModerationView() {
         },
       });
       toast.success(res.message);
+      saveRecentReason(reason);
+      setRecentReasons(loadRecentReasons());
       setReason("");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Действие не выполнено");
@@ -105,6 +193,11 @@ export function ModerationView() {
     }
     void submit();
   }
+
+  const reasonChips = useMemo(() => {
+    const all = [...recentReasons, ...COMMON_REASONS];
+    return all.filter((r, i) => all.indexOf(r) === i).slice(0, 8);
+  }, [recentReasons]);
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-10">
@@ -173,6 +266,45 @@ export function ModerationView() {
           <span className="font-medium text-fg">{display ?? "не выбрана"}</span>
         </p>
 
+        {target ? (
+          <div className="mt-3 rounded-md border border-border bg-elevated/50 px-3 py-2.5 text-xs">
+            <div className="flex items-center gap-2 text-muted">
+              <History className="size-3.5 shrink-0" />
+              {historyLoading ? (
+                "Загружаю историю игрока…"
+              ) : history && history.length ? (
+                <span>
+                  Наказаний за месяц: <b className="text-fg">{history.length}</b> · последнее{" "}
+                  {fmtShortDate(history[0].created)}
+                </span>
+              ) : (
+                <span>За текущий месяц наказаний не было</span>
+              )}
+              <Link
+                to="/player/$steamid"
+                params={{ steamid: target.id }}
+                className="ml-auto inline-flex shrink-0 items-center gap-1 text-accent hover:underline"
+              >
+                Профиль
+                <ExternalLink className="size-3" />
+              </Link>
+            </div>
+            {history && history.length ? (
+              <ul className="mt-2 space-y-1">
+                {history.slice(0, 3).map((r) => (
+                  <li key={r.id} className="flex items-center gap-2 text-subtle">
+                    <Badge tone={r.kind === "ban" ? "danger" : "warn"} className="shrink-0">
+                      {r.kind === "ban" ? "Бан" : "Мут"}
+                    </Badge>
+                    <span className="min-w-0 flex-1 truncate text-muted">{r.reason || "без причины"}</span>
+                    <span className="shrink-0 font-mono text-[10px]">{fmtShortDate(r.created)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="mt-4 flex flex-wrap gap-2">
           {ACTIONS.map((a) => (
             <Button
@@ -229,6 +361,23 @@ export function ModerationView() {
         {action !== "unmute" ? (
           <div className="mt-5 grid gap-2">
             <Label htmlFor="reason">Причина</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {reasonChips.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setReason(r)}
+                  className={cn(
+                    "h-7 rounded-full border px-2.5 text-[11px] transition-colors",
+                    reason === r
+                      ? "border-accent/40 bg-accent/15 text-accent"
+                      : "border-border bg-elevated text-muted hover:text-fg",
+                  )}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
             <Textarea
               id="reason"
               placeholder="Нарушение правил сервера"
