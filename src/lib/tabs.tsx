@@ -50,7 +50,7 @@ export const TABS: TabDef[] = [
   { id: "stats", to: "/stats", label: "Стата", desc: "Статистика модераторов", icon: BarChart3, cap: "canStats" },
   { id: "tops", to: "/tops", label: "Топы", desc: "Рейтинг модераторов", icon: Trophy, cap: "canStats" },
   { id: "moderation", to: "/moderation", label: "Модер", desc: "Наказания и модерация", icon: ShieldCheck, cap: "canModeration" },
-  { id: "suspicious", to: "/suspicious", label: "Подозрит.", desc: "Подозрительные аккаунты", icon: ShieldAlert, cap: "canModeration" },
+  { id: "suspicious", to: "/suspicious", label: "Подозрит.", desc: "Подозрительные аккаунты", icon: ShieldAlert, cap: "canStats" },
   { id: "voice", to: "/voice", label: "Голос", desc: "Озвучка", icon: Volume2, cap: "canVoice" },
   { id: "logs", to: "/logs", label: "Логи", desc: "Журнал событий", icon: ScrollText, cap: "canLogs" },
   { id: "power", to: "/power", label: "Питание", desc: "Управление ботом", icon: Power, cap: "canPower" },

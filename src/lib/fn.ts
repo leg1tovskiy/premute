@@ -361,7 +361,7 @@ export const getSuspiciousFn = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<{ updatedAt: number | null; players: SuspiciousPlayer[] }> => {
     const { getStaff } = await import("./server/staff");
     const me = await getStaff(context.userId);
-    if (!me?.caps.canModeration) throw new Error("Нет доступа.");
+    if (!me?.caps.canStats) throw new Error("Нет доступа к статистике.");
     const { fetchWorkerSuspicious } = await import("./server/discord");
     const data = await fetchWorkerSuspicious();
     if (!data) throw new Error("Воркер статистики недоступен.");
