@@ -199,14 +199,16 @@ export function SuspiciousView() {
                 >
                   <ExternalLink className="size-3.5" />
                 </a>
-                <Link
-                  to="/moderation"
-                  search={{ target: p.steamid }}
-                  className="inline-flex h-8 items-center gap-1 rounded-sm bg-accent px-2.5 text-xs font-medium text-accent-fg transition-[filter] hover:brightness-110"
-                >
-                  <Gavel className="size-3.5" />
-                  Наказать
-                </Link>
+                {p.source === 'report' ? (
+                  <Link
+                    to="/moderation"
+                    search={{ target: p.steamid }}
+                    className="inline-flex h-8 items-center gap-1 rounded-sm bg-accent px-2.5 text-xs font-medium text-accent-fg transition-[filter] hover:brightness-110"
+                  >
+                    <Gavel className="size-3.5" />
+                    Рассмотреть жалобу
+                  </Link>
+                ) : null}
               </div>
             </li>
           ))}
