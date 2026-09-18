@@ -195,11 +195,7 @@ export async function updateStaffPermissions(
   targetUserId: string,
   patch: {
     canStats?: boolean;
-    canModeration?: boolean;
-    canVoice?: boolean;
     canMods?: boolean;
-    canLogs?: boolean;
-    canPower?: boolean;
     isOwner?: boolean;
     isBotOwner?: boolean;
     setRoot?: boolean;
@@ -257,11 +253,7 @@ export async function updateStaffPermissions(
   const isOwner = patch.isOwner ?? target.isOwner;
 
   const canStats = patch.canStats ?? target.canStats;
-  const canModeration = patch.canModeration ?? target.canModeration;
-  const canVoice = patch.canVoice ?? target.canVoice;
   const canMods = patch.canMods ?? target.canMods;
-  const canLogs = patch.canLogs ?? target.canLogs;
-  const canPower = patch.canPower ?? target.canPower;
   if (patch.tag !== undefined && !actor.caps.isOwner) {
     throw new Error("Теги могут назначать только владельцы.");
   }
@@ -274,11 +266,7 @@ export async function updateStaffPermissions(
   await sql`
     update staff set
       can_stats = ${canStats},
-      can_moderation = ${canModeration},
-      can_voice = ${canVoice},
       can_mods = ${canMods},
-      can_logs = ${canLogs},
-      can_power = ${canPower},
       is_root = ${isRoot},
       is_owner = ${isOwner},
       is_bot_owner = ${isBotOwner},

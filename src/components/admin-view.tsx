@@ -58,11 +58,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
         data: {
           userId,
           canStats: next.canStats,
-          canModeration: next.canModeration,
-          canVoice: next.canVoice,
           canMods: next.canMods,
-          canLogs: next.canLogs,
-          canPower: next.canPower,
           isOwner: next.isOwner,
           isBotOwner: next.isBotOwner,
           setRoot: next.setRoot,
@@ -102,8 +98,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
         <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-accent">Админ панель</p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Доступ к вкладкам</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Выдавайте статистику, модерирование, озвучивание, логи, питание, теги у аватарки и
-          управление составом модераторов.
+          Выдавайте статистику, управление составом модераторов и теги у аватарки.
           {me.caps.canGrantBotOwner
             ? " «Владелец» (красный) — команды Discord. Нажатие по нему переключает в «Корневого владельца» и обратно. Назначать владельцев бота может корневой владелец."
             : me.caps.canGrantOwner
@@ -176,34 +171,10 @@ export function AdminView({ me }: { me: StaffProfile }) {
                       onChange={(v) => void patch(u.userId, { ...u, canStats: v })}
                     />
                     <Toggle
-                      label="Модерация"
-                      checked={u.isOwner || u.canModeration}
-                      disabled={locked || u.isOwner}
-                      onChange={(v) => void patch(u.userId, { ...u, canModeration: v })}
-                    />
-                    <Toggle
-                      label="Озвучка"
-                      checked={u.isOwner || u.canVoice}
-                      disabled={locked || u.isOwner}
-                      onChange={(v) => void patch(u.userId, { ...u, canVoice: v })}
-                    />
-                    <Toggle
                       label="Модераторы"
                       checked={u.isOwner || u.canMods}
                       disabled={locked || u.isOwner}
                       onChange={(v) => void patch(u.userId, { ...u, canMods: v })}
-                    />
-                    <Toggle
-                      label="Логи"
-                      checked={u.isOwner || u.canLogs}
-                      disabled={locked || u.isOwner}
-                      onChange={(v) => void patch(u.userId, { ...u, canLogs: v })}
-                    />
-                    <Toggle
-                      label="Питание"
-                      checked={u.isOwner || u.canPower}
-                      disabled={locked || u.isOwner}
-                      onChange={(v) => void patch(u.userId, { ...u, canPower: v })}
                     />
                     {me.caps.canGrantBotOwner ? (
                       <Toggle

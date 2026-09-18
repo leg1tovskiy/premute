@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
-import { ChevronLeft, Download, ExternalLink, Gavel, RefreshCw, ShieldAlert } from "lucide-react";
+import { ChevronLeft, Download, ExternalLink, RefreshCw, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -162,14 +162,6 @@ export function PlayerView() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Link
-            to="/moderation"
-            search={{ target: steamid }}
-            className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-accent px-3 text-xs font-medium text-accent-fg transition-[filter] hover:brightness-110"
-          >
-            <Gavel className="size-3.5" />
-            Наказать
-          </Link>
           <a
             href={fearProfileUrl(steamid)}
             target="_blank"

@@ -14,15 +14,10 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PanelIndexRouteImport } from './routes/_panel.index'
 import { Route as PanelSlugRouteImport } from './routes/_panel.$slug'
 import { Route as PanelAdminRouteImport } from './routes/_panel.admin'
-import { Route as PanelConsoleRouteImport } from './routes/_panel.console'
-import { Route as PanelLogsRouteImport } from './routes/_panel.logs'
-import { Route as PanelModerationRouteImport } from './routes/_panel.moderation'
 import { Route as PanelModsRouteImport } from './routes/_panel.mods'
-import { Route as PanelPowerRouteImport } from './routes/_panel.power'
 import { Route as PanelStatsRouteImport } from './routes/_panel.stats'
 import { Route as PanelSuspiciousRouteImport } from './routes/_panel.suspicious'
 import { Route as PanelTopsRouteImport } from './routes/_panel.tops'
-import { Route as PanelVoiceRouteImport } from './routes/_panel.voice'
 import { Route as PanelPlayerSteamidRouteImport } from './routes/_panel.player.$steamid'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
@@ -50,29 +45,9 @@ const PanelAdminRoute = PanelAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => PanelRoute,
 } as any)
-const PanelConsoleRoute = PanelConsoleRouteImport.update({
-  id: '/console',
-  path: '/console',
-  getParentRoute: () => PanelRoute,
-} as any)
-const PanelLogsRoute = PanelLogsRouteImport.update({
-  id: '/logs',
-  path: '/logs',
-  getParentRoute: () => PanelRoute,
-} as any)
-const PanelModerationRoute = PanelModerationRouteImport.update({
-  id: '/moderation',
-  path: '/moderation',
-  getParentRoute: () => PanelRoute,
-} as any)
 const PanelModsRoute = PanelModsRouteImport.update({
   id: '/mods',
   path: '/mods',
-  getParentRoute: () => PanelRoute,
-} as any)
-const PanelPowerRoute = PanelPowerRouteImport.update({
-  id: '/power',
-  path: '/power',
   getParentRoute: () => PanelRoute,
 } as any)
 const PanelStatsRoute = PanelStatsRouteImport.update({
@@ -88,11 +63,6 @@ const PanelSuspiciousRoute = PanelSuspiciousRouteImport.update({
 const PanelTopsRoute = PanelTopsRouteImport.update({
   id: '/tops',
   path: '/tops',
-  getParentRoute: () => PanelRoute,
-} as any)
-const PanelVoiceRoute = PanelVoiceRouteImport.update({
-  id: '/voice',
-  path: '/voice',
   getParentRoute: () => PanelRoute,
 } as any)
 const PanelPlayerSteamidRoute = PanelPlayerSteamidRouteImport.update({
@@ -111,15 +81,10 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/$slug': typeof PanelSlugRoute
   '/admin': typeof PanelAdminRoute
-  '/console': typeof PanelConsoleRoute
-  '/logs': typeof PanelLogsRoute
-  '/moderation': typeof PanelModerationRoute
   '/mods': typeof PanelModsRoute
-  '/power': typeof PanelPowerRoute
   '/stats': typeof PanelStatsRoute
   '/suspicious': typeof PanelSuspiciousRoute
   '/tops': typeof PanelTopsRoute
-  '/voice': typeof PanelVoiceRoute
   '/player/$steamid': typeof PanelPlayerSteamidRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
@@ -127,15 +92,10 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/$slug': typeof PanelSlugRoute
   '/admin': typeof PanelAdminRoute
-  '/console': typeof PanelConsoleRoute
-  '/logs': typeof PanelLogsRoute
-  '/moderation': typeof PanelModerationRoute
   '/mods': typeof PanelModsRoute
-  '/power': typeof PanelPowerRoute
   '/stats': typeof PanelStatsRoute
   '/suspicious': typeof PanelSuspiciousRoute
   '/tops': typeof PanelTopsRoute
-  '/voice': typeof PanelVoiceRoute
   '/': typeof PanelIndexRoute
   '/player/$steamid': typeof PanelPlayerSteamidRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -146,15 +106,10 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_panel/$slug': typeof PanelSlugRoute
   '/_panel/admin': typeof PanelAdminRoute
-  '/_panel/console': typeof PanelConsoleRoute
-  '/_panel/logs': typeof PanelLogsRoute
-  '/_panel/moderation': typeof PanelModerationRoute
   '/_panel/mods': typeof PanelModsRoute
-  '/_panel/power': typeof PanelPowerRoute
   '/_panel/stats': typeof PanelStatsRoute
   '/_panel/suspicious': typeof PanelSuspiciousRoute
   '/_panel/tops': typeof PanelTopsRoute
-  '/_panel/voice': typeof PanelVoiceRoute
   '/_panel/': typeof PanelIndexRoute
   '/_panel/player/$steamid': typeof PanelPlayerSteamidRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -166,15 +121,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/$slug'
     | '/admin'
-    | '/console'
-    | '/logs'
-    | '/moderation'
     | '/mods'
-    | '/power'
     | '/stats'
     | '/suspicious'
     | '/tops'
-    | '/voice'
     | '/player/$steamid'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
@@ -182,15 +132,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/$slug'
     | '/admin'
-    | '/console'
-    | '/logs'
-    | '/moderation'
     | '/mods'
-    | '/power'
     | '/stats'
     | '/suspicious'
     | '/tops'
-    | '/voice'
     | '/'
     | '/player/$steamid'
     | '/api/auth/$'
@@ -200,15 +145,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/_panel/$slug'
     | '/_panel/admin'
-    | '/_panel/console'
-    | '/_panel/logs'
-    | '/_panel/moderation'
     | '/_panel/mods'
-    | '/_panel/power'
     | '/_panel/stats'
     | '/_panel/suspicious'
     | '/_panel/tops'
-    | '/_panel/voice'
     | '/_panel/'
     | '/_panel/player/$steamid'
     | '/api/auth/$'
@@ -257,39 +197,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PanelAdminRouteImport
       parentRoute: typeof PanelRoute
     }
-    '/_panel/console': {
-      id: '/_panel/console'
-      path: '/console'
-      fullPath: '/console'
-      preLoaderRoute: typeof PanelConsoleRouteImport
-      parentRoute: typeof PanelRoute
-    }
-    '/_panel/logs': {
-      id: '/_panel/logs'
-      path: '/logs'
-      fullPath: '/logs'
-      preLoaderRoute: typeof PanelLogsRouteImport
-      parentRoute: typeof PanelRoute
-    }
-    '/_panel/moderation': {
-      id: '/_panel/moderation'
-      path: '/moderation'
-      fullPath: '/moderation'
-      preLoaderRoute: typeof PanelModerationRouteImport
-      parentRoute: typeof PanelRoute
-    }
     '/_panel/mods': {
       id: '/_panel/mods'
       path: '/mods'
       fullPath: '/mods'
       preLoaderRoute: typeof PanelModsRouteImport
-      parentRoute: typeof PanelRoute
-    }
-    '/_panel/power': {
-      id: '/_panel/power'
-      path: '/power'
-      fullPath: '/power'
-      preLoaderRoute: typeof PanelPowerRouteImport
       parentRoute: typeof PanelRoute
     }
     '/_panel/stats': {
@@ -313,13 +225,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PanelTopsRouteImport
       parentRoute: typeof PanelRoute
     }
-    '/_panel/voice': {
-      id: '/_panel/voice'
-      path: '/voice'
-      fullPath: '/voice'
-      preLoaderRoute: typeof PanelVoiceRouteImport
-      parentRoute: typeof PanelRoute
-    }
     '/_panel/player/$steamid': {
       id: '/_panel/player/$steamid'
       path: '/player/$steamid'
@@ -340,15 +245,10 @@ declare module '@tanstack/react-router' {
 interface PanelRouteChildren {
   PanelSlugRoute: typeof PanelSlugRoute
   PanelAdminRoute: typeof PanelAdminRoute
-  PanelConsoleRoute: typeof PanelConsoleRoute
-  PanelLogsRoute: typeof PanelLogsRoute
-  PanelModerationRoute: typeof PanelModerationRoute
   PanelModsRoute: typeof PanelModsRoute
-  PanelPowerRoute: typeof PanelPowerRoute
   PanelStatsRoute: typeof PanelStatsRoute
   PanelSuspiciousRoute: typeof PanelSuspiciousRoute
   PanelTopsRoute: typeof PanelTopsRoute
-  PanelVoiceRoute: typeof PanelVoiceRoute
   PanelIndexRoute: typeof PanelIndexRoute
   PanelPlayerSteamidRoute: typeof PanelPlayerSteamidRoute
 }
@@ -356,15 +256,10 @@ interface PanelRouteChildren {
 const PanelRouteChildren: PanelRouteChildren = {
   PanelSlugRoute: PanelSlugRoute,
   PanelAdminRoute: PanelAdminRoute,
-  PanelConsoleRoute: PanelConsoleRoute,
-  PanelLogsRoute: PanelLogsRoute,
-  PanelModerationRoute: PanelModerationRoute,
   PanelModsRoute: PanelModsRoute,
-  PanelPowerRoute: PanelPowerRoute,
   PanelStatsRoute: PanelStatsRoute,
   PanelSuspiciousRoute: PanelSuspiciousRoute,
   PanelTopsRoute: PanelTopsRoute,
-  PanelVoiceRoute: PanelVoiceRoute,
   PanelIndexRoute: PanelIndexRoute,
   PanelPlayerSteamidRoute: PanelPlayerSteamidRoute,
 }

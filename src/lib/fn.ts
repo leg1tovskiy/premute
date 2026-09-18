@@ -4,8 +4,6 @@ import type {
   BackupsPayload,
   DailyPoint,
   DiscordClaim,
-  GuildMember,
-  LogEntry,
   ModDetails,
   PlayerRecord,
   RosterPayload,
@@ -14,7 +12,6 @@ import type {
   StatsPayload,
   SuspiciousPayload,
   SystemStatus,
-  VoiceChannel,
 } from "@/lib/types";
 
 export const getMe = createServerFn({ method: "POST" })
@@ -58,11 +55,7 @@ export const setStaffPerms = createServerFn({ method: "POST" })
     (d: {
       userId: string;
       canStats?: boolean;
-      canModeration?: boolean;
-      canVoice?: boolean;
       canMods?: boolean;
-      canLogs?: boolean;
-      canPower?: boolean;
       isOwner?: boolean;
       isBotOwner?: boolean;
       setRoot?: boolean;
@@ -75,11 +68,7 @@ export const setStaffPerms = createServerFn({ method: "POST" })
     if (!me) throw new Error("Профиль не найден.");
     const updated = await updateStaffPermissions(me, data.userId, {
       canStats: data.canStats,
-      canModeration: data.canModeration,
-      canVoice: data.canVoice,
       canMods: data.canMods,
-      canLogs: data.canLogs,
-      canPower: data.canPower,
       isOwner: data.isOwner,
       isBotOwner: data.isBotOwner,
       setRoot: data.setRoot,
@@ -144,193 +133,6 @@ export const getModDetailsFn = createServerFn({ method: "POST" })
     };
   });
 
-export const searchMembersFn = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator((d: { query: string }) => d)
-  .handler(async ({ context, data }): Promise<GuildMember[]> => {
-    const { getStaff } = await import("./server/staff");
-    const me = await getStaff(context.userId);
-    if (!me?.caps.canModeration) throw new Error("Нет доступа к модерированию.");
-    const { searchMembers } = await import("./server/discord");
-    return searchMembers(data.query);
-  });
-
-export const moderateFn = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator(
-    (d: {
-      action: "ban" | "kick" | "mute" | "unmute" | "warn";
-      targetId: string;
-      reason?: string;
-      durationMs?: number;
-    }) => d,
-  )
-  .handler(async ({ context, data }): Promise<{ ok: true; message: string }> => {
-    const { getStaff, writeLog } = await import("./server/staff");
-    const me = await getStaff(context.userId);
-    if (!me?.caps.canModeration) throw new Error("Нет доступа к модерированию.");
-    const actor = me.displayName || me.email || context.userId;
-    const reason = (data.reason || "Без причины").slice(0, 300);
-    const d = await import("./server/discord");
-    const tag = `${actor}`;
-    // В логах цель показываем как в Discord: ник на сервере (username).
-    const target = await d.fetchGuildMember(data.targetId);
-    const targetTag = target
-      ? `**${target.nick || target.globalName || target.username}** (\`${target.username}\`)`
-      : `\`${data.targetId}\``;
-    if (data.action === "ban") {
-      await d.banMember(data.targetId, reason, tag);
-      await d.sendLog(`🔨 Бан — **${tag}** → ${targetTag} • ${reason}`);
-    } else if (data.action === "kick") {
-      await d.kickMember(data.targetId, reason, tag);
-      await d.sendLog(`Кик — **${tag}** → ${targetTag} • ${reason}`);
-    } else if (data.action === "mute") {
-      await d.muteMember(data.targetId, data.durationMs || 10 * 60 * 1000, reason, tag);
-      await d.sendLog(`Мут — **${tag}** → ${targetTag} • ${reason}`);
-    } else if (data.action === "unmute") {
-      await d.unmuteMember(data.targetId);
-      await d.sendLog(`Размут — **${tag}** → ${targetTag}`);
-    } else if (data.action === "warn") {
-      await d.sendWarn(data.targetId, reason, tag);
-    }
-    await writeLog(context.userId, data.action, `${data.targetId} ${reason}`);
-    const labels: Record<string, string> = {
-      ban: "Пользователь забанен",
-      kick: "Пользователь кикнут",
-      mute: "Мут выдан",
-      unmute: "Мут снят",
-      warn: "Предупреждение отправлено",
-    };
-    return { ok: true, message: labels[data.action] };
-  });
-
-export const listVoiceChannelsFn = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator((_d: unknown) => ({}))
-  .handler(async ({ context, data: _data }): Promise<VoiceChannel[]> => {
-    const { getStaff } = await import("./server/staff");
-    const me = await getStaff(context.userId);
-    if (!me?.caps.canVoice) throw new Error("Нет доступа.");
-    const { listVoiceChannels } = await import("./server/discord");
-    return listVoiceChannels();
-  });
-
-export const listTextChannelsFn = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator((_d: unknown) => ({}))
-  .handler(async ({ context, data: _data }): Promise<VoiceChannel[]> => {
-    const { getStaff } = await import("./server/staff");
-    const me = await getStaff(context.userId);
-    if (!me?.caps.canVoice) throw new Error("Нет доступа.");
-    const { listTextChannels } = await import("./server/discord");
-    return listTextChannels();
-  });
-
-export const searchMembersVoiceFn = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator((d: { query: string }) => d)
-  .handler(async ({ context, data }): Promise<GuildMember[]> => {
-    const { getStaff } = await import("./server/staff");
-    const me = await getStaff(context.userId);
-    if (!me?.caps.canVoice) throw new Error("Нет доступа.");
-    const { searchMembers } = await import("./server/discord");
-    return searchMembers(data.query);
-  });
-
-export const botSendFn = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator(
-    (d: {
-      place: "dm" | "channel";
-      userId?: string;
-      channelId?: string;
-      text: string;
-      mention: "none" | "user" | "everyone";
-      sign: boolean;
-    }) => d,
-  )
-  .handler(async ({ context, data }): Promise<{ ok: true }> => {
-    const { getStaff, writeLog } = await import("./server/staff");
-    const me = await getStaff(context.userId);
-    if (!me?.caps.canVoice) throw new Error("Нет доступа к отправке сообщений.");
-    const text = data.text.trim().slice(0, 1500);
-    if (!text) throw new Error("Пустой текст.");
-    const d = await import("./server/discord");
-    const actor = me.displayName || me.email || context.userId;
-    let who = "";
-    if (data.place === "dm") {
-      if (!data.userId) throw new Error("Не выбран получатель.");
-      const m = await d.fetchGuildMember(data.userId);
-      const name = m ? m.nick || m.globalName || m.username : data.userId;
-      const prefix = data.sign ? `**Сообщение от ${actor}:**\n` : "";
-      await d.sendBotDm(data.userId, prefix + text);
-      who = `ЛС → **${name}** (\`${m?.username ?? "?"}\`)`;
-    } else {
-      if (!data.channelId) throw new Error("Не выбран канал.");
-      const chans = await d.listTextChannels();
-      const ch = chans.find((c) => c.id === data.channelId);
-      let body = text;
-      if (data.mention === "user" && data.userId) {
-        body = `<@${data.userId}>, ${text}`;
-      } else if (data.mention === "everyone") {
-        body = `@everyone\n${text}`;
-      }
-      const prefix = data.sign ? `-# от ${actor}\n` : "";
-      await d.sendChannelMessage(data.channelId, prefix + body);
-      who = `канал → **#${ch?.name ?? data.channelId}**${data.mention === "everyone" ? " (@everyone)" : ""}`;
-    }
-    await writeLog(context.userId, "bot-send", `${who} • ${text.slice(0, 100)}`);
-    return { ok: true };
-  });
-
-export const botScheduleSendFn = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator(
-    (d: {
-      place: "dm" | "channel";
-      userId?: string;
-      channelId?: string;
-      text: string;
-      mention: "none" | "user" | "everyone";
-      sign: boolean;
-      when: number;
-    }) => d,
-  )
-  .handler(async ({ context, data }): Promise<{ ok: true; when: number }> => {
-    const { getStaff, writeLog } = await import("./server/staff");
-    const me = await getStaff(context.userId);
-    if (!me?.caps.canVoice) throw new Error("Нет доступа к отправке сообщений.");
-    const text = data.text.trim().slice(0, 1500);
-    if (!text) throw new Error("Пустой текст.");
-    const when = Number(data.when);
-    if (!Number.isFinite(when) || when <= Date.now()) throw new Error("Время отправки уже прошло.");
-    if (when - Date.now() > 366 * 24 * 3600 * 1000) throw new Error("Не дальше чем на год вперёд.");
-    const d = await import("./server/discord");
-    const actor = me.displayName || me.email || context.userId;
-    let who = "";
-    if (data.place === "dm") {
-      if (!data.userId) throw new Error("Не выбран получатель.");
-      const m = await d.fetchGuildMember(data.userId);
-      who = `ЛС → **${m ? m.nick || m.globalName || m.username : data.userId}**`;
-    } else {
-      if (!data.channelId) throw new Error("Не выбран канал.");
-      const chans = await d.listTextChannels();
-      const ch = chans.find((c) => c.id === data.channelId);
-      who = `канал → **#${ch?.name ?? data.channelId}**${data.mention === "everyone" ? " (@everyone)" : ""}`;
-    }
-    const msk = new Intl.DateTimeFormat("ru-RU", {
-      timeZone: "Europe/Moscow",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(when));
-    const scheduled = await d.scheduleBotSend({ ...data, text, actor, when });
-    await writeLog(context.userId, "bot-schedule", `${who} • ${text.slice(0, 100)} • на ${msk} МСК`);
-    return { ok: true, when: scheduled.when };
-  });
-
 export const getDailyStatsFn = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }): Promise<DailyPoint[]> => {
@@ -348,7 +150,7 @@ export const getPlayerRecordsFn = createServerFn({ method: "POST" })
   .handler(async ({ context, data }): Promise<{ month: string | null; records: PlayerRecord[] }> => {
     const { getStaff } = await import("./server/staff");
     const me = await getStaff(context.userId);
-    if (!me?.caps.canStats && !me?.caps.canModeration) throw new Error("Нет доступа.");
+    if (!me?.caps.canStats) throw new Error("Нет доступа к статистике.");
     const steamid = String(data.steamid || "").trim();
     if (!/^\d{17}$/.test(steamid)) throw new Error("SteamID64 — 17 цифр.");
     const { fetchWorkerPlayer } = await import("./server/discord");
@@ -427,96 +229,6 @@ export const moderatorOnlineFn = createServerFn({ method: "POST" })
       return res || {};
     },
   );
-
-export const getLogsFn = createServerFn({ method: "GET" })  .middleware([authMiddleware])
-  .handler(async ({ context }): Promise<LogEntry[]> => {
-    const { getStaff } = await import("./server/staff");
-    const me = await getStaff(context.userId);
-    if (!me?.caps.canLogs) throw new Error("Нет доступа к логам.");
-    const { fetchBotLogs } = await import("./server/discord");
-    const rows = await fetchBotLogs();
-    if (!rows) throw new Error("Бот недоступен — логи временно не получить.");
-    return rows.map((r) => ({ ts: r.ts, text: r.text }));
-  });
-
-export const botPowerFn = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator((d: { action: "restart" | "shutdown" }) => d)
-  .handler(async ({ context, data }): Promise<{ ok: true }> => {
-    const { getStaff, writeLog } = await import("./server/staff");
-    const me = await getStaff(context.userId);
-    if (!me?.caps.canPower) throw new Error("Нет доступа к управлению питанием.");
-    const actor = me.displayName || me.email || context.userId;
-    const { botPower } = await import("./server/discord");
-    await botPower(data.action, actor);
-    await writeLog(context.userId, "power", data.action);
-    return { ok: true };
-  });
-
-export const playSoundFn = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator((d: { file: string; channelId?: string }) => d)
-  .handler(async ({ context, data }): Promise<{ ok: true }> => {
-    const { getStaff, writeLog } = await import("./server/staff");
-    const me = await getStaff(context.userId);
-    if (!me?.caps.canVoice) throw new Error("Нет доступа к озвучиванию.");
-    const allowed = new Set(["eye.mp3", "koza1.mp3", "koza2.mp3", "svin.mp3"]);
-    if (!allowed.has(data.file)) throw new Error("Неизвестный звук.");
-    const d = await import("./server/discord");
-    const actor = me.displayName || me.email || context.userId;
-    await d.playInVoice({
-      op: "sound",
-      file: data.file,
-      channelId: data.channelId,
-      actor,
-    });
-    await writeLog(context.userId, "sound", data.file);
-    return { ok: true };
-  });
-
-export const sayFn = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator((d: { text: string; channelId?: string }) => d)
-  .handler(async ({ context, data }): Promise<{ ok: true }> => {
-    const { getStaff, writeLog } = await import("./server/staff");
-    const me = await getStaff(context.userId);
-    if (!me?.caps.canVoice) throw new Error("Нет доступа к озвучиванию.");
-    const text = data.text.trim().slice(0, 190);
-    if (!text) throw new Error("Введите текст.");
-    const d = await import("./server/discord");
-    const actor = me.displayName || me.email || context.userId;
-    await d.playInVoice({
-      op: "say",
-      text,
-      channelId: data.channelId,
-      actor,
-    });
-    await writeLog(context.userId, "say", text);
-    return { ok: true };
-  });
-
-// Голосовое сообщение с сайта (запись с микрофона) -> бот играет в войсе, где сидит.
-// Аудио приходит base64 (webm/opus), ~1.5 МБ на минуту — в лимиты Vercel влезает.
-export const voiceRecordFn = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator((d: { audio: string; mime?: string }) => d)
-  .handler(async ({ context, data }): Promise<{ ok: true }> => {
-    const { getStaff, writeLog } = await import("./server/staff");
-    const me = await getStaff(context.userId);
-    if (!me?.caps.canVoice) throw new Error("Нет доступа к озвучиванию.");
-    const mime = data.mime && data.mime.startsWith("audio/") ? data.mime : "audio/webm";
-    const base64 = String(data.audio || "").replace(/^data:[^,]*,/, "");
-    if (!base64) throw new Error("Пустая запись.");
-    const bytes = Math.floor((base64.length * 3) / 4);
-    if (bytes < 1000) throw new Error("Слишком короткая запись.");
-    if (bytes > 6 * 1024 * 1024) throw new Error("Запись слишком длинная (макс ~6 МБ, около минуты).");
-    const d = await import("./server/discord");
-    const actor = me.displayName || me.email || context.userId;
-    const buffer = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-    await d.botVoiceUpload(buffer.buffer as ArrayBuffer, mime, "", actor);
-    await writeLog(context.userId, "voice_record", `${Math.round(bytes / 1024)} КБ ${mime}`);
-    return { ok: true };
-  });
 
 const STEAMID_RE = /^\d{17}$/;
 
