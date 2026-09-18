@@ -185,6 +185,9 @@ export type SystemStatus = {
   checkedAt: number;
 };
 
+/** Откуда игрок попал во вкладку «Подозрительные». */
+export type SuspiciousSource = "online" | "ticket" | "report";
+
 export type SuspiciousPlayer = {
   steamid: string;
   nickname: string;
@@ -197,6 +200,28 @@ export type SuspiciousPlayer = {
   kd: number;
   rank: number | null;
   value: number;
+  /** online — фильтр по онлайну, ticket — тикет с KD/часами, report — жалоба по причине. */
+  source?: SuspiciousSource;
+  /** Причина жалобы, по которой игрок попал в список (для source === "report"). */
+  reason?: string | null;
+  /** Все подходящие причины жалоб игрока. */
+  reasons?: string[];
+  /** Сколько жалоб (тикетов) на игрока в текущей выборке. */
+  reports?: number;
+};
+
+/** Диагностика источника тикетов fearproject.ru (cookie задаётся в .env воркера). */
+export type SuspiciousTicketsInfo = {
+  configured: boolean;
+  error: string | null;
+  count: number;
+};
+
+/** Ответ воркера на /suspicious: список подозрительных + диагностика тикетов. */
+export type SuspiciousPayload = {
+  updatedAt: number | null;
+  tickets: SuspiciousTicketsInfo | null;
+  players: SuspiciousPlayer[];
 };
 
 export type GuildMember = {

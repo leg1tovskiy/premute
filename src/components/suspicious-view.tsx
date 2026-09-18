@@ -1,12 +1,29 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ExternalLink, Gavel, Loader2, RefreshCw, ShieldAlert, Timer } from "lucide-react";
+import {
+  ExternalLink,
+  Gavel,
+  Loader2,
+  MessageSquareWarning,
+  RefreshCw,
+  ShieldAlert,
+  TicketCheck,
+  Timer,
+  TriangleAlert,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeaderSkeleton, RowsSkeleton } from "@/components/skeletons";
 import { getSuspiciousFn } from "@/lib/fn";
 import { fearProfileUrl } from "@/lib/constants";
-import type { SuspiciousPlayer } from "@/lib/types";
+import type { SuspiciousPayload, SuspiciousSource } from "@/lib/types";
+
+/** Как бейдж выглядит для каждого источника попадания игрока в список. */
+const SOURCE_BADGES: Record<SuspiciousSource, { label: string; tone: "muted" | "warn" | "danger" }> = {
+  online: { label: "Онлайн", tone: "muted" },
+  ticket: { label: "Тикет", tone: "warn" },
+  report: { label: "Жалоба", tone: "danger" },
+};
 
 function fmtPlaytime(sec: number) {
   const h = Math.floor(sec / 3600);
@@ -28,7 +45,7 @@ function fmtTime(sec: number) {
 }
 
 export function SuspiciousView() {
-  const [data, setData] = useState<{ updatedAt: number | null; players: SuspiciousPlayer[] } | null>(null);
+  const [data, setData] = useState<SuspiciousPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -76,6 +93,8 @@ export function SuspiciousView() {
   }
 
   const players = data?.players ?? [];
+  const tickets = data?.tickets ?? null;
+  const ticketsWarning = tickets && (!tickets.configured || tickets.error) ? tickets : null;
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:py-10">
@@ -84,7 +103,8 @@ export function SuspiciousView() {
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">Античит</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Подозрительные аккаунты</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted">
-            Только игроки, которые сейчас на серверах: наиграно меньше 2 часов и KD выше 2.
+            Онлайн-игроки с KD выше 2 и наигранными меньше 2 часов, нарушители из тикетов
+            fearproject.ru и все, на кого жаловались по причине «Спам микрофон/чат» или «Токсичность».
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -97,6 +117,20 @@ export function SuspiciousView() {
           </Button>
         </div>
       </header>
+
+      {ticketsWarning ? (
+        <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-warn/25 bg-warn/10 px-4 py-3">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warn" />
+          <div className="min-w-0 text-xs">
+            <p className="font-medium text-warn">Тикеты fearproject.ru не подключены</p>
+            <p className="mt-0.5 text-subtle">
+              {!ticketsWarning.configured
+                ? "В воркере статистики не задан FEAR_ADMIN_COOKIE — игроки из тикетов и жалобы пока не попадают в список."
+                : `Не удалось получить тикеты: ${ticketsWarning.error}`}
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {players.length === 0 ? (
         <div className="rounded-lg border border-border bg-surface px-5 py-14 text-center shadow-[var(--shadow-panel)]">
@@ -127,14 +161,28 @@ export function SuspiciousView() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-                <Badge tone="danger">KD {p.kd.toFixed(2)}</Badge>
-                <span className="inline-flex items-center gap-1 text-xs tabular-nums text-muted">
-                  <Timer className="size-3.5" />
-                  {fmtPlaytime(p.playtime)}
-                </span>
-                <span className="text-xs tabular-nums text-subtle">
-                  {p.kills}/{p.deaths}
-                </span>
+                <Badge tone={SOURCE_BADGES[p.source ?? "online"].tone}>
+                  {SOURCE_BADGES[p.source ?? "online"].label}
+                </Badge>
+                {p.reason ? (
+                  <Badge tone="danger" className="normal-case">
+                    <MessageSquareWarning className="size-3" />
+                    {p.reason}
+                  </Badge>
+                ) : null}
+                {p.reports != null && p.reports > 1 ? <Badge tone="muted">жалоб: {p.reports}</Badge> : null}
+                {p.playtime > 0 ? (
+                  <>
+                    <Badge tone="danger">KD {p.kd.toFixed(2)}</Badge>
+                    <span className="inline-flex items-center gap-1 text-xs tabular-nums text-muted">
+                      <Timer className="size-3.5" />
+                      {fmtPlaytime(p.playtime)}
+                    </span>
+                    <span className="text-xs tabular-nums text-subtle">
+                      {p.kills}/{p.deaths}
+                    </span>
+                  </>
+                ) : null}
                 <Link
                   to="/player/$steamid"
                   params={{ steamid: p.steamid }}
@@ -165,8 +213,12 @@ export function SuspiciousView() {
         </ul>
       )}
 
-      <p className="mt-4 text-xs text-subtle">
-        KD и время считаются из профиля FearProject; админы серверов в список не попадают.
+      <p className="mt-4 flex items-start gap-1.5 text-xs text-subtle">
+        <TicketCheck className="mt-0.5 size-3.5 shrink-0" />
+        <span>
+          KD и время считаются из профиля FearProject; админы серверов в список не попадают. Жалобы и
+          тикеты берутся из админки fearproject.ru.
+        </span>
       </p>
     </div>
   );

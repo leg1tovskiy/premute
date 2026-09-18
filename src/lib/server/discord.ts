@@ -18,6 +18,7 @@ import type {
   RosterMod,
   RosterPayload,
   SuspiciousPlayer,
+  SuspiciousTicketsInfo,
   VoiceChannel,
 } from "@/lib/types";
 
@@ -483,6 +484,7 @@ export async function fetchBotAlive(): Promise<boolean> {
 
 export async function fetchWorkerSuspicious(): Promise<{
   updatedAt?: number;
+  tickets?: SuspiciousTicketsInfo;
   players?: SuspiciousPlayer[];
 } | null> {
   try {
@@ -490,7 +492,12 @@ export async function fetchWorkerSuspicious(): Promise<{
       signal: AbortSignal.timeout(25000),
     });
     if (!res.ok) return null;
-    const json = (await res.json()) as { ok?: boolean; updatedAt?: number; players?: SuspiciousPlayer[] };
+    const json = (await res.json()) as {
+      ok?: boolean;
+      updatedAt?: number;
+      tickets?: SuspiciousTicketsInfo;
+      players?: SuspiciousPlayer[];
+    };
     if (!json.ok) return null;
     return json;
   } catch {
