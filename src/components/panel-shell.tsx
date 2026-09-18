@@ -255,14 +255,14 @@ export function HomeTiles() {
 
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">Разделы</h2>
-          <div className="mt-3 flex flex-wrap justify-center gap-3">
+          <div className="mt-3 flex flex-wrap justify-center gap-3 lg:flex-nowrap">
             {tiles.map((i) => {
               const Icon = i.icon;
               return (
                 <Link
                   key={i.id}
                   to={i.to}
-                  className="group flex w-full items-center gap-3 rounded-md border border-border bg-surface p-4 text-left transition-colors hover:border-accent/40 hover:bg-elevated sm:w-[calc(50%-0.375rem)] lg:w-[calc(33.3333%-0.5rem)] 2xl:w-[calc(25%-0.5625rem)]"
+                  className="group flex w-full items-center gap-3 rounded-md border border-border bg-surface p-4 text-left transition-colors hover:border-accent/40 hover:bg-elevated sm:w-[calc(50%-0.375rem)] lg:w-auto lg:min-w-0 lg:flex-1"
                 >
                   <span className="grid size-10 shrink-0 place-items-center rounded-sm border border-border bg-elevated text-accent transition-colors group-hover:border-accent/40">
                     <Icon className="size-4" />
