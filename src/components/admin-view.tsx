@@ -58,6 +58,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
         data: {
           userId,
           canStats: next.canStats,
+          canSuspicious: next.canSuspicious,
           canMods: next.canMods,
           isOwner: next.isOwner,
           isBotOwner: next.isBotOwner,
@@ -98,7 +99,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
         <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-accent">Админ панель</p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Доступ к вкладкам</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Выдавайте статистику, управление составом модераторов и теги у аватарки.
+          Выдавайте статистику, подозрительные аккаунты, управление составом модераторов и теги у аватарки.
           {me.caps.canGrantBotOwner
             ? " «Владелец» (красный) — команды Discord. Нажатие по нему переключает в «Корневого владельца» и обратно. Назначать владельцев бота может корневой владелец."
             : me.caps.canGrantOwner
@@ -169,6 +170,12 @@ export function AdminView({ me }: { me: StaffProfile }) {
                       checked={u.isOwner || u.canStats}
                       disabled={locked || u.isOwner}
                       onChange={(v) => void patch(u.userId, { ...u, canStats: v })}
+                    />
+                    <Toggle
+                      label="Подозрительные"
+                      checked={u.isOwner || u.canSuspicious}
+                      disabled={locked || u.isOwner}
+                      onChange={(v) => void patch(u.userId, { ...u, canSuspicious: v })}
                     />
                     <Toggle
                       label="Модераторы"

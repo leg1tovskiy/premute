@@ -55,6 +55,7 @@ export const setStaffPerms = createServerFn({ method: "POST" })
     (d: {
       userId: string;
       canStats?: boolean;
+      canSuspicious?: boolean;
       canMods?: boolean;
       isOwner?: boolean;
       isBotOwner?: boolean;
@@ -68,6 +69,7 @@ export const setStaffPerms = createServerFn({ method: "POST" })
     if (!me) throw new Error("Профиль не найден.");
     const updated = await updateStaffPermissions(me, data.userId, {
       canStats: data.canStats,
+      canSuspicious: data.canSuspicious,
       canMods: data.canMods,
       isOwner: data.isOwner,
       isBotOwner: data.isBotOwner,
@@ -163,7 +165,7 @@ export const getSuspiciousFn = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<SuspiciousPayload> => {
     const { getStaff } = await import("./server/staff");
     const me = await getStaff(context.userId);
-    if (!me?.caps.canStats) throw new Error("Нет доступа к статистике.");
+    if (!me?.caps.canSuspicious) throw new Error("Нет доступа к подозрительным аккаунтам.");
     const { fetchWorkerSuspicious } = await import("./server/discord");
     const data = await fetchWorkerSuspicious();
     if (!data) throw new Error("Воркер статистики недоступен.");

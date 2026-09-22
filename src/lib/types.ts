@@ -2,6 +2,7 @@ export type Caps = {
   isRoot: boolean;
   isOwner: boolean;
   canStats: boolean;
+  canSuspicious: boolean;
   canModeration: boolean;
   canVoice: boolean;
   canMods: boolean;
@@ -25,6 +26,7 @@ export type StaffProfile = {
   isOwner: boolean;
   isBotOwner: boolean;
   canStats: boolean;
+  canSuspicious: boolean;
   canModeration: boolean;
   canVoice: boolean;
   canMods: boolean;

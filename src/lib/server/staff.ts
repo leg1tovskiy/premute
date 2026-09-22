@@ -23,6 +23,7 @@ export function computeCaps(row: {
   is_owner: unknown;
   is_bot_owner: unknown;
   can_stats: unknown;
+  can_suspicious: unknown;
   can_moderation: unknown;
   can_voice: unknown;
   can_mods: unknown;
@@ -33,6 +34,7 @@ export function computeCaps(row: {
   // «Владелец сайта» — полный доступ к сайту. «Владелец бота» (красный) — команды Discord.
   const isOwner = isRoot || flag(row.is_owner);
   const canStats = isOwner || flag(row.can_stats);
+  const canSuspicious = isOwner || flag(row.can_suspicious);
   const canModeration = isOwner || flag(row.can_moderation);
   const canVoice = isOwner || flag(row.can_voice);
   const canMods = isOwner || flag(row.can_mods);
@@ -45,6 +47,7 @@ export function computeCaps(row: {
     isRoot,
     isOwner,
     canStats,
+    canSuspicious,
     canModeration,
     canVoice,
     canMods,
@@ -56,7 +59,7 @@ export function computeCaps(row: {
     canGrantOwner: isRoot,
     // Назначать/снимать «владельцев бота» может только корневой владелец.
     canGrantBotOwner: isRoot,
-    waiting: !(canStats || canModeration || canVoice || canMods || canLogs || canPower || canConsole || canAdmin),
+    waiting: !(canStats || canSuspicious || canModeration || canVoice || canMods || canLogs || canPower || canConsole || canAdmin),
   };
 }
 
@@ -70,6 +73,7 @@ type StaffRow = {
   is_owner: unknown;
   is_bot_owner: unknown;
   can_stats: unknown;
+  can_suspicious: unknown;
   can_moderation: unknown;
   can_voice: unknown;
   can_mods: unknown;
@@ -93,6 +97,7 @@ function toProfile(row: StaffRow): StaffProfile {
     isOwner: caps.isOwner,
     isBotOwner: flag(row.is_bot_owner) && !caps.isRoot,
     canStats: flag(row.can_stats),
+    canSuspicious: flag(row.can_suspicious),
     canModeration: flag(row.can_moderation),
     canVoice: flag(row.can_voice),
     canMods: flag(row.can_mods),
@@ -176,6 +181,7 @@ export async function claimDiscordId(userId: string, discordId: string): Promise
           is_root = true,
           is_owner = true,
           can_stats = true,
+          can_suspicious = true,
           can_moderation = true,
           can_voice = true,
           can_mods = true,
@@ -195,6 +201,7 @@ export async function updateStaffPermissions(
   targetUserId: string,
   patch: {
     canStats?: boolean;
+    canSuspicious?: boolean;
     canMods?: boolean;
     isOwner?: boolean;
     isBotOwner?: boolean;
@@ -253,6 +260,7 @@ export async function updateStaffPermissions(
   const isOwner = patch.isOwner ?? target.isOwner;
 
   const canStats = patch.canStats ?? target.canStats;
+  const canSuspicious = patch.canSuspicious ?? target.canSuspicious;
   const canMods = patch.canMods ?? target.canMods;
   if (patch.tag !== undefined && !actor.caps.isOwner) {
     throw new Error("Теги могут назначать только владельцы.");
@@ -263,9 +271,11 @@ export async function updateStaffPermissions(
   await sql.query("alter table staff add column if not exists is_bot_owner boolean not null default false");
   await sql.query("alter table staff add column if not exists can_logs boolean not null default false");
   await sql.query("alter table staff add column if not exists can_power boolean not null default false");
+  await sql.query("alter table staff add column if not exists can_suspicious boolean not null default false");
   await sql`
     update staff set
       can_stats = ${canStats},
+      can_suspicious = ${canSuspicious},
       can_mods = ${canMods},
       is_root = ${isRoot},
       is_owner = ${isOwner},

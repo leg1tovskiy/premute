@@ -4,7 +4,7 @@ import { RequireCap } from "@/lib/panel";
 
 export const Route = createFileRoute("/_panel/suspicious")({
   component: () => (
-    <RequireCap cap="canStats">
+    <RequireCap cap="canSuspicious">
       <SuspiciousView />
     </RequireCap>
   ),
