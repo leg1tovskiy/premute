@@ -18,6 +18,8 @@
   --color-silver: #c5c9d1;
   --color-bronze: #c4845a;
   --color-embed: #4d70ef;
+  --color-chart-bans: var(--color-accent);
+  --color-chart-mutes: color-mix(in oklab, var(--color-accent) 55%, var(--color-muted));
 
   --font-sans: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;

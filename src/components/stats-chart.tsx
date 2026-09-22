@@ -40,11 +40,11 @@ export function ModeratorsChart({ mods }: { mods: ModRow[] }) {
         </h2>
         <div className="flex items-center gap-4 text-xs text-muted">
           <span className="inline-flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full bg-danger" aria-hidden="true" />
+            <span className="size-2.5 rounded-full" style={{ background: "var(--color-chart-bans)" }} aria-hidden="true" />
             Баны
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full bg-warn" aria-hidden="true" />
+            <span className="size-2.5 rounded-full" style={{ background: "var(--color-chart-mutes)" }} aria-hidden="true" />
             Муты
           </span>
         </div>
@@ -76,8 +76,8 @@ export function ModeratorsChart({ mods }: { mods: ModRow[] }) {
                   fontSize: 12,
                 }}
               />
-              <Bar dataKey="Баны" stackId="a" fill="#e5484d" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="Муты" stackId="a" fill="#f5a524" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="Баны" stackId="a" fill="var(--color-chart-bans)" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="Муты" stackId="a" fill="var(--color-chart-mutes)" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         ) : (
