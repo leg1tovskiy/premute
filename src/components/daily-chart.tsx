@@ -17,6 +17,37 @@ function fmtDay(date: string) {
   return `${d}.${m}`;
 }
 
+function DailyTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ dataKey: string; value: number }>; label?: string }) {
+  if (!active || !payload || !payload.length) return null;
+  const bans = payload.find((p) => p.dataKey === "Баны")?.value ?? 0;
+  const mutes = payload.find((p) => p.dataKey === "Муты")?.value ?? 0;
+  const total = bans + mutes;
+  return (
+    <div
+      style={{
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-border)",
+        borderRadius: 8,
+        padding: "8px 10px",
+        fontSize: 12,
+        color: "var(--color-fg)",
+        minWidth: 110,
+      }}
+    >
+      <p style={{ margin: 0, fontWeight: 600 }}>{label}</p>
+      <p style={{ margin: "6px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ width: 8, height: 8, borderRadius: 999, background: "var(--color-chart-bans)", flexShrink: 0 }} />
+        Баны: {bans}
+      </p>
+      <p style={{ margin: "3px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ width: 8, height: 8, borderRadius: 999, background: "var(--color-chart-mutes)", flexShrink: 0 }} />
+        Муты: {mutes}
+      </p>
+      <p style={{ margin: "6px 0 0", fontWeight: 600, borderTop: "1px solid var(--color-border)", paddingTop: 6 }}>общее: {total}</p>
+    </div>
+  );
+}
+
 export function DailyChart() {
   const [days, setDays] = useState<DailyPoint[] | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -71,16 +102,7 @@ export function DailyChart() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
               <XAxis dataKey="name" tick={{ fill: "var(--color-muted)", fontSize: 11 }} />
               <YAxis allowDecimals={false} tick={{ fill: "var(--color-muted)", fontSize: 11 }} />
-              <Tooltip
-                cursor={{ fill: "var(--color-elevated)" }}
-                contentStyle={{
-                  background: "var(--color-surface)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: 8,
-                  color: "var(--color-fg)",
-                  fontSize: 12,
-                }}
-              />
+              <Tooltip cursor={{ fill: "var(--color-elevated)" }} content={<DailyTooltip />} />
               <Bar dataKey="Баны" stackId="a" fill="var(--color-chart-bans)" radius={[3, 3, 0, 0]} />
               <Bar dataKey="Муты" stackId="a" fill="var(--color-chart-mutes)" radius={[3, 3, 0, 0]} />
             </BarChart>

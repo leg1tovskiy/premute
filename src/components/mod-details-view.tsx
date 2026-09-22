@@ -85,6 +85,37 @@ function moscowDateKey(tsSec: number): string {
   return new Date(tsSec * 1000).toLocaleDateString("en-CA", { timeZone: "Europe/Moscow" });
 }
 
+function ModChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ dataKey: string; value: number; color: string }>; label?: string }) {
+  if (!active || !payload || !payload.length) return null;
+  const bans = payload.find((p) => p.dataKey === "Баны")?.value ?? 0;
+  const mutes = payload.find((p) => p.dataKey === "Муты")?.value ?? 0;
+  const total = bans + mutes;
+  return (
+    <div
+      style={{
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-border)",
+        borderRadius: 8,
+        padding: "8px 10px",
+        fontSize: 12,
+        color: "var(--color-fg)",
+        minWidth: 110,
+      }}
+    >
+      <p style={{ margin: 0, fontWeight: 600 }}>{label}</p>
+      <p style={{ margin: "6px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ width: 8, height: 8, borderRadius: 999, background: "var(--color-chart-bans)", flexShrink: 0 }} />
+        Баны: {bans}
+      </p>
+      <p style={{ margin: "3px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ width: 8, height: 8, borderRadius: 999, background: "var(--color-chart-mutes)", flexShrink: 0 }} />
+        Муты: {mutes}
+      </p>
+      <p style={{ margin: "6px 0 0", fontWeight: 600, borderTop: "1px solid var(--color-border)", paddingTop: 6 }}>общее: {total}</p>
+    </div>
+  );
+}
+
 function buildModDailyData(
   records: PunishmentRecord[],
   monthStart: number | null,
@@ -151,118 +182,41 @@ function ModDailyCharts({
       </section>
     );
   }
-  const maxTotal = Math.max(...daily.map((d) => d.total), 1);
   return (
-    <>
-      <section className="mt-6 rounded-lg border border-border bg-surface p-4 shadow-[var(--shadow-panel)] sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Наказания по дням — {handle}</h2>
-          <div className="flex items-center gap-4 text-xs text-muted">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full" style={{ background: "var(--color-chart-bans)" }} aria-hidden="true" />
-              Баны
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full" style={{ background: "var(--color-chart-mutes)" }} aria-hidden="true" />
-              Муты
-            </span>
-          </div>
-        </div>
-        <div className="mt-4 h-56 w-full">
-          {mounted ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={daily} margin={{ top: 4, right: 8, bottom: 4, left: -22 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-                <XAxis dataKey="name" tick={{ fill: "var(--color-muted)", fontSize: 11 }} />
-                <YAxis allowDecimals={false} tick={{ fill: "var(--color-muted)", fontSize: 11 }} />
-                <Tooltip
-                  cursor={{ fill: "var(--color-elevated)" }}
-                  contentStyle={{
-                    background: "var(--color-surface)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: 8,
-                    color: "var(--color-fg)",
-                    fontSize: 12,
-                  }}
-                />
-                <Bar dataKey="Баны" stackId="a" fill="var(--color-chart-bans)" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="Муты" stackId="a" fill="var(--color-chart-mutes)" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <Skeleton className="h-full w-full" />
-          )}
-        </div>
-        <p className="mt-3 text-xs text-subtle">
-          {month} · {activeDays} активных дней из {totalDays} · показано по МСК
-        </p>
-      </section>
-      <section className="mt-6 rounded-lg border border-border bg-surface p-4 shadow-[var(--shadow-panel)] sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Дни активности</h2>
-          <span className="text-xs tabular-nums text-muted">
-            {activeDays}/{totalDays} дней · макс {maxTotal} за день
+    <section className="mt-6 rounded-lg border border-border bg-surface p-4 shadow-[var(--shadow-panel)] sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Наказания по дням — {handle}</h2>
+        <div className="flex items-center gap-4 text-xs text-muted">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="size-2.5 rounded-full" style={{ background: "var(--color-chart-bans)" }} aria-hidden="true" />
+            Баны
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="size-2.5 rounded-full" style={{ background: "var(--color-chart-mutes)" }} aria-hidden="true" />
+            Муты
           </span>
         </div>
-        <div className="mt-4 h-28 w-full">
-          {mounted ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={daily} margin={{ top: 4, right: 8, bottom: 4, left: -22 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-                <XAxis dataKey="name" tick={{ fill: "var(--color-muted)", fontSize: 10 }} interval={Math.ceil(daily.length / 12)} />
-                <YAxis allowDecimals={false} tick={{ fill: "var(--color-muted)", fontSize: 11 }} />
-                <Tooltip
-                  cursor={{ fill: "var(--color-elevated)" }}
-                  contentStyle={{
-                    background: "var(--color-surface)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: 8,
-                    color: "var(--color-fg)",
-                    fontSize: 12,
-                  }}
-                  formatter={(value: number) => [value, "Всего"]}
-                />
-                <Bar dataKey="total" fill="var(--color-chart-bans)" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <Skeleton className="h-full w-full" />
-          )}
-        </div>
-        <div className="mt-4 grid grid-cols-7 gap-1.5 sm:gap-2">
-          {daily.map((d) => {
-            const intensity = d.total === 0 ? 0 : Math.min(1, d.total / Math.max(1, maxTotal));
-            const bg =
-              d.total === 0
-                ? "bg-elevated border-border"
-                : intensity < 0.33
-                  ? "border-transparent"
-                  : intensity < 0.66
-                    ? "border-transparent"
-                    : "border-transparent";
-            const style =
-              d.total === 0
-                ? {}
-                : intensity < 0.33
-                  ? { background: "color-mix(in oklab, var(--color-chart-bans) 35%, var(--color-elevated))" }
-                  : intensity < 0.66
-                    ? { background: "color-mix(in oklab, var(--color-chart-bans) 62%, var(--color-elevated))" }
-                    : { background: "var(--color-chart-bans)" };
-            return (
-              <div
-                key={d.dateKey}
-                title={`${d.name}: ${d.total} (${d.Баны} банов, ${d.Муты} мутов)`}
-                className={cn("grid h-9 place-items-center rounded-sm border text-[11px] font-medium tabular-nums", bg)}
-                style={style}
-              >
-                <span className={cn(d.total === 0 ? "text-subtle" : "text-[var(--color-accent-fg)]")}>{d.name.slice(0, 2)}</span>
-              </div>
-            );
-          })}
-        </div>
-        <p className="mt-3 text-xs text-subtle">Цвет — интенсивность наказаний в этот день (по МСК). Серые — без наказаний.</p>
-      </section>
-    </>
+      </div>
+      <div className="mt-4 h-56 w-full">
+        {mounted ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={daily} margin={{ top: 4, right: 8, bottom: 4, left: -22 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+              <XAxis dataKey="name" tick={{ fill: "var(--color-muted)", fontSize: 11 }} />
+              <YAxis allowDecimals={false} tick={{ fill: "var(--color-muted)", fontSize: 11 }} />
+              <Tooltip cursor={{ fill: "var(--color-elevated)" }} content={<ModChartTooltip />} />
+              <Bar dataKey="Баны" stackId="a" fill="var(--color-chart-bans)" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="Муты" stackId="a" fill="var(--color-chart-mutes)" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <Skeleton className="h-full w-full" />
+        )}
+      </div>
+      <p className="mt-3 text-xs text-subtle">
+        {month} · {activeDays} активных дней из {totalDays} · показано по МСК
+      </p>
+    </section>
   );
 }
 
