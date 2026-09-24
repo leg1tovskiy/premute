@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, Download, Gamepad2, Hammer, Loader2, RefreshCw, Unlock, VolumeX } from "lucide-react";
+import { ChevronRight, Clock3, Download, Gamepad2, Hammer, Loader2, RefreshCw, Unlock, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ModeratorsChart } from "@/components/stats-chart";
 import { DailyChart } from "@/components/daily-chart";
@@ -99,7 +99,7 @@ function ModeratorCard({
             {m.rank ? ` · ${RANK_SHORT[m.rank] ?? "—"}` : ""}
           </p>
         </div>
-        <OnlineBadges info={info} />
+        <PresenceBadge info={info} lastOnline={m.lastOnline} />
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 min-[560px]:grid-cols-4">
@@ -376,13 +376,45 @@ export function StatsView() {
   );
 }
 
-function OnlineBadges({ info }: { info?: OnlineInfo }) {
-  if (!info) return null;
+function PresenceBadge({
+  info,
+  lastOnline,
+}: {
+  info?: OnlineInfo;
+  lastOnline: StatsPayload["moderators"][number]["lastOnline"];
+}) {
+  if (info) {
+    return (
+      <span className="ml-auto mr-2 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
+        <Gamepad2 className="size-3.5" />
+        <span className="max-w-44 truncate" title={info.map ? `${info.server} · ${info.map}` : info.server}>
+          {info.server}
+        </span>
+      </span>
+    );
+  }
+  if (!lastOnline?.ts) return null;
+  const d = new Date(lastOnline.ts * 1000);
+  const time = new Intl.DateTimeFormat("ru-RU", {
+    timeZone: "Europe/Moscow",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
+  const date = new Intl.DateTimeFormat("ru-RU", {
+    timeZone: "Europe/Moscow",
+    day: "2-digit",
+    month: "2-digit",
+  }).format(d);
+  const server = lastOnline.server ?? "—";
+  const title = [lastOnline.nickname, lastOnline.map].filter(Boolean).join(" · ") || server;
   return (
-    <span className="ml-auto mr-2 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
-      <Gamepad2 className="size-3.5" />
-      <span className="max-w-44 truncate" title={info.map ? `${info.server} · ${info.map}` : info.server}>
-        {info.server}
+    <span
+      className="ml-auto mr-2 inline-flex max-w-[11rem] shrink-0 items-center gap-1.5 truncate rounded-full border border-border bg-elevated px-2.5 py-0.5 text-xs font-medium text-muted"
+      title={`${title} · ${date} ${time} МСК`}
+    >
+      <Clock3 className="size-3.5 shrink-0 text-subtle" />
+      <span className="truncate">
+        {server} · {date} {time}
       </span>
     </span>
   );
