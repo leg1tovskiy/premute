@@ -405,16 +405,14 @@ function PresenceBadge({
     day: "2-digit",
     month: "2-digit",
   }).format(d);
-  const server = lastOnline.server ?? "—";
-  const title = [lastOnline.nickname, lastOnline.map].filter(Boolean).join(" · ") || server;
   return (
     <span
       className="ml-auto mr-2 inline-flex max-w-[11rem] shrink-0 items-center gap-1.5 truncate rounded-full border border-border bg-elevated px-2.5 py-0.5 text-xs font-medium text-muted"
-      title={`${title} · ${date} ${time} МСК`}
+      title={`${date} ${time} МСК`}
     >
       <Clock3 className="size-3.5 shrink-0 text-subtle" />
       <span className="truncate">
-        {server} · {date} {time}
+        {date} {time}
       </span>
     </span>
   );
