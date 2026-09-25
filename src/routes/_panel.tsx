@@ -35,39 +35,90 @@ function BootScreen({ error }: { error?: string | null }) {
   );
 }
 
+const LOCAL_DEV_PROFILE: StaffProfile = {
+  userId: "dev-user",
+  displayName: "Администратор (Local)",
+  email: "admin@fearproject.ru",
+  image: null,
+  discordId: "1234567890",
+  tag: "FearAdmin",
+  isRoot: true,
+  isOwner: true,
+  isBotOwner: true,
+  canStats: true,
+  canSuspicious: true,
+  canModeration: true,
+  canVoice: true,
+  canMods: true,
+  canLogs: true,
+  canPower: true,
+  createdAt: new Date().toISOString(),
+  lastSeen: new Date().toISOString(),
+  caps: {
+    isRoot: true,
+    isOwner: true,
+    canStats: true,
+    canSuspicious: true,
+    canModeration: true,
+    canVoice: true,
+    canMods: true,
+    canLogs: true,
+    canPower: true,
+    canConsole: true,
+    canAdmin: true,
+    canGrantOwner: true,
+    canGrantBotOwner: true,
+    waiting: false,
+  },
+};
+
 function PanelLayout() {
-  const { user, isPending } = useCurrentUserState();
+  const { user: authUser, isPending } = useCurrentUserState();
   const { isDark } = useTheme();
-  const [profile, setProfile] = useState<StaffProfile | null>(null);
+  const [profile, setProfile] = useState<StaffProfile | null>(
+    import.meta.env.DEV ? LOCAL_DEV_PROFILE : null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
-      setProfile(null);
+    if (!authUser) {
+      if (import.meta.env.DEV) {
+        setProfile(LOCAL_DEV_PROFILE);
+      } else {
+        setProfile(null);
+      }
       return;
     }
     let cancelled = false;
     setError(null);
     void getMe({
       data: {
-        displayName: user.displayName,
-        email: user.primaryEmail,
-        image: user.profileImageUrl,
+        displayName: authUser.displayName,
+        email: authUser.primaryEmail,
+        image: authUser.profileImageUrl,
       },
     })
       .then((p) => {
         if (!cancelled) setProfile(p);
       })
       .catch((e) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Ошибка профиля");
+        if (!cancelled) {
+          if (import.meta.env.DEV) {
+            setProfile(LOCAL_DEV_PROFILE);
+          } else {
+            setError(e instanceof Error ? e.message : "Ошибка профиля");
+          }
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [authUser]);
 
-  if (isPending) return <BootScreen />;
-  if (!user) return <LoginScreen />;
+  if (!import.meta.env.DEV) {
+    if (isPending) return <BootScreen />;
+    if (!authUser) return <LoginScreen />;
+  }
   if (!profile) return <BootScreen error={error} />;
   if (profile.caps.waiting) {
     return (

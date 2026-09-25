@@ -33,7 +33,7 @@ export function ModeratorsChart({ mods }: { mods: ModRow[] }) {
   if (data.length === 0) return null;
 
   return (
-    <section className="mt-8 rounded-lg border border-border bg-surface p-4 shadow-[var(--shadow-panel)] sm:p-5">
+    <section className="mt-8 rounded-2xl border border-border/80 bg-surface/90 glass-panel p-5 sm:p-6 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
           Топ-10 по наказаниям за месяц

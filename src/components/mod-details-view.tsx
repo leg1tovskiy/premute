@@ -1,6 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
-import { ChevronLeft, Download, ExternalLink, Hammer, RefreshCw, Search, Unlock, VolumeX } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  CheckCircle2,
+  ChevronLeft,
+  Clock,
+  Download,
+  ExternalLink,
+  Flame,
+  Hammer,
+  RefreshCw,
+  Search,
+  Shield,
+  Unlock,
+  VolumeX,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +25,15 @@ import { downloadCsv } from "@/lib/csv";
 import { RANK_SHORT, fearProfileUrl } from "@/lib/constants";
 import type { ModDetails, PunishmentRecord } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 function fmtDate(sec: number) {
   try {
@@ -59,61 +82,11 @@ function recordStatus(r: PunishmentRecord): { label: string; className: string }
   if (r.expires && r.expires <= Math.floor(Date.now() / 1000)) {
     return { label: "Истёк", className: "text-subtle" };
   }
-  return { label: "Активен", className: "text-success" };
-}
-
-function MetricTile({
-  value,
-  label,
-  className,
-  valueClassName,
-}: {
-  value: number | string;
-  label: string;
-  className?: string;
-  valueClassName?: string;
-}) {
-  return (
-    <div className={cn("flex flex-col items-center justify-center rounded-2xl border px-3 py-3 text-center", className)}>
-      <p className={cn("text-2xl font-bold tabular-nums leading-none", valueClassName)}>{value}</p>
-      <p className="mt-1.5 text-xs font-medium leading-tight text-muted">{label}</p>
-    </div>
-  );
+  return { label: "Активен", className: "text-success font-bold" };
 }
 
 function moscowDateKey(tsSec: number): string {
   return new Date(tsSec * 1000).toLocaleDateString("en-CA", { timeZone: "Europe/Moscow" });
-}
-
-function ModChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ dataKey: string; value: number; color: string }>; label?: string }) {
-  if (!active || !payload || !payload.length) return null;
-  const bans = payload.find((p) => p.dataKey === "Баны")?.value ?? 0;
-  const mutes = payload.find((p) => p.dataKey === "Муты")?.value ?? 0;
-  const total = bans + mutes;
-  return (
-    <div
-      style={{
-        background: "var(--color-surface)",
-        border: "1px solid var(--color-border)",
-        borderRadius: 8,
-        padding: "8px 10px",
-        fontSize: 12,
-        color: "var(--color-fg)",
-        minWidth: 110,
-      }}
-    >
-      <p style={{ margin: 0, fontWeight: 600 }}>{label}</p>
-      <p style={{ margin: "6px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ width: 8, height: 8, borderRadius: 999, background: "var(--color-chart-bans)", flexShrink: 0 }} />
-        Баны: {bans}
-      </p>
-      <p style={{ margin: "3px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ width: 8, height: 8, borderRadius: 999, background: "var(--color-chart-mutes)", flexShrink: 0 }} />
-        Муты: {mutes}
-      </p>
-      <p style={{ margin: "6px 0 0", fontWeight: 600, borderTop: "1px solid var(--color-border)", paddingTop: 6 }}>общее: {total}</p>
-    </div>
-  );
 }
 
 function buildModDailyData(
@@ -172,50 +145,81 @@ function ModDailyCharts({
   const activeDays = useMemo(() => daily.filter((d) => d.total > 0).length, [daily]);
   const totalDays = daily.length;
   const hasData = daily.some((d) => d.total > 0);
+
   if (!hasData) {
     return (
-      <section className="mt-6 rounded-lg border border-border bg-surface p-4 shadow-[var(--shadow-panel)] sm:p-5">
-        <h2 className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Наказания по дням — {handle}</h2>
-        <p className="mt-4 rounded-md border border-border bg-elevated/60 px-4 py-8 text-center text-sm text-muted">
+      <section className="rounded-3xl border border-border/80 bg-surface/90 glass-panel p-5 sm:p-6 shadow-sm">
+        <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-muted">
+          График активности по дням &middot; {handle}
+        </h2>
+        <p className="mt-4 rounded-2xl border border-border/60 bg-elevated/40 px-4 py-8 text-center text-xs text-muted">
           В этом месяце график пуст — наказаний ещё нет.
         </p>
       </section>
     );
   }
+
   return (
-    <section className="mt-6 rounded-lg border border-border bg-surface p-4 shadow-[var(--shadow-panel)] sm:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Наказания по дням — {handle}</h2>
-        <div className="flex items-center gap-4 text-xs text-muted">
+    <section className="rounded-3xl border border-border/80 bg-surface/90 glass-panel p-5 sm:p-6 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-muted flex items-center gap-2">
+            <Flame className="size-4 text-accent" />
+            Наказания по дням &middot; {handle}
+          </h2>
+          <p className="text-xs text-subtle mt-0.5">
+            {month} &middot; {activeDays} активных дней из {totalDays} &middot; время МСК
+          </p>
+        </div>
+        <div className="flex items-center gap-4 text-xs font-medium text-muted">
           <span className="inline-flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full" style={{ background: "var(--color-chart-bans)" }} aria-hidden="true" />
+            <span className="size-2.5 rounded-full" style={{ background: "var(--color-chart-bans)" }} />
             Баны
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full" style={{ background: "var(--color-chart-mutes)" }} aria-hidden="true" />
+            <span className="size-2.5 rounded-full" style={{ background: "var(--color-chart-mutes)" }} />
             Муты
           </span>
         </div>
       </div>
-      <div className="mt-4 h-56 w-full">
+
+      <div className="mt-5 h-64 w-full">
         {mounted ? (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={daily} margin={{ top: 4, right: 8, bottom: 4, left: -22 }}>
+            <BarChart data={daily} margin={{ top: 8, right: 10, bottom: 4, left: -20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
               <XAxis dataKey="name" tick={{ fill: "var(--color-muted)", fontSize: 11 }} />
               <YAxis allowDecimals={false} tick={{ fill: "var(--color-muted)", fontSize: 11 }} />
-              <Tooltip cursor={{ fill: "var(--color-elevated)" }} content={<ModChartTooltip />} />
-              <Bar dataKey="Баны" stackId="a" fill="var(--color-chart-bans)" radius={[3, 3, 0, 0]} />
+              <Tooltip
+                cursor={{ fill: "var(--color-elevated)" }}
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  const bans = payload.find((p) => p.dataKey === "Баны")?.value ?? 0;
+                  const mutes = payload.find((p) => p.dataKey === "Муты")?.value ?? 0;
+                  return (
+                    <div className="rounded-xl border border-border bg-surface p-3 text-xs shadow-xl min-w-[130px]">
+                      <p className="font-bold text-fg mb-1.5">{label}</p>
+                      <p className="text-danger flex items-center justify-between">
+                        <span>Баны:</span> <span className="font-black">{bans}</span>
+                      </p>
+                      <p className="text-warn flex items-center justify-between mt-0.5">
+                        <span>Муты:</span> <span className="font-black">{mutes}</span>
+                      </p>
+                      <p className="border-t border-border mt-2 pt-1 font-bold text-fg flex items-center justify-between">
+                        <span>Всего:</span> <span className="font-black text-accent">{Number(bans) + Number(mutes)}</span>
+                      </p>
+                    </div>
+                  );
+                }}
+              />
+              <Bar dataKey="Баны" stackId="a" fill="var(--color-chart-bans)" radius={[0, 0, 0, 0]} />
               <Bar dataKey="Муты" stackId="a" fill="var(--color-chart-mutes)" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <Skeleton className="h-full w-full" />
+          <Skeleton className="h-full w-full rounded-2xl" />
         )}
       </div>
-      <p className="mt-3 text-xs text-subtle">
-        {month} · {activeDays} активных дней из {totalDays} · показано по МСК
-      </p>
     </section>
   );
 }
@@ -263,29 +267,24 @@ export function ModDetailsView() {
               : "active";
         if (status !== "all" && st !== status) return false;
         if (!q) return true;
-        return r.player.toLowerCase().includes(q) || (r.reason || "").toLowerCase().includes(q);
+        return (
+          r.player.toLowerCase().includes(q) ||
+          (r.reason || "").toLowerCase().includes(q) ||
+          r.playerSteamid.includes(q)
+        );
       });
   }, [data, kind, status, search]);
 
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-[1440px] px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
+      <div className="mx-auto w-full max-w-[1500px] px-4 py-8 sm:px-8 space-y-6">
         <PageHeaderSkeleton />
-        <div className="mt-8 flex items-center gap-3">
-          <Skeleton className="size-12 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-5 w-44" />
-            <Skeleton className="h-3 w-32" />
-          </div>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 min-[560px]:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-2xl" />
+            <Skeleton key={i} className="h-28 rounded-3xl" />
           ))}
         </div>
-        <div className="mt-8">
-          <RowsSkeleton rows={6} />
-        </div>
+        <RowsSkeleton rows={6} />
       </div>
     );
   }
@@ -293,9 +292,9 @@ export function ModDetailsView() {
   if (error) {
     return (
       <div className="mx-auto max-w-lg py-16 text-center">
-        <p className="text-danger">{error}</p>
-        <Button className="mt-4" onClick={() => void load()}>
-          Повторить
+        <p className="text-danger font-bold text-lg">{error}</p>
+        <Button className="mt-4 rounded-xl" onClick={() => void load()}>
+          Повторить попытку
         </Button>
       </div>
     );
@@ -304,16 +303,16 @@ export function ModDetailsView() {
   if (!data) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Модератор не найден</h1>
-        <p className="mt-2 text-sm text-muted">
-          Возможно, ссылка устарела или модератор больше не в составе.
+        <h1 className="text-2xl font-bold tracking-tight">Модератор не найден</h1>
+        <p className="mt-2 text-xs text-muted">
+          Возможно, ссылка устарела или модератор больше не состоит в составе.
         </p>
         <Link
           to="/stats"
-          className="mt-6 inline-flex h-9 items-center gap-1 rounded-sm border border-border bg-elevated px-3 text-xs font-medium text-muted transition-colors hover:text-fg"
+          className="mt-6 inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-elevated px-4 text-xs font-bold text-muted hover:text-fg"
         >
-          <ChevronLeft className="size-3.5" />
-          К статистике
+          <ChevronLeft className="size-4" />
+          Вернуться к статистике
         </Link>
       </div>
     );
@@ -324,76 +323,125 @@ export function ModDetailsView() {
   const initial = (handle.trim().charAt(0) || "?").toUpperCase();
   const monthTarget = m.norma?.month ?? null;
   const monthDone = monthTarget != null && monthTarget > 0 && m.total >= monthTarget;
+  const progressPct = monthTarget ? Math.min(Math.round((m.total / monthTarget) * 100), 100) : 0;
+  const actualRatio = monthTarget ? Math.round((m.total / monthTarget) * 100) : null;
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
-      <Link
-        to="/stats"
-        className="inline-flex h-8 items-center gap-1 rounded-sm border border-border bg-elevated px-2 text-xs font-medium text-muted transition-colors hover:text-fg"
-      >
-        <ChevronLeft className="size-3.5" />
-        Статистика
-      </Link>
+    <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 sm:py-8 space-y-6 animate-in fade-in duration-300">
+      {/* ── Top Back Link ──────────────────────────────────────────── */}
+      <div>
+        <Link
+          to="/stats"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-elevated/70 px-3 py-1.5 text-xs font-bold text-muted hover:border-accent hover:text-fg transition-all shadow-sm"
+        >
+          <ArrowLeft className="size-3.5" />
+          Назад к общей статистике
+        </Link>
+      </div>
 
-      <article className="mt-4 flex min-w-0 flex-col rounded-2xl border border-border bg-surface p-4 shadow-[var(--shadow-panel)] sm:p-5">
-        <div className="flex items-center gap-3">
-          {m.avatar ? (
-            <img src={m.avatar} alt="" className="size-12 shrink-0 rounded-full object-cover" />
-          ) : (
-            <span className="grid size-12 shrink-0 place-items-center rounded-full bg-elevated text-lg font-semibold text-fg">
-              {initial}
-            </span>
-          )}
-          <div className="min-w-0 flex-1">
-            <Link
-              to="/player/$steamid"
-              params={{ steamid: m.steamid }}
-              className="block truncate text-xl font-semibold leading-tight hover:underline"
-            >
-              {handle}
-            </Link>
-            <p className="mt-0.5 flex items-center gap-1.5 truncate font-mono text-xs text-subtle">
-              <span className="truncate">{m.steamid}</span>
-              {m.rank ? <span>· {RANK_SHORT[m.rank] ?? "—"}</span> : null}
-              <a
-                href={fearProfileUrl(m.steamid)}
-                target="_blank"
-                rel="noreferrer"
-                title="Профиль на FearProject"
-                className="inline-flex shrink-0 text-subtle transition-colors hover:text-fg"
-              >
-                <ExternalLink className="size-3" />
-              </a>
-            </p>
+      {/* ── Moderator Hero Profile Card ────────────────────────────── */}
+      <article className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-r from-surface via-surface/95 to-elevated/70 p-6 sm:p-8 shadow-2xl glass-panel cyber-border-glow">
+        <div className="absolute right-0 top-0 size-80 bg-accent/10 blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4 sm:gap-5">
+            {m.avatar ? (
+              <img
+                src={m.avatar}
+                alt=""
+                className="size-16 sm:size-20 shrink-0 rounded-2xl object-cover border-2 border-border/80 ring-4 ring-accent/20 shadow-xl"
+              />
+            ) : (
+              <span className="grid size-16 sm:size-20 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-surface to-elevated text-2xl font-black text-fg border-2 border-border/80 shadow-xl">
+                {initial}
+              </span>
+            )}
+
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <Link
+                  to="/player/$steamid"
+                  params={{ steamid: m.steamid }}
+                  className="truncate text-xl sm:text-3xl font-black text-fg hover:text-accent transition-colors"
+                >
+                  {handle}
+                </Link>
+                {m.rank ? (
+                  <span className="rounded-lg bg-accent/15 px-2.5 py-0.5 text-xs font-black uppercase text-accent border border-accent/25">
+                    {RANK_SHORT[m.rank] ?? "мод"}
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="mt-1 flex flex-wrap items-center gap-3 font-mono text-xs text-subtle">
+                <span className="truncate">{m.steamid}</span>
+                <a
+                  href={fearProfileUrl(m.steamid)}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Профиль на FearProject"
+                  className="inline-flex items-center gap-1 text-muted hover:text-accent transition-colors"
+                >
+                  FearProject <ExternalLink className="size-3" />
+                </a>
+                <span>&middot;</span>
+                <span>Обновлено {fmtUpdated(data.updatedAt)} МСК</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Norma Widget on Hero */}
+          <div className="rounded-2xl border border-border/70 bg-surface/80 p-4 shadow-sm min-w-[220px]">
+            <div className="flex items-center justify-between text-xs font-bold">
+              <span className="text-muted uppercase tracking-wider text-[10px]">Норма месяца</span>
+              <span className={cn("font-mono", monthDone ? "text-success" : "text-fg")}>
+                {m.total}/{monthTarget ?? "—"}{" "}
+                {actualRatio != null ? `(${actualRatio}%)` : ""}
+              </span>
+            </div>
+            <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-elevated border border-border/50">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  monthDone ? "bg-success shadow-[0_0_8px_var(--color-success)]" : "bg-accent/70",
+                )}
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 min-[560px]:grid-cols-4">
-          <MetricTile value={m.bans ?? "—"} label="Банов выдано" className="border-border bg-elevated/60" />
-          <MetricTile value={m.mutes ?? "—"} label="Мутов выдано" className="border-border bg-elevated/60" />
-          <MetricTile
-            value={m.total}
-            label="Выдано за период"
-            className="border-border bg-elevated/70"
-          />
-          <MetricTile value={m.removed ?? "—"} label="Снято · за период" className="border-border bg-elevated/70" />
-        </div>
+        {/* 4 Cyber Metric Chips */}
+        <div className="relative z-10 mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-2xl border border-danger/25 bg-danger/10 p-3.5 text-center transition-all hover:bg-danger/15">
+            <p className="text-3xl font-black tabular-nums text-danger">{m.bans ?? 0}</p>
+            <p className="mt-1 text-xs font-bold text-danger/80 flex items-center justify-center gap-1">
+              <Hammer className="size-3.5" /> Банов выдано
+            </p>
+          </div>
 
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-elevated/60 px-3 py-2 text-xs">
-          <span className="font-medium uppercase tracking-[0.18em] text-muted">Норма</span>
-          <span className="tabular-nums text-muted">
-            Мес{" "}
-            <span className={cn("font-semibold", monthDone ? "text-accent" : "text-fg")}>
-              {m.total}/{monthTarget ?? "—"}
-            </span>
-          </span>
-        </div>
+          <div className="rounded-2xl border border-warn/25 bg-warn/10 p-3.5 text-center transition-all hover:bg-warn/15">
+            <p className="text-3xl font-black tabular-nums text-warn">{m.mutes ?? 0}</p>
+            <p className="mt-1 text-xs font-bold text-warn/80 flex items-center justify-center gap-1">
+              <VolumeX className="size-3.5" /> Мутов выдано
+            </p>
+          </div>
 
-        <p className="mt-3 text-xs text-subtle">
-          {data.month} · данные на {fmtUpdated(data.updatedAt)} МСК
-        </p>
+          <div className="rounded-2xl border border-accent/30 bg-accent/15 p-3.5 text-center shadow-inner transition-all hover:bg-accent/20">
+            <p className="text-3xl font-black tabular-nums text-accent">{m.total}</p>
+            <p className="mt-1 text-xs font-bold text-accent">Выдано за период</p>
+          </div>
+
+          <div className="rounded-2xl border border-success/25 bg-success/10 p-3.5 text-center transition-all hover:bg-success/15">
+            <p className="text-3xl font-black tabular-nums text-success">{m.removed ?? 0}</p>
+            <p className="mt-1 text-xs font-bold text-success/80 flex items-center justify-center gap-1">
+              <Unlock className="size-3.5" /> Снято решений
+            </p>
+          </div>
+        </div>
       </article>
 
+      {/* ── Daily Chart Section ────────────────────────────────────── */}
       <ModDailyCharts
         records={data.records}
         month={data.month}
@@ -402,159 +450,176 @@ export function ModDetailsView() {
         handle={handle}
       />
 
-      <section className="mt-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-          <h2 className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
-            Все наказания за период
-          </h2>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {(
-              [
-                { id: "all", label: "Все" },
-                { id: "ban", label: "Баны" },
-                { id: "mute", label: "Муты" },
-              ] as const
-            ).map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setKind(f.id)}
-                className={cn(
-                  "h-7 rounded-sm border px-2.5 text-xs font-medium transition-colors",
-                  kind === f.id
-                    ? "border-border bg-elevated text-fg"
-                    : "border-transparent text-muted hover:text-fg",
-                )}
+      {/* ── All Punishments Table with Filters ─────────────────────── */}
+      <section className="rounded-3xl border border-border/80 bg-surface/90 glass-panel overflow-hidden shadow-sm">
+        {/* Table Header & Filters */}
+        <div className="p-5 border-b border-border/60 space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-base font-extrabold text-fg">Все наказания за период</h2>
+              <p className="text-xs text-muted">
+                {records.length} записей &middot; {data.records.filter((r) => r.kind === "ban").length} банов,{" "}
+                {data.records.filter((r) => r.kind === "mute").length} мутов,{" "}
+                {data.records.filter((r) => r.unpunishAdmin || r.status === 2).length} снято
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-8.5 rounded-xl border-border/80 bg-elevated/70 px-3 text-xs font-bold text-fg hover:border-accent"
+                onClick={() =>
+                  data &&
+                  downloadCsv(`mod-${m.steamid}.csv`, [
+                    ["Дата", "Игрок", "SteamID игрока", "Тип", "Срок", "Статус", "Причина"],
+                    ...records.map((r) => [
+                      fmtDateTime(r.created),
+                      r.player,
+                      r.playerSteamid,
+                      r.kind === "ban" ? "Бан" : "Мут",
+                      r.durationLabel || "",
+                      recordStatus(r).label,
+                      r.reason || "",
+                    ]),
+                  ])
+                }
+                disabled={!records.length}
+                title="Экспорт наказаний в CSV"
               >
-                {f.label}
-              </button>
-            ))}
-            <span className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
-            {(
-              [
-                { id: "all", label: "Любой статус" },
-                { id: "active", label: "Активные" },
-                { id: "expired", label: "Истёкшие" },
-                { id: "removed", label: "Снятые" },
-              ] as const
-            ).map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setStatus(f.id)}
-                className={cn(
-                  "h-7 rounded-sm border px-2.5 text-xs font-medium transition-colors",
-                  status === f.id
-                    ? "border-border bg-elevated text-fg"
-                    : "border-transparent text-muted hover:text-fg",
-                )}
+                <Download className="size-3.5" />
+                Экспорт CSV
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8.5 w-8.5 rounded-xl border border-border/80 bg-elevated/70 p-0 text-muted hover:text-fg"
+                onClick={() => void load()}
               >
-                {f.label}
-              </button>
-            ))}
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-7"
-              onClick={() =>
-                data &&
-                downloadCsv(`mod-${m.steamid}.csv`, [
-                  ["Дата", "Игрок", "SteamID игрока", "Тип", "Срок", "Статус", "Причина"],
-                  ...records.map((r) => [
-                    fmtDateTime(r.created),
-                    r.player,
-                    r.playerSteamid,
-                    r.kind === "ban" ? "Бан" : "Мут",
-                    r.durationLabel || "",
-                    recordStatus(r).label,
-                    r.reason || "",
-                  ]),
-                ])
-              }
-              disabled={!records.length}
-              title="Экспорт наказаний в CSV"
-            >
-              <Download className="size-3.5" />
-              CSV
-            </Button>
-            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => void load()}>
-              <RefreshCw className="size-3.5" />
-            </Button>
+                <RefreshCw className="size-3.5" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Filter Chips & Search Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/40">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(
+                [
+                  { id: "all", label: "Все типы" },
+                  { id: "ban", label: "Баны" },
+                  { id: "mute", label: "Муты" },
+                ] as const
+              ).map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setKind(f.id)}
+                  className={cn(
+                    "h-7.5 rounded-xl border px-3 text-xs font-bold transition-all",
+                    kind === f.id
+                      ? "border-accent bg-accent text-accent-fg shadow-sm"
+                      : "border-border/60 bg-elevated/60 text-muted hover:text-fg",
+                  )}
+                >
+                  {f.label}
+                </button>
+              ))}
+
+              <span className="mx-1 h-4 w-px bg-border/80" />
+
+              {(
+                [
+                  { id: "all", label: "Любой статус" },
+                  { id: "active", label: "Активные" },
+                  { id: "expired", label: "Истёкшие" },
+                  { id: "removed", label: "Снятые" },
+                ] as const
+              ).map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setStatus(f.id)}
+                  className={cn(
+                    "h-7.5 rounded-xl border px-3 text-xs font-bold transition-all",
+                    status === f.id
+                      ? "border-accent bg-accent text-accent-fg shadow-sm"
+                      : "border-border/60 bg-elevated/60 text-muted hover:text-fg",
+                  )}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Quick Search */}
+            <div className="relative min-w-[240px]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-subtle" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Поиск по игроку, SteamID или причине..."
+                className="h-8.5 rounded-xl border-border/80 bg-elevated/70 pl-8.5 text-xs text-fg focus:border-accent"
+              />
+            </div>
           </div>
         </div>
 
-        <div className="relative mt-3">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-subtle" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Поиск по игроку или причине"
-            className="h-9 pl-9"
-          />
-        </div>
-
-        <div className="mt-3 overflow-hidden rounded-lg border border-border bg-surface shadow-[var(--shadow-panel)]">
-          {records.length === 0 ? (
-            <p className="px-5 py-10 text-center text-sm text-muted">
-              {data.records.length === 0 ? "За текущий месяц наказаний нет." : "Ничего не найдено по фильтру."}
-            </p>
-          ) : (
-            <ul className="max-h-[70vh] divide-y divide-border overflow-y-auto">
-              {records.map((r) => {
-                const st = recordStatus(r);
-                return (
-                  <li key={r.id} className="flex items-center gap-3 px-4 py-3 sm:px-5">
-                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-elevated text-xs font-medium">
-                      {(r.player.trim().charAt(0) || "?").toUpperCase()}
-                    </span>
-                    <div className="min-w-0 flex-1">
+        {/* Sanctions List */}
+        {records.length === 0 ? (
+          <p className="px-5 py-12 text-center text-xs text-muted">
+            {data.records.length === 0 ? "За текущий месяц наказаний нет." : "Ничего не найдено по заданным фильтрам."}
+          </p>
+        ) : (
+          <ul className="max-h-[70vh] divide-y divide-border/60 overflow-y-auto">
+            {records.map((r) => {
+              const st = recordStatus(r);
+              return (
+                <li
+                  key={r.id}
+                  className="flex items-center gap-3.5 px-5 py-3.5 transition-colors hover:bg-elevated/50"
+                >
+                  <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-tr from-surface to-elevated text-xs font-black text-fg border border-border/80">
+                    {(r.player.trim().charAt(0) || "?").toUpperCase()}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
                       <a
                         href={fearProfileUrl(r.playerSteamid)}
                         target="_blank"
                         rel="noreferrer"
-                        className="block truncate text-sm font-medium hover:underline"
+                        className="block truncate text-sm font-bold text-fg hover:underline hover:text-accent transition-colors"
                       >
                         {r.player}
                       </a>
-                      <p className="truncate font-mono text-[11px] text-subtle">{r.playerSteamid}</p>
-                      {r.reason ? (
-                        <p className="mt-1 line-clamp-2 text-xs leading-snug text-muted" title={r.reason}>
-                          {r.reason}
-                        </p>
-                      ) : null}
+                      <span className="font-mono text-[10px] text-subtle">{r.playerSteamid}</span>
                     </div>
-                    <Badge tone={r.kind === "ban" ? "danger" : "warn"} className="shrink-0">
-                      {r.kind === "ban" ? "Бан" : "Мут"}
-                    </Badge>
-                    <span className="hidden w-16 shrink-0 text-right text-xs tabular-nums text-muted min-[560px]:block">
-                      {r.durationLabel || "—"}
-                    </span>
-                    <span className={cn("w-16 shrink-0 text-right text-xs font-medium", st.className)}>
-                      {st.label}
-                    </span>
-                    <span className="hidden w-24 shrink-0 text-right font-mono text-[11px] text-subtle sm:block">
-                      {fmtDate(r.created)}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-        <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-subtle">
-          <span className="inline-flex items-center gap-1.5">
-            <Hammer className="size-3.5 text-danger" />
-            {data.records.filter((r) => r.kind === "ban").length} банов
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <VolumeX className="size-3.5 text-warn" />
-            {data.records.filter((r) => r.kind === "mute").length} мутов
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Unlock className="size-3.5" />
-            {data.records.filter((r) => r.unpunishAdmin || r.status === 2).length} снято
-          </span>
-        </p>
+                    {r.reason ? (
+                      <p className="mt-0.5 line-clamp-2 text-xs text-muted leading-tight" title={r.reason}>
+                        {r.reason}
+                      </p>
+                    ) : null}
+                  </div>
+                  <Badge
+                    tone={r.kind === "ban" ? "danger" : "warn"}
+                    className="shrink-0 font-bold"
+                  >
+                    {r.kind === "ban" ? "Бан" : "Мут"}
+                  </Badge>
+                  <span className="hidden w-20 shrink-0 text-right text-xs font-mono tabular-nums text-muted min-[560px]:block">
+                    {r.durationLabel || "—"}
+                  </span>
+                  <span className={cn("w-20 shrink-0 text-right text-xs", st.className)}>
+                    {st.label}
+                  </span>
+                  <span className="hidden w-24 shrink-0 text-right font-mono text-[11px] text-subtle sm:block">
+                    {fmtDate(r.created)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
     </div>
   );

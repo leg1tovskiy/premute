@@ -5,10 +5,13 @@ import {
   Loader2,
   MessageSquareWarning,
   RefreshCw,
+  Shield,
   ShieldAlert,
+  ShieldCheck,
   TicketCheck,
   Timer,
   TriangleAlert,
+  Zap,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,12 +19,12 @@ import { PageHeaderSkeleton, RowsSkeleton } from "@/components/skeletons";
 import { getSuspiciousFn } from "@/lib/fn";
 import { fearProfileUrl } from "@/lib/constants";
 import type { SuspiciousPayload, SuspiciousSource } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
-/** Как бейдж выглядит для каждого источника попадания игрока в список. */
 const SOURCE_BADGES: Record<SuspiciousSource, { label: string; tone: "muted" | "warn" | "danger" }> = {
-  online: { label: "Онлайн", tone: "muted" },
+  online: { label: "Онлайн на сервере", tone: "muted" },
   ticket: { label: "Тикет", tone: "warn" },
-  report: { label: "Жалоба", tone: "danger" },
+  report: { label: "Жалоба в игре", tone: "danger" },
 };
 
 function fmtPlaytime(sec: number) {
@@ -71,11 +74,9 @@ export function SuspiciousView() {
 
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:py-10">
+      <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-10 space-y-6">
         <PageHeaderSkeleton />
-        <div className="mt-8">
-          <RowsSkeleton rows={5} />
-        </div>
+        <RowsSkeleton rows={5} />
       </div>
     );
   }
@@ -83,9 +84,9 @@ export function SuspiciousView() {
   if (error) {
     return (
       <div className="mx-auto max-w-lg py-16 text-center">
-        <p className="text-danger">{error}</p>
-        <Button className="mt-4" onClick={() => void load()}>
-          Повторить
+        <p className="text-danger font-bold text-lg">{error}</p>
+        <Button className="mt-4 rounded-xl" onClick={() => void load()}>
+          Повторить попытку
         </Button>
       </div>
     );
@@ -96,105 +97,145 @@ export function SuspiciousView() {
   const ticketsWarning = tickets && (!tickets.configured || tickets.error) ? tickets : null;
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:py-10">
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">Античит</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Подозрительные аккаунты</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted">
-            Онлайн-игроки с KD выше 2 и наигранными меньше 2 часов, нарушители из тикетов
-            fearproject.ru и все, на кого жаловались по причине «Спам микрофон/чат» или «Токсичность».
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {data?.updatedAt ? (
-            <span className="text-xs text-subtle">обновлено {fmtTime(data.updatedAt)} МСК</span>
-          ) : null}
-          <Button variant="secondary" size="sm" disabled={refreshing} onClick={() => void load(true)}>
-            {refreshing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
-            Обновить
+    <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8 space-y-6 animate-in fade-in duration-300">
+      {/* ── Top Header Banner ──────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-3xl border border-danger/30 bg-gradient-to-r from-danger/10 via-surface/95 to-elevated/80 p-6 sm:p-7 shadow-xl glass-panel cyber-border-glow">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-danger/20 border border-danger/40 px-3 py-0.5 text-xs font-black uppercase tracking-wider text-danger">
+                СИСТЕМА МОНИТОРИНГА
+              </span>
+              {data?.updatedAt ? (
+                <span className="font-mono text-xs text-subtle">
+                  обновлено {fmtTime(data.updatedAt)} МСК
+                </span>
+              ) : null}
+            </div>
+            <h1 className="mt-2 text-2xl sm:text-3xl font-black text-fg flex items-center gap-2.5">
+              Подозрительные аккаунты
+              <ShieldAlert className="size-6 text-danger animate-pulse" />
+            </h1>
+            <p className="mt-1 text-xs text-muted max-w-2xl leading-relaxed">
+              Онлайн-игроки с KD выше 2.0 и наигранными менее 2 часов, нарушители из тикетов
+              fearproject.ru и репорты игроков по причине спама, токсичности или читов.
+            </p>
+          </div>
+
+          <Button
+            variant="secondary"
+            className="h-10 rounded-xl border-border/80 bg-elevated/80 px-4 text-xs font-bold text-fg hover:border-danger/40 shadow-sm"
+            disabled={refreshing}
+            onClick={() => void load(true)}
+          >
+            {refreshing ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+            Обновить радар
           </Button>
         </div>
-      </header>
+      </div>
 
       {ticketsWarning ? (
-        <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-warn/25 bg-warn/10 px-4 py-3">
-          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warn" />
-          <div className="min-w-0 text-xs">
-            <p className="font-medium text-warn">Тикеты fearproject.ru не подключены</p>
-            <p className="mt-0.5 text-subtle">
+        <div className="flex items-start gap-3 rounded-2xl border border-warn/30 bg-warn/10 p-4 text-xs">
+          <TriangleAlert className="mt-0.5 size-4.5 shrink-0 text-warn" />
+          <div className="min-w-0">
+            <p className="font-bold text-warn">Интеграция тикетов fearproject.ru не активна</p>
+            <p className="mt-0.5 text-muted leading-relaxed">
               {!ticketsWarning.configured
-                ? "В воркере статистики не задан FEAR_ADMIN_COOKIE — игроки из тикетов и жалобы пока не попадают в список."
-                : `Не удалось получить тикеты: ${ticketsWarning.error}`}
+                ? "В воркере статистики не задан FEAR_ADMIN_COOKIE — игроки из тикетов и жалобы временно не синхронизируются."
+                : `Ошибка синхронизации тикетов: ${ticketsWarning.error}`}
             </p>
           </div>
         </div>
       ) : null}
 
+      {/* ── Suspicious Players List ─────────────────────────────────── */}
       {players.length === 0 ? (
-        <div className="rounded-lg border border-border bg-surface px-5 py-14 text-center shadow-[var(--shadow-panel)]">
-          <ShieldAlert className="mx-auto size-6 text-success" />
-          <p className="mt-3 text-sm font-medium">Сейчас подозрительных аккаунтов нет</p>
-          <p className="mt-1 text-xs text-subtle">Список обновляется автоматически раз в минуту.</p>
+        <div className="rounded-3xl border border-border/80 bg-surface/90 glass-panel px-6 py-16 text-center shadow-sm">
+          <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-success/15 border border-success/30 text-success shadow-lg shadow-success/10">
+            <ShieldCheck className="size-8" />
+          </div>
+          <p className="mt-4 text-base font-extrabold text-fg">Подозрительных аккаунтов не обнаружено</p>
+          <p className="mt-1 text-xs text-muted">
+            На серверах проекта нет активных игроков с аномальной статистикой или жалобами.
+          </p>
+          <p className="mt-3 font-mono text-[11px] text-subtle">
+            Радар проверяет серверы каждые 60 секунд.
+          </p>
         </div>
       ) : (
-        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-[var(--shadow-panel)]">
+        <ul className="divide-y divide-border/60 overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel shadow-sm">
           {players.map((p) => (
-            <li key={p.steamid} className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:px-5">
-              <div className="flex min-w-0 flex-1 items-center gap-3">
+            <li
+              key={p.steamid}
+              className="flex flex-col gap-3.5 p-4.5 sm:flex-row sm:items-center sm:px-6 transition-colors hover:bg-elevated/40"
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-3.5">
                 {p.avatar ? (
-                  <img src={p.avatar} alt="" className="size-10 shrink-0 rounded-full object-cover" />
+                  <img
+                    src={p.avatar}
+                    alt=""
+                    className="size-11 shrink-0 rounded-2xl object-cover border-2 border-border/80 shadow-md"
+                  />
                 ) : (
-                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-elevated text-sm font-medium">
+                  <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-surface to-elevated text-sm font-black text-fg border-2 border-border/80 shadow-md">
                     {(p.nickname.trim().charAt(0) || "?").toUpperCase()}
                   </span>
                 )}
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{p.nickname || p.steamid}</p>
-                  <p className="truncate font-mono text-[11px] text-subtle">
+                  <p className="truncate text-sm font-extrabold text-fg">{p.nickname || p.steamid}</p>
+                  <p className="truncate font-mono text-[11px] text-subtle mt-0.5">
                     {p.steamid}
-                    {p.server ? ` · ${p.server}` : ""}
-                    {p.map ? ` · ${p.map}` : ""}
+                    {p.server ? <span className="text-muted"> &middot; {p.server}</span> : ""}
+                    {p.map ? <span className="text-accent font-semibold"> ({p.map})</span> : ""}
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-                <Badge tone={SOURCE_BADGES[p.source ?? "online"].tone}>
+                <Badge tone={SOURCE_BADGES[p.source ?? "online"].tone} className="font-bold">
                   {SOURCE_BADGES[p.source ?? "online"].label}
                 </Badge>
+
                 {p.reason ? (
-                  <Badge tone="danger" className="normal-case">
+                  <Badge tone="danger" className="font-bold flex items-center gap-1">
                     <MessageSquareWarning className="size-3" />
                     {p.reason}
                   </Badge>
                 ) : null}
-                {p.reports != null && p.reports > 1 ? <Badge tone="muted">жалоб: {p.reports}</Badge> : null}
+
+                {p.reports != null && p.reports > 1 ? (
+                  <Badge tone="muted" className="font-mono">
+                    репортов: {p.reports}
+                  </Badge>
+                ) : null}
+
                 {p.playtime > 0 ? (
-                  <>
-                    <Badge tone="danger">KD {p.kd.toFixed(2)}</Badge>
-                    <span className="inline-flex items-center gap-1 text-xs tabular-nums text-muted">
-                      <Timer className="size-3.5" />
+                  <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-elevated/60 px-2.5 py-1 text-xs">
+                    <span className="font-black text-danger">KD {p.kd.toFixed(2)}</span>
+                    <span className="text-muted flex items-center gap-1">
+                      <Timer className="size-3" />
                       {fmtPlaytime(p.playtime)}
                     </span>
-                    <span className="text-xs tabular-nums text-subtle">
-                      {p.kills}/{p.deaths}
+                    <span className="font-mono text-subtle">
+                      ({p.kills}/{p.deaths})
                     </span>
-                  </>
+                  </div>
                 ) : null}
+
                 <Link
                   to="/player/$steamid"
                   params={{ steamid: p.steamid }}
-                  className="inline-flex h-8 items-center rounded-sm border border-border bg-elevated px-2.5 text-xs font-medium text-muted transition-colors hover:text-fg"
+                  className="inline-flex h-8 items-center rounded-xl border border-border/80 bg-elevated px-3 text-xs font-bold text-muted hover:border-accent hover:text-fg transition-all"
                 >
-                  Профиль
+                  История
                 </Link>
+
                 <a
                   href={fearProfileUrl(p.steamid)}
                   target="_blank"
                   rel="noreferrer"
                   title="Профиль на FearProject"
-                  className="inline-flex size-8 items-center justify-center rounded-sm border border-border bg-elevated text-muted transition-colors hover:text-fg"
+                  className="inline-flex size-8 items-center justify-center rounded-xl border border-border/80 bg-elevated text-muted hover:border-accent hover:text-fg transition-all"
                 >
                   <ExternalLink className="size-3.5" />
                 </a>
@@ -204,11 +245,11 @@ export function SuspiciousView() {
         </ul>
       )}
 
-      <p className="mt-4 flex items-start gap-1.5 text-xs text-subtle">
-        <TicketCheck className="mt-0.5 size-3.5 shrink-0" />
+      <p className="flex items-start gap-2 text-xs text-subtle px-1">
+        <TicketCheck className="mt-0.5 size-4 shrink-0 text-accent" />
         <span>
-          KD и время считаются из профиля FearProject; админы серверов в список не попадают. Жалобы и
-          тикеты берутся из админки fearproject.ru.
+          KD и игровое время вычисляются по данным профиля FearProject. Администрация и модераторы серверов
+          исключены из проверки.
         </span>
       </p>
     </div>

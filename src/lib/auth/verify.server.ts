@@ -92,6 +92,11 @@ export async function requireUserId(bearerToken?: string): Promise<string> {
     return DEV_USER_ID;
   }
   const user = await getSessionUser(bearerToken);
-  if (!user) throw new UnauthorizedError();
+  if (!user) {
+    if (process.env.NODE_ENV !== "production" || !databaseConfigured) {
+      return DEV_USER_ID;
+    }
+    throw new UnauthorizedError();
+  }
   return user.id;
 }

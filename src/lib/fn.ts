@@ -383,3 +383,73 @@ export const unsetBackupFn = createServerFn({ method: "POST" })
     await writeLog(context.userId, "mod_backup_clear", steamid);
     return { backups };
   });
+
+export type LivePunishmentItem = {
+  id: number;
+  kind: "ban" | "mute";
+  adminSteamid: string;
+  adminName: string;
+  adminRank: number | null;
+  adminAvatar: string | null;
+  adminSlug?: string;
+  player: string;
+  playerSteamid: string;
+  reason: string | null;
+  created: number;
+  durationLabel: string | null;
+  status: number;
+  unpunishAdmin: string | null;
+};
+
+export const getRecentPunishmentsFn = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }): Promise<LivePunishmentItem[]> => {
+    try {
+      const { getStaff } = await import("./server/staff");
+      const me = await getStaff(context.userId);
+      if (!me?.caps.canStats) return [];
+      const { loadStats } = await import("./server/stats");
+      const stats = await loadStats({ refresh: false });
+      const { fetchWorkerPunishments } = await import("./server/discord");
+
+      const activeMods = (stats.moderators || [])
+        .filter((m) => (m.rank ?? 0) <= 3 && m.total > 0)
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 5);
+
+      const results = await Promise.allSettled(
+        activeMods.map((m) => fetchWorkerPunishments(m.steamid)),
+      );
+
+      const items: LivePunishmentItem[] = [];
+      results.forEach((res, idx) => {
+        if (res.status === "fulfilled" && res.value?.records?.length) {
+          const mod = activeMods[idx];
+          if (!mod) return;
+          for (const r of res.value.records) {
+            items.push({
+              id: r.id,
+              kind: r.kind,
+              adminSteamid: r.adminSteamid || mod.steamid,
+              adminName: mod.name,
+              adminRank: mod.rank,
+              adminAvatar: mod.avatar,
+              adminSlug: mod.slug,
+              player: r.player || "Игрок",
+              playerSteamid: r.playerSteamid,
+              reason: r.reason,
+              created: r.created,
+              durationLabel: r.durationLabel,
+              status: r.status,
+              unpunishAdmin: r.unpunishAdmin,
+            });
+          }
+        }
+      });
+
+      items.sort((a, b) => b.created - a.created);
+      return items.slice(0, 25);
+    } catch {
+      return [];
+    }
+  });

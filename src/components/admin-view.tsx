@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Download, Loader2, Shield } from "lucide-react";
+import { Download, Loader2, Shield, ShieldCheck, Sparkles, Terminal } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast.success("Резервная копия скачана");
+      toast.success("Резервная копия успешно выгружена");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Не удалось выгрузить копию");
     } finally {
@@ -67,9 +67,9 @@ export function AdminView({ me }: { me: StaffProfile }) {
         },
       });
       setRows((prev) => prev.map((r) => (r.userId === userId ? updated : r)));
-      toast.success("Права обновлены");
+      toast.success("Права доступа обновлены");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Не сохранено");
+      toast.error(e instanceof Error ? e.message : "Ошибка при сохранении прав");
     }
   }
 
@@ -84,50 +84,67 @@ export function AdminView({ me }: { me: StaffProfile }) {
 
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-10">
+      <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10 space-y-6">
         <PageHeaderSkeleton />
-        <div className="mt-8">
-          <RowsSkeleton rows={4} />
-        </div>
+        <RowsSkeleton rows={4} />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-10">
-      <header className="mb-8">
-        <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-accent">Админ панель</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Доступ к вкладкам</h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted">
-          Выдавайте статистику, подозрительные аккаунты, управление составом модераторов и теги у аватарки.
-          {me.caps.canGrantBotOwner
-            ? " «Владелец» (красный) — команды Discord. Нажатие по нему переключает в «Корневого владельца» и обратно. Назначать владельцев бота может корневой владелец."
-            : me.caps.canGrantOwner
-              ? " «Владелец сайта» — все вкладки сайта и выдача вкладок другим. Назначать владельцев бота и сайта может только корневой владелец."
-              : " Назначать владельцев сайта и бота может только корневой владелец."}
-        </p>
-      </header>
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 space-y-6 animate-in fade-in duration-300">
+      {/* ── Admin Header Banner ────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-r from-surface via-surface/95 to-elevated/70 p-6 sm:p-7 shadow-2xl glass-panel cyber-border-glow">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-accent/20 border border-accent/40 px-3 py-0.5 text-xs font-black uppercase tracking-wider text-accent">
+              СИСТЕМА БЕЗОПАСНОСТИ &middot; ACL
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-fg flex items-center gap-2.5">
+            Управление правами доступа
+            <Shield className="size-6 text-accent" />
+          </h1>
+          <p className="max-w-3xl text-xs sm:text-sm text-muted leading-relaxed">
+            Гибкая настройка прав администраторов и модераторов. Управление доступом к статистике,
+            радару подозрительных аккаунтов, составу и ролям владельцев.
+          </p>
+        </div>
+      </div>
 
-      <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-[var(--shadow-panel)]">
+      {/* ── Users Access Matrix ────────────────────────────────────── */}
+      <div className="overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel shadow-sm">
         {rows.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-muted">Пока никто не входил.</p>
+          <p className="px-5 py-12 text-center text-xs text-muted">
+            Пользователей с активным доступом пока нет.
+          </p>
         ) : (
-          <ul className="divide-y divide-border">
+          <ul className="divide-y divide-border/60">
             {rows.map((u) => {
               const locked = u.isRoot && u.userId !== me.userId;
               return (
-                <li key={u.userId} className="flex flex-col gap-4 px-4 py-4 sm:px-5">
-                  <div className="flex items-center gap-3">
+                <li
+                  key={u.userId}
+                  className="flex flex-col gap-4 p-5 transition-colors hover:bg-elevated/40"
+                >
+                  <div className="flex items-center gap-4">
                     {u.image ? (
-                      <img src={u.image} alt="" className="size-10 shrink-0 rounded-full object-cover" />
+                      <img
+                        src={u.image}
+                        alt=""
+                        className="size-11 shrink-0 rounded-2xl object-cover border-2 border-border/80 shadow-md"
+                      />
                     ) : (
-                      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-elevated text-sm font-medium">
+                      <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-surface to-elevated text-sm font-black text-fg border-2 border-border/80 shadow-md">
                         {(u.displayName || u.email || "?").charAt(0).toUpperCase()}
                       </span>
                     )}
+
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-medium">{u.displayName || u.email || "Без имени"}</p>
+                        <p className="font-extrabold text-sm text-fg">
+                          {u.displayName || u.email || "Без имени"}
+                        </p>
                         {u.isRoot ? (
                           <OwnershipBadge
                             tone="gold"
@@ -136,7 +153,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
                             onClick={() => toggleOwnership(u)}
                           >
                             <Shield className="mr-1 size-3" />
-                            корень
+                            ROOT
                           </OwnershipBadge>
                         ) : u.isBotOwner ? (
                           <OwnershipBadge
@@ -148,14 +165,18 @@ export function AdminView({ me }: { me: StaffProfile }) {
                             Владелец
                           </OwnershipBadge>
                         ) : null}
-                        {u.isOwner && !u.isRoot ? <Badge tone="accent">владелец сайта</Badge> : null}
-                        {u.tag ? <Badge>{u.tag}</Badge> : null}
+                        {u.isOwner && !u.isRoot ? (
+                          <Badge tone="accent" className="font-bold">владелец сайта</Badge>
+                        ) : null}
+                        {u.tag ? <Badge className="font-bold font-mono text-[10px]">{u.tag}</Badge> : null}
                       </div>
-                      <p className="text-xs text-subtle">
+
+                      <p className="mt-0.5 text-xs text-subtle font-mono">
                         {u.email || "—"}
-                        {u.discordId ? ` · Discord ${u.discordId}` : " · Discord не привязан"}
+                        {u.discordId ? ` · Discord: ${u.discordId}` : " · Discord не привязан"}
                       </p>
                     </div>
+
                     {me.caps.isOwner ? (
                       <TagField
                         value={u.tag}
@@ -164,7 +185,8 @@ export function AdminView({ me }: { me: StaffProfile }) {
                       />
                     ) : null}
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-border/60 bg-elevated/60 p-3.5">
                     <Toggle
                       label="Статистика"
                       checked={u.isOwner || u.canStats}
@@ -207,16 +229,24 @@ export function AdminView({ me }: { me: StaffProfile }) {
         )}
       </div>
 
-      <section className="mt-8 rounded-lg border border-border bg-surface p-5 shadow-[var(--shadow-panel)]">
-        <h2 className="text-sm font-semibold">Резервная копия базы</h2>
-        <p className="mt-1 max-w-2xl text-sm text-muted">
-          Выгрузка в JSON: staff, слаги модераторов, архив статистики, кэш, лог действий и
-          пользователи. Neon хранит собственные резервные копии (PITR), а эта выгрузка — быстрый
-          ручной снимок на случай отката.
+      {/* ── Database Backup ────────────────────────────────────────── */}
+      <section className="rounded-3xl border border-border/80 bg-surface/90 glass-panel p-6 shadow-sm">
+        <h2 className="text-sm font-extrabold text-fg uppercase tracking-wider flex items-center gap-2">
+          <Terminal className="size-4 text-accent" />
+          Резервная копия базы данных
+        </h2>
+        <p className="mt-1 max-w-2xl text-xs text-muted leading-relaxed">
+          Экспорт полного снимка конфигурации в формате JSON: staff, слаги модераторов, архив
+          статистики, кэш, журнал действий и пользователи.
         </p>
-        <Button className="mt-4" variant="secondary" disabled={backingUp} onClick={() => void downloadBackup()}>
-          {backingUp ? <Loader2 className="animate-spin" /> : <Download />}
-          Скачать JSON
+        <Button
+          className="mt-4 rounded-xl border border-border bg-elevated px-4 text-xs font-bold text-fg hover:border-accent shadow-sm"
+          variant="secondary"
+          disabled={backingUp}
+          onClick={() => void downloadBackup()}
+        >
+          {backingUp ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+          Скачать JSON-дамп
         </Button>
       </section>
     </div>
@@ -237,13 +267,13 @@ function TagField({
     setText(value ?? "");
   }, [value]);
   return (
-    <label className="grid gap-1 text-xs text-muted">
+    <label className="grid gap-1 text-[11px] font-bold text-muted">
       Тег
       <Input
-        className="h-8 w-36"
+        className="h-8 w-32 rounded-xl text-xs font-mono"
         maxLength={24}
         disabled={disabled}
-        placeholder="например CURATOR"
+        placeholder="CURATOR"
         value={text}
         onChange={(e) => setText(e.target.value)}
         onBlur={() => {
@@ -272,7 +302,7 @@ function OwnershipBadge({
   children: ReactNode;
 }) {
   return (
-    <Badge tone={tone} className={canClick ? "p-0 transition hover:opacity-80" : undefined}>
+    <Badge tone={tone} className={canClick ? "p-0 transition hover:opacity-80 font-bold" : "font-bold"}>
       {canClick ? (
         <button
           type="button"
@@ -301,7 +331,7 @@ function Toggle({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className="flex items-center gap-2 text-xs text-muted">
+    <label className="flex items-center gap-2 text-xs font-medium text-fg cursor-pointer select-none">
       <Switch checked={checked} disabled={disabled} onCheckedChange={onChange} />
       {label}
     </label>

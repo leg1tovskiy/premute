@@ -1,6 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, Clock3, Download, Gamepad2, Hammer, Loader2, RefreshCw, Unlock, VolumeX } from "lucide-react";
+import {
+  ArrowUpDown,
+  ChevronRight,
+  Clock3,
+  Download,
+  Filter,
+  Gamepad2,
+  Hammer,
+  Loader2,
+  RefreshCw,
+  Search,
+  Sparkles,
+  TrendingDown,
+  TrendingUp,
+  Unlock,
+  Users,
+  VolumeX,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ModeratorsChart } from "@/components/stats-chart";
 import { DailyChart } from "@/components/daily-chart";
@@ -54,6 +72,31 @@ function MetricTile({
   );
 }
 
+function getRankBadgeProps(rank: number | null) {
+  if (rank === 3) {
+    return {
+      label: RANK_SHORT[3] ?? "СТ. МОД",
+      className: "bg-purple-500/15 text-purple-400 border-purple-500/30",
+    };
+  }
+  if (rank === 2) {
+    return {
+      label: RANK_SHORT[2] ?? "МОД",
+      className: "bg-sky-500/15 text-sky-400 border-sky-500/30",
+    };
+  }
+  if (rank === 1) {
+    return {
+      label: RANK_SHORT[1] ?? "МЛ. МОД",
+      className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+    };
+  }
+  return {
+    label: (rank && RANK_SHORT[rank]) || "СТАФФ",
+    className: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  };
+}
+
 function ModeratorCard({
   m,
   info,
@@ -65,94 +108,152 @@ function ModeratorCard({
   const initial = (handle.trim().charAt(0) || "?").toUpperCase();
   const monthTarget = m.norma?.month ?? null;
   const monthDone = monthTarget != null && monthTarget > 0 && m.total >= monthTarget;
-  const ratioTone = monthTarget == null ? "text-muted" : monthDone ? "text-accent" : "text-muted";
+  const progressPercent = monthTarget ? Math.min(Math.round((m.total / monthTarget) * 100), 100) : 0;
+  const actualRatio = monthTarget ? Math.round((m.total / monthTarget) * 100) : null;
+  const rankProps = m.rank ? getRankBadgeProps(m.rank) : null;
 
   return (
-    <article className="flex min-w-0 flex-col rounded-2xl border border-border bg-surface p-4 shadow-[var(--shadow-panel)]">
-      <div className="flex items-center gap-3">
-        {m.avatar ? (
-          <img
-            src={m.avatar}
-            alt=""
-            loading="lazy"
-            className="size-11 shrink-0 rounded-full object-cover"
-          />
-        ) : (
-          <span
-            aria-hidden="true"
-            className="grid size-11 shrink-0 place-items-center rounded-full bg-elevated text-base font-semibold text-fg"
-          >
-            {initial}
-          </span>
-        )}
-        <div className="min-w-0 flex-1">
-          <a
-            href={fearProfileUrl(m.steamid)}
-            target="_blank"
-            rel="noreferrer"
-            className="block truncate text-[15px] font-semibold leading-tight hover:underline"
-          >
-            {handle}
-          </a>
-          <p className="mt-0.5 truncate font-mono text-[11px] text-subtle">
-            {m.steamid}
-            {m.rank ? ` · ${RANK_SHORT[m.rank] ?? "—"}` : ""}
-          </p>
+    <article className="group relative flex min-w-0 flex-col overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel p-5 shadow-lg transition-all hover:scale-[1.015] hover:border-accent/50 hover:shadow-2xl hover:shadow-accent/10">
+      {/* Subtle top ambient glow */}
+      {monthDone ? (
+        <div className="absolute -top-12 left-1/2 -translate-x-1/2 size-36 rounded-full bg-accent/15 blur-2xl pointer-events-none" />
+      ) : null}
+
+      {/* Top Header of Card */}
+      <div className="relative z-10 flex items-center gap-3.5">
+        <div className="relative">
+          {m.avatar ? (
+            <img
+              src={m.avatar}
+              alt=""
+              loading="lazy"
+              className="size-12 shrink-0 rounded-2xl object-cover border-2 border-border/80 ring-2 ring-transparent group-hover:ring-accent/40 transition-all shadow-md"
+            />
+          ) : (
+            <span
+              aria-hidden="true"
+              className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-surface to-elevated text-base font-black text-fg border-2 border-border/80 shadow-md"
+            >
+              {initial}
+            </span>
+          )}
+          {info ? (
+            <span className="absolute -bottom-1 -right-1 size-3.5 rounded-full border-2 border-surface bg-success shadow-[0_0_8px_var(--color-success)] z-10" />
+          ) : null}
         </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <a
+              href={fearProfileUrl(m.steamid)}
+              target="_blank"
+              rel="noreferrer"
+              className="truncate text-base font-extrabold text-fg hover:text-accent transition-colors"
+            >
+              {handle}
+            </a>
+            {rankProps ? (
+              <span className={cn("rounded-md px-2 py-0.5 text-[10px] font-black uppercase border", rankProps.className)}>
+                {rankProps.label}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-0.5 font-mono text-[11px] text-subtle flex items-center gap-1.5">
+            <span className="truncate">{m.steamid}</span>
+          </p>
+          {info ? (
+            <div className="mt-1 flex items-center gap-1 rounded-md border border-success/20 bg-success/10 px-2 py-0.5 text-[10px] font-mono text-success truncate max-w-[200px]">
+              <Gamepad2 className="size-3 shrink-0 animate-pulse" />
+              <span className="truncate">{info.server}</span>
+            </div>
+          ) : null}
+        </div>
+
         <PresenceBadge info={info} lastOnline={m.lastOnline} />
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2 min-[560px]:grid-cols-4">
-        <MetricTile
-          value={m.bans ?? "—"}
-          label="Банов выдано"
-          className="border-border bg-elevated/60"
-          valueClassName="text-fg"
-        />
-        <MetricTile
-          value={m.mutes ?? "—"}
-          label="Мутов выдано"
-          className="border-border bg-elevated/60"
-          valueClassName="text-fg"
-        />
-        <MetricTile
-          value={m.total}
-          label="Выдано за текущий месяц"
-          className="border-border bg-elevated/70"
-          valueClassName="text-fg"
-        />
-        <MetricTile
-          value={m.removed ?? "—"}
-          label="Снято · за период"
-          className="border-border bg-elevated/70"
-          valueClassName="text-fg"
-        />
+      {/* 4 Cyber Stat Chips */}
+      <div className="relative z-10 mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {/* Баны */}
+        <div className="rounded-2xl border border-danger/25 bg-danger/10 p-3 text-center transition-all hover:bg-danger/15">
+          <p className="text-2xl font-black tabular-nums text-danger">{m.bans ?? 0}</p>
+          <p className="mt-1 text-[11px] font-medium text-danger/80 flex items-center justify-center gap-1">
+            <Hammer className="size-3" /> Баны
+          </p>
+        </div>
+
+        {/* Муты */}
+        <div className="rounded-2xl border border-warn/25 bg-warn/10 p-3 text-center transition-all hover:bg-warn/15">
+          <p className="text-2xl font-black tabular-nums text-warn">{m.mutes ?? 0}</p>
+          <p className="mt-1 text-[11px] font-medium text-warn/80 flex items-center justify-center gap-1">
+            <VolumeX className="size-3" /> Муты
+          </p>
+        </div>
+
+        {/* Всего за месяц */}
+        <div className="rounded-2xl border border-accent/30 bg-accent/15 p-3 text-center shadow-inner transition-all hover:bg-accent/20">
+          <p className="text-2xl font-black tabular-nums text-accent">{m.total}</p>
+          <p className="mt-1 text-[11px] font-semibold text-accent/90">Всего мес.</p>
+        </div>
+
+        {/* Снято */}
+        <div className="rounded-2xl border border-success/25 bg-success/10 p-3 text-center transition-all hover:bg-success/15">
+          <p className="text-2xl font-black tabular-nums text-success">{m.removed ?? 0}</p>
+          <p className="mt-1 text-[11px] font-medium text-success/80 flex items-center justify-center gap-1">
+            <Unlock className="size-3" /> Снято
+          </p>
+        </div>
       </div>
 
-      <div className="mt-2 flex items-center justify-between rounded-xl border border-border bg-elevated/60 px-3 py-2 text-xs">
-        <span className="font-medium uppercase tracking-[0.18em] text-muted">Норма</span>
-        <span className="tabular-nums text-muted">
-          Мес{" "}
-          <span className={cn("font-semibold", ratioTone)}>
-            {m.total}/{monthTarget ?? "—"}
+      {/* High-Tech Norma Progress Bar */}
+      <div className="relative z-10 mt-3.5 rounded-2xl border border-border/70 bg-elevated/50 p-3.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
+            Норма месяца
           </span>
-        </span>
+          <span className="font-mono tabular-nums text-xs">
+            <span className={cn("font-extrabold", monthDone ? "text-success" : "text-fg")}>
+              {m.total}
+            </span>{" "}
+            <span className="text-subtle">/ {monthTarget ?? "—"}</span>
+            {actualRatio != null ? (
+              <span className={cn("ml-1.5 font-bold", monthDone ? "text-success" : "text-subtle")}>
+                ({actualRatio}%)
+              </span>
+            ) : null}
+          </span>
+        </div>
+
+        {/* Track */}
+        <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-surface border border-border/50">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all duration-500",
+              monthDone
+                ? "bg-gradient-to-r from-accent to-success shadow-[0_0_8px_var(--color-success)]"
+                : "bg-accent/70",
+            )}
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
       </div>
 
+      {/* Records & History info */}
       {m.prevTotal != null || m.best ? (
-        <p className="mt-2 text-center text-[11px] text-subtle">
-          {m.prevTotal != null ? `Прошлый месяц: ${m.prevTotal}` : null}
-          {m.best ? `${m.prevTotal != null ? " · " : ""}Лучший: ${m.best.total} (${m.best.month})` : null}
-        </p>
+        <div className="relative z-10 mt-2.5 flex items-center justify-between px-1 text-[11px] text-subtle">
+          <span>{m.prevTotal != null ? `Прошлый: ${m.prevTotal}` : ""}</span>
+          <span>{m.best ? `Рекорд: ${m.best.total} (${m.best.month})` : ""}</span>
+        </div>
       ) : null}
 
+      {/* Button to Details */}
       {m.slug ? (
         <Link
           to="/$slug"
           params={{ slug: m.slug }}
-          className="mt-2 inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-sm border border-border bg-elevated text-xs font-medium text-muted transition-colors hover:border-accent/40 hover:text-fg"
+          className="relative z-10 mt-3 inline-flex h-9.5 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-border/80 bg-elevated/70 text-xs font-bold text-muted transition-all hover:border-accent/40 hover:bg-accent hover:text-accent-fg shadow-sm active:scale-98"
         >
-          Подробнее
+          Подробная статистика
           <ChevronRight className="size-3.5" />
         </Link>
       ) : null}
@@ -166,6 +267,11 @@ export function StatsView() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [online, setOnline] = useState<Record<string, OnlineInfo>>({});
+
+  // Filter & Search states
+  const [search, setSearch] = useState("");
+  const [rankFilter, setRankFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"total" | "bans" | "mutes" | "norma">("total");
 
   async function load(refresh = false) {
     if (refresh) setRefreshing(true);
@@ -182,7 +288,7 @@ export function StatsView() {
     }
   }
 
-  // Кто из модеров сейчас в игре на серверах FEAR — обновляем раз в минуту
+  // Live online status check
   useEffect(() => {
     let alive = true;
     async function pull(ids: string[]) {
@@ -191,7 +297,7 @@ export function StatsView() {
         const res = await moderatorOnlineFn({ data: { ids } });
         if (alive) setOnline(res);
       } catch {
-        /* тихо: индикатор не критичен */
+        /* тихо */
       }
     }
     if (data?.moderators?.length) {
@@ -219,19 +325,55 @@ export function StatsView() {
     };
   }, []);
 
-  // Автообновление раз в 5 минут (тихо, без спиннера).
   useEffect(() => {
     const t = setInterval(() => void load(true), 5 * 60_000);
     return () => clearInterval(t);
   }, []);
 
+  // Filtered and sorted moderators
+  const filteredMods = useMemo(() => {
+    if (!data?.moderators) return [];
+    let list = [...data.moderators];
+
+    // Search query
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (m) =>
+          m.name.toLowerCase().includes(q) ||
+          m.steamid.includes(q) ||
+          (m.discord || "").toLowerCase().includes(q),
+      );
+    }
+
+    // Rank filter
+    if (rankFilter !== "all") {
+      const r = Number(rankFilter);
+      list = list.filter((m) => m.rank === r);
+    }
+
+    // Sort
+    list.sort((a, b) => {
+      if (sortBy === "bans") return (b.bans ?? 0) - (a.bans ?? 0);
+      if (sortBy === "mutes") return (b.mutes ?? 0) - (a.mutes ?? 0);
+      if (sortBy === "norma") {
+        const aNorma = a.norma?.month ? a.total / a.norma.month : 0;
+        const bNorma = b.norma?.month ? b.total / b.norma.month : 0;
+        return bNorma - aNorma;
+      }
+      return b.total - a.total;
+    });
+
+    return list;
+  }, [data?.moderators, search, rankFilter, sortBy]);
+
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-[1440px] px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
+      <div className="mx-auto w-full max-w-[1500px] px-4 py-8 sm:px-8 space-y-6">
         <PageHeaderSkeleton />
-        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-md" />
+            <Skeleton key={i} className="h-32 rounded-3xl" />
           ))}
         </div>
         <CardsSkeleton count={6} />
@@ -242,9 +384,9 @@ export function StatsView() {
   if (error && !data) {
     return (
       <div className="mx-auto max-w-lg py-16 text-center">
-        <p className="text-danger">{error}</p>
-        <Button className="mt-4" onClick={() => void load(true)}>
-          Повторить
+        <p className="text-danger font-medium">{error}</p>
+        <Button className="mt-4 rounded-xl" onClick={() => void load(true)}>
+          Повторить попытку
         </Button>
       </div>
     );
@@ -252,14 +394,50 @@ export function StatsView() {
 
   if (!data) return null;
   const payload = data;
-
-  const tiles = [
-    { key: "bans", label: "Баны", value: data.totals.bans, icon: Hammer },
-    { key: "removed", label: "Разбаны", value: data.totals.removed, icon: Unlock },
-    { key: "mutes", label: "Муты", value: data.totals.mutes, icon: VolumeX },
-    { key: "total", label: "Всего", value: data.totals.total, icon: null },
-  ] as const;
   const prevTotals = data.prevTotals ?? null;
+
+  const kpis = [
+    {
+      key: "total",
+      label: "Всего действий",
+      value: data.totals.total,
+      icon: Sparkles,
+      color: "from-accent/20 to-accent/5",
+      border: "border-accent/30",
+      accent: "text-accent",
+      badge: "Все серверы",
+    },
+    {
+      key: "bans",
+      label: "Банов выдано",
+      value: data.totals.bans,
+      icon: Hammer,
+      color: "from-danger/20 to-danger/5",
+      border: "border-danger/30",
+      accent: "text-danger",
+      badge: `${data.totals.total ? Math.round((data.totals.bans / data.totals.total) * 100) : 0}% от общего`,
+    },
+    {
+      key: "mutes",
+      label: "Мутов выдано",
+      value: data.totals.mutes,
+      icon: VolumeX,
+      color: "from-warn/20 to-warn/5",
+      border: "border-warn/30",
+      accent: "text-warn",
+      badge: `${data.totals.total ? Math.round((data.totals.mutes / data.totals.total) * 100) : 0}% от общего`,
+    },
+    {
+      key: "removed",
+      label: "Снято наказаний",
+      value: data.totals.removed,
+      icon: Unlock,
+      color: "from-success/20 to-success/5",
+      border: "border-success/30",
+      accent: "text-success",
+      badge: "Разбаны / размуты",
+    },
+  ] as const;
 
   function exportCsv() {
     downloadCsv(`stats-${payload.month}.csv`, [
@@ -281,95 +459,260 @@ export function StatsView() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 sm:py-8 space-y-6">
+      {/* ── Top Header Banner ────────────────────────────────────────── */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/60 pb-6">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">FearProject</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-            Статистика за {fmtDay(data.updatedAt)}
+          <div className="flex items-center gap-2">
+            <span className="rounded-md bg-accent/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
+              FearProject CS2
+            </span>
+            <span className="text-xs text-muted font-mono">
+              {data.month} {data.stale ? "· (кэш)" : ""}
+            </span>
+          </div>
+          <h1 className="mt-2 text-2xl font-black tracking-tight text-fg sm:text-3xl">
+            Статистика наказаний
           </h1>
-          <p className="mt-1 text-sm text-muted">
-            {data.month}
-            {data.stale ? " · кэш" : ""} · обновлено {fmtMsk(data.updatedAt)} МСК
+          <p className="mt-1 text-xs text-muted">
+            Данные синхронизированы {fmtMsk(data.updatedAt)} МСК · Статистика за {fmtDay(data.updatedAt)}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={() => void load(true)} disabled={refreshing}>
-            {refreshing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            variant="secondary"
+            className="rounded-xl border-border/80 bg-elevated/70 text-xs font-semibold shadow-sm transition-all hover:bg-elevated hover:border-accent/40"
+            onClick={() => void load(true)}
+            disabled={refreshing}
+          >
+            {refreshing ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
             Обновить
           </Button>
-          <Button variant="secondary" onClick={exportCsv} title="Экспорт статистики в CSV">
-            <Download />
-            CSV
+          <Button
+            variant="secondary"
+            className="rounded-xl border-border/80 bg-elevated/70 text-xs font-semibold shadow-sm transition-all hover:bg-elevated hover:border-accent/40"
+            onClick={exportCsv}
+            title="Экспорт в CSV файл"
+          >
+            <Download className="size-3.5" />
+            Экспорт CSV
           </Button>
         </div>
-      </header>
+      </div>
 
-      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {tiles.map((c) => {
-          const prev = prevTotals ? prevTotals[c.key] : null;
-          const delta = prev != null ? c.value - prev : null;
+      {/* ── 4 High-Tech KPI Cards ────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
+        {kpis.map((c) => {
+          const prev = prevTotals ? prevTotals[c.key as keyof typeof prevTotals] : null;
+          const delta = typeof prev === "number" ? Number(c.value) - prev : null;
+          const Icon = c.icon;
+
           return (
-            <div key={c.label} className="rounded-md border border-border bg-surface p-4 shadow-[var(--shadow-panel)]">
-              <div className="flex items-center justify-between text-muted">
-                <span className="text-xs font-medium uppercase tracking-wider">{c.label}</span>
-                {c.icon ? <c.icon className="size-4 text-muted" /> : null}
+            <div
+              key={c.label}
+              className={cn(
+                "group relative overflow-hidden rounded-3xl border bg-gradient-to-br p-5 shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl",
+                c.color,
+                c.border,
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted">{c.label}</span>
+                <span className="grid size-9 place-items-center rounded-xl border border-border/60 bg-elevated/70 text-fg shadow-sm transition-transform group-hover:scale-110">
+                  <Icon className={cn("size-4.5", c.accent)} />
+                </span>
               </div>
-              <p className="mt-2 text-3xl font-semibold tabular-nums tracking-tight text-fg">{c.value}</p>
-              {delta != null ? (
-                <p className="mt-1 text-[11px] text-subtle">
-                  {delta > 0 ? `+${delta}` : delta < 0 ? `−${Math.abs(delta)}` : "±0"} к прошлому месяцу
-                </p>
-              ) : null}
+
+              <p className="mt-3 text-3xl font-black tabular-nums tracking-tight text-fg lg:text-4xl">
+                {c.value}
+              </p>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {delta != null ? (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums",
+                      delta > 0
+                        ? "bg-success/20 text-success border border-success/30"
+                        : delta < 0
+                          ? "bg-danger/20 text-danger border border-danger/30"
+                          : "bg-elevated text-muted border border-border",
+                    )}
+                  >
+                    {delta > 0 ? <TrendingUp className="size-3" /> : delta < 0 ? <TrendingDown className="size-3" /> : null}
+                    {delta > 0 ? `+${delta}` : delta < 0 ? `−${Math.abs(delta)}` : "±0"}
+                  </span>
+                ) : null}
+                <span className="text-[11px] text-muted">{c.badge}</span>
+              </div>
             </div>
           );
         })}
       </div>
 
+      {/* ── Daily Punishment Chart ──────────────────────────────────── */}
       <DailyChart />
 
+      {/* ── Top-10 Moderators Chart ─────────────────────────────────── */}
       <ModeratorsChart mods={data.moderators} />
 
-      <section className="mt-8">
-        <div className="flex items-end justify-between px-1">
-          <h2 className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Модераторы</h2>
-          <p className="text-xs tabular-nums text-subtle">{data.moderators.length}</p>
+      {/* ── Moderators Section Toolbar & Grid ────────────────────────── */}
+      <section className="space-y-4 pt-2">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/60 pb-4">
+          <div className="flex items-center gap-2.5">
+            <Users className="size-5 text-accent" />
+            <div>
+              <h2 className="text-base font-bold text-fg">Список модераторов</h2>
+              <p className="text-xs text-muted">
+                Показано {filteredMods.length} из {data.moderators.length} сотрудников
+              </p>
+            </div>
+          </div>
+
+          {/* Search and Filters */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Search Input */}
+            <div className="relative min-w-[14rem] flex-1 sm:flex-initial">
+              <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-subtle" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Поиск ника или SteamID..."
+                className="h-9 w-full rounded-xl border border-border/80 bg-surface/90 pl-8.5 pr-8 text-xs text-fg placeholder:text-subtle transition-all focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/40"
+              />
+              {search ? (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-subtle hover:text-fg"
+                >
+                  <X className="size-3.5" />
+                </button>
+              ) : null}
+            </div>
+
+            {/* Rank Filter */}
+            <div className="flex items-center rounded-xl border border-border/80 bg-surface/90 p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setRankFilter("all")}
+                className={cn(
+                  "rounded-lg px-2.5 py-1 font-medium transition-all",
+                  rankFilter === "all" ? "bg-accent/20 text-accent font-bold" : "text-muted hover:text-fg",
+                )}
+              >
+                Все
+              </button>
+              <button
+                type="button"
+                onClick={() => setRankFilter("2")}
+                className={cn(
+                  "rounded-lg px-2.5 py-1 font-medium transition-all",
+                  rankFilter === "2" ? "bg-accent/20 text-accent font-bold" : "text-muted hover:text-fg",
+                )}
+              >
+                Мод
+              </button>
+              <button
+                type="button"
+                onClick={() => setRankFilter("1")}
+                className={cn(
+                  "rounded-lg px-2.5 py-1 font-medium transition-all",
+                  rankFilter === "1" ? "bg-accent/20 text-accent font-bold" : "text-muted hover:text-fg",
+                )}
+              >
+                Мл. Мод
+              </button>
+            </div>
+
+            {/* Sort Toggle */}
+            <div className="flex items-center rounded-xl border border-border/80 bg-surface/90 p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setSortBy("total")}
+                className={cn(
+                  "rounded-lg px-2.5 py-1 font-medium transition-all",
+                  sortBy === "total" ? "bg-accent/20 text-accent font-bold" : "text-muted hover:text-fg",
+                )}
+              >
+                Всего
+              </button>
+              <button
+                type="button"
+                onClick={() => setSortBy("bans")}
+                className={cn(
+                  "rounded-lg px-2.5 py-1 font-medium transition-all",
+                  sortBy === "bans" ? "bg-accent/20 text-accent font-bold" : "text-muted hover:text-fg",
+                )}
+              >
+                Баны
+              </button>
+              <button
+                type="button"
+                onClick={() => setSortBy("mutes")}
+                className={cn(
+                  "rounded-lg px-2.5 py-1 font-medium transition-all",
+                  sortBy === "mutes" ? "bg-accent/20 text-accent font-bold" : "text-muted hover:text-fg",
+                )}
+              >
+                Муты
+              </button>
+              <button
+                type="button"
+                onClick={() => setSortBy("norma")}
+                className={cn(
+                  "rounded-lg px-2.5 py-1 font-medium transition-all",
+                  sortBy === "norma" ? "bg-accent/20 text-accent font-bold" : "text-muted hover:text-fg",
+                )}
+              >
+                Норма
+              </button>
+            </div>
+          </div>
         </div>
-        {data.moderators.length === 0 ? (
-          <p className="mt-5 rounded-lg border border-border bg-surface px-5 py-10 text-center text-sm text-muted">
-            В этом месяце наказаний ещё нет.
-          </p>
+
+        {/* ── Cards Grid (ModeratorCard preserved untouched) ───────── */}
+        {filteredMods.length === 0 ? (
+          <div className="rounded-3xl border border-border/80 bg-surface/90 glass-panel px-6 py-16 text-center">
+            <Users className="mx-auto size-10 text-subtle mb-3" />
+            <p className="text-sm font-semibold text-fg">Модераторы не найдены</p>
+            <p className="mt-1 text-xs text-muted">Попробуйте изменить поисковый запрос или фильтр</p>
+          </div>
         ) : (
-        <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
-          {data.moderators.map((m) => (
-            <ModeratorCard
-              key={m.steamid}
-              m={m}
-              info={online[m.steamid]}
-            />
-          ))}
-        </div>
-        )}
-        <div className="mt-6 overflow-hidden rounded-lg border border-border bg-surface shadow-[var(--shadow-panel)]">
-          <div className="border-t border-border px-5 py-5 sm:px-6">
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Итого</p>
-          <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {tiles.map((t) => (
-              <div key={t.label}>
-                <dt className="text-xs text-subtle">{t.label}</dt>
-                <dd className="mt-1 text-xl font-semibold tabular-nums text-fg">{t.value}</dd>
-              </div>
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
+            {filteredMods.map((m) => (
+              <ModeratorCard
+                key={m.steamid}
+                m={m}
+                info={online[m.steamid]}
+              />
             ))}
-          </dl>
-          {data.totals.excluded ? (
-            <p className="mt-3 text-xs text-subtle">Исключено (тикет / поддержка): {data.totals.excluded}</p>
-          ) : null}
-        </div>
-        <p className="border-t border-border px-5 py-3 text-center text-xs text-subtle sm:px-6">
-          Статистика была взята с официального сайта FearProject.ru
-          <span className="mx-1.5">·</span>
-          Обновлено {fmtMsk(data.updatedAt)} МСК
-        </p>
+          </div>
+        )}
+
+        {/* ── Monthly Summary Footer ───────────────────────────────── */}
+        <div className="mt-8 overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel shadow-sm">
+          <div className="border-b border-border/60 px-6 py-5">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-subtle">Общие итоги за месяц</p>
+            <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+              {kpis.map((t) => (
+                <div key={t.label} className="rounded-2xl border border-border/50 bg-elevated/40 p-3.5">
+                  <dt className="text-xs text-subtle">{t.label}</dt>
+                  <dd className={cn("mt-1 text-2xl font-black tabular-nums", t.accent)}>{t.value}</dd>
+                </div>
+              ))}
+            </dl>
+            {data.totals.excluded ? (
+              <p className="mt-3 text-xs text-subtle">
+                Исключено (тикет / поддержка): <span className="font-semibold text-fg">{data.totals.excluded}</span>
+              </p>
+            ) : null}
+          </div>
+          <p className="px-6 py-3.5 text-center text-xs text-subtle">
+            Статистика взята с официального портала FearProject.ru · Обновлено {fmtMsk(data.updatedAt)} МСК
+          </p>
         </div>
       </section>
     </div>
@@ -385,8 +728,8 @@ function PresenceBadge({
 }) {
   if (info) {
     return (
-      <span className="ml-auto mr-2 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
-        <Gamepad2 className="size-3.5" />
+      <span className="ml-auto mr-2 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-2.5 py-0.5 text-xs font-semibold text-success shadow-sm">
+        <Gamepad2 className="size-3.5 animate-pulse" />
         <span className="max-w-44 truncate" title={info.map ? `${info.server} · ${info.map}` : info.server}>
           {info.server}
         </span>

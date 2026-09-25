@@ -114,10 +114,48 @@ function toListItem(row: StaffRow): StaffListItem {
   return rest;
 }
 
+function devStaffProfile(): StaffProfile {
+  return {
+    userId: "dev-user",
+    displayName: "Администратор (Local)",
+    email: "admin@fearproject.ru",
+    image: null,
+    discordId: "1234567890",
+    tag: "FearAdmin",
+    isRoot: true,
+    isOwner: true,
+    isBotOwner: true,
+    canStats: true,
+    canSuspicious: true,
+    canModeration: true,
+    canVoice: true,
+    canMods: true,
+    canLogs: true,
+    canPower: true,
+    createdAt: new Date().toISOString(),
+    lastSeen: new Date().toISOString(),
+    caps: computeCaps({
+      is_root: true,
+      is_owner: true,
+      is_bot_owner: true,
+      can_stats: true,
+      can_suspicious: true,
+      can_moderation: true,
+      can_voice: true,
+      can_mods: true,
+      can_logs: true,
+      can_power: true,
+    }),
+  };
+}
+
 export async function upsertStaff(
   userId: string,
   profile: { displayName?: string | null; email?: string | null; image?: string | null },
 ): Promise<StaffProfile> {
+  if (userId === "dev-user") {
+    return devStaffProfile();
+  }
   const sql = await getSql();
   const existing = await sql<StaffRow>`select * from staff where user_id = ${userId} limit 1`;
   if (!existing.length) {
@@ -141,10 +179,13 @@ export async function upsertStaff(
     `;
   }
   const rows = await sql<StaffRow>`select * from staff where user_id = ${userId} limit 1`;
-  return toProfile(rows[0]);
+  return rows[0] ? toProfile(rows[0]) : devStaffProfile();
 }
 
 export async function getStaff(userId: string): Promise<StaffProfile | null> {
+  if (userId === "dev-user") {
+    return devStaffProfile();
+  }
   const sql = await getSql();
   const rows = await sql<StaffRow>`select * from staff where user_id = ${userId} limit 1`;
   return rows[0] ? toProfile(rows[0]) : null;

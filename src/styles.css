@@ -39,6 +39,7 @@
   color-scheme: dark;
 }
 
+/* 1. Graphite (Default Slate Dark) */
 :root,
 :root[data-theme="graphite"] {
   --color-bg: #101114;
@@ -47,22 +48,149 @@
   --color-fg: #eef0f4;
   --color-muted: #9aa0aa;
   --color-subtle: #63676f;
-  --color-accent: #c8cdd6;
+  --color-accent: #6ea8ff;
   --color-accent-fg: #101114;
+  --color-embed: #4d70ef;
+  --color-chart-bans: #6ea8ff;
+  --color-chart-mutes: #4d70ef;
 }
 
-:root[data-theme="light"] {
-  color-scheme: light;
-  --color-bg: #f3f4f7;
-  --color-surface: #ffffff;
-  --color-elevated: #e8eaf0;
-  --color-fg: #17191e;
-  --color-muted: #5b616b;
-  --color-subtle: #878e99;
-  --color-accent: #2f6fed;
+/* 2. Cyberpunk (Neon Pink & Electric Cyan) */
+:root[data-theme="cyberpunk"] {
+  --color-bg: #0c0816;
+  --color-surface: #150f24;
+  --color-elevated: #221838;
+  --color-fg: #f8efff;
+  --color-muted: #b09ec9;
+  --color-subtle: #715f8a;
+  --color-accent: #ff2a85;
   --color-accent-fg: #ffffff;
+  --color-embed: #00f0ff;
+  --color-chart-bans: #ff2a85;
+  --color-chart-mutes: #00f0ff;
 }
 
+/* 3. Asiimov (CS2 Orange & Industrial Carbon) */
+:root[data-theme="asiimov"] {
+  --color-bg: #0f1013;
+  --color-surface: #17181e;
+  --color-elevated: #22242c;
+  --color-fg: #f7f8fa;
+  --color-muted: #9ea3ae;
+  --color-subtle: #636873;
+  --color-accent: #ff6b00;
+  --color-accent-fg: #0f1013;
+  --color-embed: #ffaa00;
+  --color-chart-bans: #ff6b00;
+  --color-chart-mutes: #ffaa00;
+}
+
+/* 4. Hyperbeast (Vibrant Aqua & Hot Magenta) */
+:root[data-theme="hyperbeast"] {
+  --color-bg: #060e15;
+  --color-surface: #0c1a26;
+  --color-elevated: #132738;
+  --color-fg: #e8faff;
+  --color-muted: #82a8be;
+  --color-subtle: #4d7185;
+  --color-accent: #00e5ff;
+  --color-accent-fg: #060e15;
+  --color-embed: #ff0077;
+  --color-chart-bans: #ff0077;
+  --color-chart-mutes: #00e5ff;
+}
+
+/* 5. Amethyst (Vaporwave Royal Violet) */
+:root[data-theme="amethyst"] {
+  --color-bg: #0e0818;
+  --color-surface: #170e28;
+  --color-elevated: #25173e;
+  --color-fg: #f5edff;
+  --color-muted: #a993c4;
+  --color-subtle: #6e588a;
+  --color-accent: #a855f7;
+  --color-accent-fg: #ffffff;
+  --color-embed: #c084fc;
+  --color-chart-bans: #ec4899;
+  --color-chart-mutes: #a855f7;
+}
+
+/* 6. Emerald (Matrix & Toxic Mint) */
+:root[data-theme="emerald"] {
+  --color-bg: #06110a;
+  --color-surface: #0c1f13;
+  --color-elevated: #132e1d;
+  --color-fg: #e8faee;
+  --color-muted: #82b093;
+  --color-subtle: #4c755c;
+  --color-accent: #10b981;
+  --color-accent-fg: #06110a;
+  --color-embed: #06b6d4;
+  --color-chart-bans: #ef4444;
+  --color-chart-mutes: #10b981;
+}
+
+/* 7. Crimson (Blood Dragon & Ruby) */
+:root[data-theme="crimson"] {
+  --color-bg: #120709;
+  --color-surface: #1e0d11;
+  --color-elevated: #2d141a;
+  --color-fg: #feeff1;
+  --color-muted: #b88d95;
+  --color-subtle: #7a525a;
+  --color-accent: #ff2e4d;
+  --color-accent-fg: #ffffff;
+  --color-embed: #fb7185;
+  --color-chart-bans: #ff2e4d;
+  --color-chart-mutes: #fb923c;
+}
+
+/* 8. Gold (Solar Gold & Imperial Carbon) */
+:root[data-theme="gold"] {
+  --color-bg: #100e0a;
+  --color-surface: #1a1610;
+  --color-elevated: #272118;
+  --color-fg: #faf5eb;
+  --color-muted: #b0a18a;
+  --color-subtle: #736550;
+  --color-accent: #f59e0b;
+  --color-accent-fg: #100e0a;
+  --color-embed: #d97706;
+  --color-chart-bans: #ef4444;
+  --color-chart-mutes: #f59e0b;
+}
+
+/* 9. Arctic (Polar Glacier & Ice Blue) */
+:root[data-theme="arctic"] {
+  --color-bg: #080d14;
+  --color-surface: #0f1926;
+  --color-elevated: #172538;
+  --color-fg: #f0f8ff;
+  --color-muted: #8ca5c2;
+  --color-subtle: #506a88;
+  --color-accent: #38bdf8;
+  --color-accent-fg: #080d14;
+  --color-embed: #0284c7;
+  --color-chart-bans: #f43f5e;
+  --color-chart-mutes: #38bdf8;
+}
+
+/* 10. Sunset (Synthwave Coral & Twilight) */
+:root[data-theme="sunset"] {
+  --color-bg: #120912;
+  --color-surface: #1f1020;
+  --color-elevated: #2f1830;
+  --color-fg: #fef2f2;
+  --color-muted: #b893a7;
+  --color-subtle: #7a546c;
+  --color-accent: #f43f5e;
+  --color-accent-fg: #ffffff;
+  --color-embed: #fb923c;
+  --color-chart-bans: #f43f5e;
+  --color-chart-mutes: #fb923c;
+}
+
+/* 11. Midnight (Deep Navy) */
 :root[data-theme="midnight"] {
   --color-bg: #090e18;
   --color-surface: #0f1729;
@@ -70,10 +198,14 @@
   --color-fg: #e8eefb;
   --color-muted: #93a0b8;
   --color-subtle: #5f6b84;
-  --color-accent: #7fb0ff;
-  --color-accent-fg: #090e18;
+  --color-accent: #3b82f6;
+  --color-accent-fg: #ffffff;
+  --color-embed: #6366f1;
+  --color-chart-bans: #3b82f6;
+  --color-chart-mutes: #6366f1;
 }
 
+/* 12. Forest (Nordic Pine) */
 :root[data-theme="forest"] {
   --color-bg: #0a110d;
   --color-surface: #111a14;
@@ -83,8 +215,10 @@
   --color-subtle: #5f6f63;
   --color-accent: #7ed6a7;
   --color-accent-fg: #0a110d;
+  --color-embed: #34d399;
 }
 
+/* 13. Wine (Burgundy / Merlot) */
 :root[data-theme="wine"] {
   --color-bg: #110a0d;
   --color-surface: #1a1115;
@@ -94,6 +228,23 @@
   --color-subtle: #71606a;
   --color-accent: #e3a3b8;
   --color-accent-fg: #110a0d;
+  --color-embed: #f472b6;
+}
+
+/* 14. Light (Clean Studio Light) */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #f4f5f8;
+  --color-surface: #ffffff;
+  --color-elevated: #e8eaf0;
+  --color-fg: #14161b;
+  --color-muted: #5c626d;
+  --color-subtle: #848a96;
+  --color-accent: #2563eb;
+  --color-accent-fg: #ffffff;
+  --color-embed: #3b82f6;
+  --color-chart-bans: #2563eb;
+  --color-chart-mutes: #3b82f6;
 }
 
 @layer base {
@@ -106,7 +257,14 @@
 
   body {
     min-height: 100dvh;
-    background: var(--color-bg);
+    background-color: var(--color-bg);
+    background-image:
+      radial-gradient(ellipse 90% 50% at 50% -10%, color-mix(in oklab, var(--color-accent) 14%, transparent), transparent 70%),
+      radial-gradient(ellipse 60% 40% at 90% 20%, color-mix(in oklab, var(--color-embed) 10%, transparent), transparent 60%),
+      radial-gradient(ellipse 50% 50% at 10% 70%, color-mix(in oklab, var(--color-accent) 6%, transparent), transparent 70%),
+      radial-gradient(circle at 1px 1px, color-mix(in oklab, var(--color-fg) 3%, transparent) 1px, transparent 0);
+    background-size: auto, auto, auto, 28px 28px;
+    background-attachment: fixed;
     color: var(--color-fg);
     font-family: var(--font-sans);
   }
@@ -141,6 +299,43 @@
       linear-gradient(to bottom, color-mix(in oklab, var(--color-fg) 4.5%, transparent) 1px, transparent 1px);
     background-size: 48px 48px;
     mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 20%, transparent 75%);
+  }
+
+  .glass-panel {
+    background-color: color-mix(in oklab, var(--color-surface) 80%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid color-mix(in oklab, var(--color-fg) 8%, transparent);
+  }
+
+  .glow-card {
+    transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .glow-card:hover {
+    border-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
+    box-shadow: 0 12px 36px -10px color-mix(in oklab, var(--color-accent) 20%, transparent);
+    transform: translateY(-2px);
+  }
+
+  .neon-text-glow {
+    text-shadow: 0 0 20px color-mix(in oklab, var(--color-accent) 50%, transparent);
+  }
+
+  .cyber-border-glow {
+    position: relative;
+  }
+  .cyber-border-glow::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, color-mix(in oklab, var(--color-accent) 50%, transparent), transparent 60%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
   }
 }
 
