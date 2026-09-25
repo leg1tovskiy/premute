@@ -226,18 +226,15 @@ export function PanelShell({ children }: { children: ReactNode }) {
                 {profile.isOwner ? "Владелец" : "Модератор"}
               </p>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <ThemeSelect />
-              <button
-                type="button"
-                onClick={() => void signOut()}
-                className="grid size-8 place-items-center rounded-lg border border-border/60 bg-surface/80 text-subtle hover:text-danger hover:border-danger/40 hover:bg-danger/10 transition-colors"
-                title="Выйти из аккаунта"
-                aria-label="Выйти из аккаунта"
-              >
-                <LogOut className="size-3.5" />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              className="grid size-8 shrink-0 place-items-center rounded-lg border border-border/60 bg-surface/80 text-subtle hover:text-danger hover:border-danger/40 hover:bg-danger/10 transition-colors"
+              title="Выйти из аккаунта"
+              aria-label="Выйти из аккаунта"
+            >
+              <LogOut className="size-3.5" />
+            </button>
           </div>
         </div>
       </aside>
