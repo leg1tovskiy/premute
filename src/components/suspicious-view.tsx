@@ -187,7 +187,7 @@ export function SuspiciousView() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="truncate text-sm font-extrabold text-fg">{p.nickname || p.steamid}</p>
-                    <span className="inline-flex items-center gap-1 rounded-md bg-success/15 border border-success/30 px-1.5 py-0.5 font-mono text-[10px] font-bold text-success">
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-success/15 border border-success/30 px-1.5 py-0.5 font-mono text-[10px] font-bold text-success">
                       <span className="size-1.5 rounded-full bg-success animate-pulse" />
                       В ИГРЕ
                     </span>
