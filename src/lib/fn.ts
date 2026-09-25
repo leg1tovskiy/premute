@@ -166,13 +166,50 @@ export const getSuspiciousFn = createServerFn({ method: "GET" })
     const { getStaff } = await import("./server/staff");
     const me = await getStaff(context.userId);
     if (!me?.caps.canSuspicious) throw new Error("Нет доступа к подозрительным аккаунтам.");
-    const { fetchWorkerSuspicious } = await import("./server/discord");
+    const { fetchWorkerSuspicious, fetchWorkerOnline } = await import("./server/discord");
     const data = await fetchWorkerSuspicious();
     if (!data) throw new Error("Воркер статистики недоступен.");
+
+    let players = data.players ?? [];
+
+    if (players.length > 0) {
+      const ids = players
+        .map((p) => String(p.steamid || "").trim().replace(/\D/g, ""))
+        .filter((s) => /^\d{17}$/.test(s));
+
+      if (ids.length > 0) {
+        let onlineMap = await fetchWorkerOnline(ids);
+        if (!onlineMap) {
+          // Retry once in case of temporary network latency
+          await new Promise((resolve) => setTimeout(resolve, 350));
+          onlineMap = await fetchWorkerOnline(ids);
+        }
+
+        if (onlineMap) {
+          // Оставляем в списке подозрительных ТОЛЬКО тех игроков, которые прямо сейчас онлайн на сервере.
+          // Если игрок вышел с сервера (даже если на него есть жалоба или тикет), он перестаёт отображаться.
+          players = players
+            .filter((p) => {
+              const sid = String(p.steamid || "").trim().replace(/\D/g, "");
+              return Boolean(onlineMap[sid] || onlineMap[p.steamid]);
+            })
+            .map((p) => {
+              const sid = String(p.steamid || "").trim().replace(/\D/g, "");
+              const live = onlineMap[sid] || onlineMap[p.steamid];
+              return {
+                ...p,
+                server: live?.server || p.server,
+                map: live?.map || p.map,
+              };
+            });
+        }
+      }
+    }
+
     return {
       updatedAt: data.updatedAt ?? null,
       tickets: data.tickets ?? null,
-      players: data.players ?? [],
+      players,
     };
   });
 

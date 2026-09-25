@@ -68,7 +68,7 @@ export function SuspiciousView() {
 
   useEffect(() => {
     void load();
-    const t = setInterval(() => void load(true), 60_000);
+    const t = setInterval(() => void load(true), 30_000);
     return () => clearInterval(t);
   }, []);
 
@@ -117,8 +117,8 @@ export function SuspiciousView() {
               <ShieldAlert className="size-6 text-danger animate-pulse" />
             </h1>
             <p className="mt-1 text-xs text-muted max-w-2xl leading-relaxed">
-              Онлайн-игроки с KD выше 2.0 и наигранными менее 2 часов, нарушители из тикетов
-              fearproject.ru и репорты игроков по причине спама, токсичности или читов.
+              В радаре отображаются исключительно игроки, находящиеся онлайн на серверах. Как только игрок
+              выходит с сервера (даже если на него есть жалоба или тикет), он автоматически снимается со списка.
             </p>
           </div>
 
@@ -154,12 +154,12 @@ export function SuspiciousView() {
           <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-success/15 border border-success/30 text-success shadow-lg shadow-success/10">
             <ShieldCheck className="size-8" />
           </div>
-          <p className="mt-4 text-base font-extrabold text-fg">Подозрительных аккаунтов не обнаружено</p>
+          <p className="mt-4 text-base font-extrabold text-fg">Подозрительных игроков онлайн не обнаружено</p>
           <p className="mt-1 text-xs text-muted">
-            На серверах проекта нет активных игроков с аномальной статистикой или жалобами.
+            На серверах проекта сейчас нет активных игроков с жалобами или аномальной статистикой.
           </p>
           <p className="mt-3 font-mono text-[11px] text-subtle">
-            Радар проверяет серверы каждые 60 секунд.
+            Радар проверяет серверы каждые 30 секунд. Игроки не в сети в списке не отображаются.
           </p>
         </div>
       ) : (
@@ -170,19 +170,28 @@ export function SuspiciousView() {
               className="flex flex-col gap-3.5 p-4.5 sm:flex-row sm:items-center sm:px-6 transition-colors hover:bg-elevated/40"
             >
               <div className="flex min-w-0 flex-1 items-center gap-3.5">
-                {p.avatar ? (
-                  <img
-                    src={p.avatar}
-                    alt=""
-                    className="size-11 shrink-0 rounded-2xl object-cover border-2 border-border/80 shadow-md"
-                  />
-                ) : (
-                  <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-surface to-elevated text-sm font-black text-fg border-2 border-border/80 shadow-md">
-                    {(p.nickname.trim().charAt(0) || "?").toUpperCase()}
-                  </span>
-                )}
+                <div className="relative shrink-0">
+                  {p.avatar ? (
+                    <img
+                      src={p.avatar}
+                      alt=""
+                      className="size-11 shrink-0 rounded-2xl object-cover border-2 border-border/80 shadow-md"
+                    />
+                  ) : (
+                    <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-surface to-elevated text-sm font-black text-fg border-2 border-border/80 shadow-md">
+                      {(p.nickname.trim().charAt(0) || "?").toUpperCase()}
+                    </span>
+                  )}
+                  <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-surface bg-success shadow-[0_0_8px_var(--color-success)]" />
+                </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-extrabold text-fg">{p.nickname || p.steamid}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-sm font-extrabold text-fg">{p.nickname || p.steamid}</p>
+                    <span className="inline-flex items-center gap-1 rounded-md bg-success/15 border border-success/30 px-1.5 py-0.5 font-mono text-[10px] font-bold text-success">
+                      <span className="size-1.5 rounded-full bg-success animate-pulse" />
+                      В ИГРЕ
+                    </span>
+                  </div>
                   <p className="truncate font-mono text-[11px] text-subtle mt-0.5">
                     {p.steamid}
                     {p.server ? <span className="text-muted"> &middot; {p.server}</span> : ""}
