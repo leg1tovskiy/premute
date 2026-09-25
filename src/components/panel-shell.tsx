@@ -18,8 +18,10 @@ import {
   Gamepad2,
   History,
   Home,
+  LogOut,
   Medal,
   Menu,
+  Play,
   Radio,
   RefreshCw,
   Search,
@@ -39,7 +41,7 @@ import {
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
-import { UserButton } from "@/lib/auth/gates";
+import { signOut } from "@/lib/auth/client";
 import { ThemeSelect } from "@/components/theme-provider";
 import { usePalette } from "@/components/command-palette";
 import { NotificationBell } from "@/components/notification-bell";
@@ -205,25 +207,36 @@ export function PanelShell({ children }: { children: ReactNode }) {
 
         {/* User Card at bottom of sidebar */}
         <div className="border-t border-border/60 bg-surface/90 p-3">
-          <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-elevated/50 p-2.5">
-            {profile.image ? (
-              <img src={profile.image} alt="" className="size-9 rounded-full border border-border object-cover" />
-            ) : (
-              <div className="grid size-9 place-items-center rounded-full bg-gradient-to-tr from-accent/30 to-elevated text-xs font-bold text-fg">
-                {(profile.displayName || profile.tag || "U")[0].toUpperCase()}
-              </div>
-            )}
+          <div className="flex items-center gap-2.5 rounded-xl border border-border/50 bg-elevated/50 p-2.5">
+            <div className="relative shrink-0">
+              {profile.image ? (
+                <img src={profile.image} alt="" className="size-9 rounded-full border border-border object-cover" />
+              ) : (
+                <div className="grid size-9 place-items-center rounded-full bg-gradient-to-tr from-accent/30 to-elevated text-xs font-bold text-fg">
+                  {(profile.displayName || profile.tag || "U")[0].toUpperCase()}
+                </div>
+              )}
+              <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-surface bg-success" />
+            </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-bold leading-tight text-fg">
                 {profile.displayName || profile.tag || "Администратор"}
               </p>
-              <p className="truncate text-[10px] text-subtle">
+              <p className="truncate text-[10px] text-subtle font-medium">
                 {profile.isOwner ? "Владелец" : "Модератор"}
               </p>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0">
               <ThemeSelect />
-              <UserButton />
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                className="grid size-8 place-items-center rounded-lg border border-border/60 bg-surface/80 text-subtle hover:text-danger hover:border-danger/40 hover:bg-danger/10 transition-colors"
+                title="Выйти из аккаунта"
+                aria-label="Выйти из аккаунта"
+              >
+                <LogOut className="size-3.5" />
+              </button>
             </div>
           </div>
         </div>
@@ -285,7 +298,15 @@ export function PanelShell({ children }: { children: ReactNode }) {
 
             <div className="md:hidden flex items-center gap-1.5">
               <ThemeSelect />
-              <UserButton />
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                className="grid size-8 place-items-center rounded-lg border border-border/60 bg-elevated text-subtle hover:text-danger hover:border-danger/40 transition-colors"
+                title="Выйти"
+                aria-label="Выйти"
+              >
+                <LogOut className="size-3.5" />
+              </button>
             </div>
           </div>
         </header>
@@ -376,60 +397,98 @@ function fmtMskDateTime(sec: number) {
   }
 }
 
-const CS2_SERVERS = [
-  {
-    id: "pub1",
-    name: "FEAR #1 | PUBLIC",
-    map: "de_mirage",
-    players: 22,
-    maxPlayers: 24,
-    ip: "cs.fearproject.ru:27015",
-    tick: "128 tick",
-  },
+interface CS2Server {
+  id: string;
+  name: string;
+  mode: string;
+  map: string;
+  mapLabel: string;
+  mapIcon: string;
+  players: number;
+  maxPlayers: number;
+  ip: string;
+  tick: string;
+  location: string;
+}
+
+const CS2_SERVERS: CS2Server[] = [
   {
     id: "mirage",
     name: "FEAR #2 | MIRAGE ONLY",
+    mode: "Mirage Only",
     map: "de_mirage",
+    mapLabel: "Mirage",
+    mapIcon: "🏜️",
     players: 24,
     maxPlayers: 24,
     ip: "cs.fearproject.ru:27016",
     tick: "128 tick",
-  },
-  {
-    id: "awp",
-    name: "FEAR #3 | AWP LEGO FAST",
-    map: "awp_lego_2",
-    players: 18,
-    maxPlayers: 20,
-    ip: "cs.fearproject.ru:27017",
-    tick: "128 tick",
+    location: "MSK-1",
   },
   {
     id: "retake1",
     name: "FEAR #4 | RETAKE #1",
+    mode: "Retake Classic",
     map: "de_inferno",
+    mapLabel: "Inferno",
+    mapIcon: "🏰",
     players: 9,
     maxPlayers: 9,
     ip: "cs.fearproject.ru:27018",
     tick: "128 tick",
+    location: "MSK-2",
+  },
+  {
+    id: "pub1",
+    name: "FEAR #1 | PUBLIC",
+    mode: "Public Classic",
+    map: "de_mirage",
+    mapLabel: "Mirage",
+    mapIcon: "🏜️",
+    players: 22,
+    maxPlayers: 24,
+    ip: "cs.fearproject.ru:27015",
+    tick: "128 tick",
+    location: "MSK-1",
+  },
+  {
+    id: "awp",
+    name: "FEAR #3 | AWP LEGO FAST",
+    mode: "AWP Only",
+    map: "awp_lego_2",
+    mapLabel: "AWP Lego 2",
+    mapIcon: "🎯",
+    players: 18,
+    maxPlayers: 20,
+    ip: "cs.fearproject.ru:27017",
+    tick: "128 tick",
+    location: "MSK-2",
   },
   {
     id: "retake2",
     name: "FEAR #5 | RETAKE #2",
+    mode: "Retake Classic",
     map: "de_dust2",
+    mapLabel: "Dust II",
+    mapIcon: "☀️",
     players: 7,
     maxPlayers: 9,
     ip: "cs.fearproject.ru:27019",
     tick: "128 tick",
+    location: "MSK-1",
   },
   {
     id: "duels",
     name: "FEAR #6 | DUELS 1v1",
+    mode: "Duels Arena",
     map: "aim_map",
+    mapLabel: "Aim Map",
+    mapIcon: "⚔️",
     players: 12,
     maxPlayers: 16,
     ip: "cs.fearproject.ru:27020",
     tick: "128 tick",
+    location: "MSK-3",
   },
 ];
 
@@ -592,6 +651,27 @@ export function HomeTiles() {
   const banCount = useMemo(() => punishments.filter((p) => p.kind === "ban").length, [punishments]);
   const muteCount = useMemo(() => punishments.filter((p) => p.kind === "mute").length, [punishments]);
 
+  const sortedServers = useMemo(() => {
+    return [...CS2_SERVERS].sort((a, b) => {
+      const ratioA = a.players / a.maxPlayers;
+      const ratioB = b.players / b.maxPlayers;
+      if (Math.abs(ratioB - ratioA) > 0.0001) {
+        return ratioB - ratioA; // Higher fill percentage first
+      }
+      return b.players - a.players; // Secondary sort: more players
+    });
+  }, []);
+
+  const totalPlayers = useMemo(
+    () => CS2_SERVERS.reduce((acc, s) => acc + s.players, 0),
+    [],
+  );
+  const maxTotalPlayers = useMemo(
+    () => CS2_SERVERS.reduce((acc, s) => acc + s.maxPlayers, 0),
+    [],
+  );
+  const overallPct = Math.round((totalPlayers / maxTotalPlayers) * 100);
+
   return (
     <section className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 sm:py-8 space-y-7">
       {/* ── CS2 Portal Hero Banner with SteamID Search ──────────────── */}
@@ -727,106 +807,193 @@ export function HomeTiles() {
 
       {/* ── CS2 Servers Live Monitoring Matrix ──────────────────────── */}
       <div className="rounded-3xl border border-border/80 bg-surface/90 glass-panel p-5 sm:p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border/60 gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="grid size-9 place-items-center rounded-xl border border-success/30 bg-success/15 text-success shadow-sm">
-              <Server className="size-4.5" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border/60 gap-4">
+          <div className="flex items-center gap-3">
+            <div className="relative grid size-10 place-items-center rounded-2xl border border-success/40 bg-success/15 text-success shadow-[0_0_12px_rgba(34,197,94,0.2)]">
+              <Server className="size-5" />
+              <span className="absolute -top-1 -right-1 size-3 rounded-full border-2 border-surface bg-success animate-ping" />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-black text-fg tracking-tight">
-                Мониторинг серверов FEAR Project CS2
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-black text-fg tracking-tight">
+                  Мониторинг серверов FEAR Project CS2
+                </h3>
+                <span className="hidden sm:inline-flex rounded-full bg-accent/15 border border-accent/30 px-2 py-0.5 text-[10px] font-bold text-accent">
+                  ТОП ПО ЗАПОЛНЕННОСТИ
+                </span>
+              </div>
               <p className="text-xs text-muted">
-                Прямая трансляция статуса нод, карт и заполненности слотов
+                Серверы ранжированы от самых заполненных к менее заполненным · 6 нод в сети
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-mono text-muted">
-            <span className="size-2 rounded-full bg-success animate-pulse" />
-            <span>Обновление в реальном времени</span>
+          <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+            <div className="flex items-center gap-1.5 rounded-xl border border-border/70 bg-elevated/60 px-3 py-1.5 text-muted">
+              <Users className="size-3.5 text-accent" />
+              <span>
+                <strong className="text-fg">{totalPlayers}</strong> / {maxTotalPlayers} в игре
+              </span>
+              <span className="rounded bg-accent/20 px-1.5 py-0.5 text-[10px] font-bold text-accent">
+                {overallPct}%
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 rounded-xl border border-success/30 bg-success/10 px-3 py-1.5 text-success font-semibold">
+              <span className="size-2 rounded-full bg-success animate-pulse" />
+              <span>6/6 онлайн</span>
+            </div>
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-          {CS2_SERVERS.map((srv) => {
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {sortedServers.map((srv, index) => {
             const isFull = srv.players >= srv.maxPlayers;
             const pct = Math.round((srv.players / srv.maxPlayers) * 100);
             const isCopied = copiedIp === srv.ip;
 
+            const rankLabel =
+              index === 0
+                ? "🔥 #1 ТОП ОНЛАЙН"
+                : index === 1
+                  ? "⚡ #2 ТОП"
+                  : index === 2
+                    ? "🥉 #3"
+                    : `#${index + 1}`;
+
+            const rankBadgeStyle =
+              index === 0
+                ? "border-amber-500/40 bg-amber-500/15 text-amber-300 font-extrabold shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+                : index === 1
+                  ? "border-accent/40 bg-accent/15 text-accent font-bold"
+                  : index === 2
+                    ? "border-indigo-500/30 bg-indigo-500/15 text-indigo-300 font-semibold"
+                    : "border-border/60 bg-surface/80 text-subtle font-medium";
+
             return (
               <div
                 key={srv.id}
-                className="group relative flex flex-col justify-between rounded-2xl border border-border/70 bg-elevated/40 p-4 transition-all hover:border-accent/40 hover:bg-elevated/70 hover:shadow-md"
+                className={cn(
+                  "group relative flex flex-col justify-between rounded-2xl border bg-elevated/40 p-4 transition-all duration-200 hover:bg-elevated/75 hover:shadow-xl hover:-translate-y-0.5",
+                  index === 0
+                    ? "border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.06)]"
+                    : "border-border/70 hover:border-accent/40",
+                )}
               >
+                {/* Gold accent bar on top for #1 server */}
+                {index === 0 && (
+                  <div className="absolute top-0 left-4 right-4 h-0.5 bg-gradient-to-r from-amber-500 via-accent to-danger rounded-full" />
+                )}
+
                 <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="size-2 rounded-full bg-success shadow-[0_0_6px_var(--color-success)]" />
-                        <h4 className="text-xs sm:text-sm font-black text-fg tracking-tight">
-                          {srv.name}
-                        </h4>
-                      </div>
-                      <p className="mt-1 text-[11px] font-mono text-subtle flex items-center gap-1.5">
-                        <span className="rounded bg-surface px-1.5 py-0.5 border border-border/60 text-fg font-semibold">
-                          {srv.map}
-                        </span>
-                        <span>&middot;</span>
-                        <span className="text-muted">{srv.tick}</span>
-                      </p>
-                    </div>
+                  {/* Top Bar: Rank Tag & Occupancy Status */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={cn("inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[11px] font-mono", rankBadgeStyle)}>
+                      {rankLabel}
+                    </span>
 
                     <span
                       className={cn(
-                        "rounded-md border px-1.5 py-0.5 text-[10px] font-black font-mono",
+                        "rounded-lg border px-2 py-0.5 text-[11px] font-black font-mono shadow-sm",
                         isFull
-                          ? "bg-danger/15 text-danger border-danger/30"
-                          : "bg-success/15 text-success border-success/30",
+                          ? "bg-danger/20 text-danger border-danger/40 animate-pulse"
+                          : pct >= 85
+                            ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                            : "bg-success/20 text-success border-success/40",
                       )}
                     >
-                      {srv.players}/{srv.maxPlayers}
+                      {isFull ? "ЗАПОЛНЕН" : `${pct}%`} · {srv.players}/{srv.maxPlayers}
                     </span>
                   </div>
 
+                  {/* Server Name & Badges */}
+                  <div className="mt-3">
+                    <div className="flex items-center gap-2">
+                      <span className="size-2 rounded-full bg-success shadow-[0_0_6px_var(--color-success)] shrink-0" />
+                      <h4 className="text-sm font-black text-fg tracking-tight truncate group-hover:text-accent transition-colors">
+                        {srv.name}
+                      </h4>
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-surface px-2 py-0.5 border border-border/70 font-semibold text-fg">
+                        <span>{srv.mapIcon}</span>
+                        <span>{srv.mapLabel}</span>
+                      </span>
+                      <span className="rounded-md bg-surface/70 px-1.5 py-0.5 border border-border/50 text-subtle font-mono text-[10px]">
+                        {srv.map}
+                      </span>
+                      <span className="rounded-md bg-accent/10 px-1.5 py-0.5 border border-accent/25 text-accent font-medium text-[10px]">
+                        {srv.mode}
+                      </span>
+                      <span className="rounded-md bg-surface/60 px-1.5 py-0.5 border border-border/40 text-muted font-mono text-[10px]">
+                        {srv.tick}
+                      </span>
+                    </div>
+                  </div>
+
                   {/* Player fill bar */}
-                  <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-surface border border-border/50">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all duration-500",
-                        isFull
-                          ? "bg-danger"
-                          : pct >= 80
-                            ? "bg-warn"
-                            : "bg-gradient-to-r from-accent to-success",
-                      )}
-                      style={{ width: `${pct}%` }}
-                    />
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between text-[10px] font-mono text-subtle mb-1.5">
+                      <span>Заполненность слотов</span>
+                      <span className="font-semibold text-fg">{srv.players} / {srv.maxPlayers} игроков</span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-surface border border-border/60 p-0.5">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all duration-700",
+                          isFull
+                            ? "bg-gradient-to-r from-danger via-red-500 to-rose-400 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
+                            : pct >= 85
+                              ? "bg-gradient-to-r from-amber-500 to-orange-400 shadow-[0_0_8px_rgba(245,158,11,0.4)]"
+                              : "bg-gradient-to-r from-accent to-success shadow-[0_0_8px_rgba(34,197,94,0.3)]",
+                        )}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="mt-3.5 flex items-center justify-between border-t border-border/50 pt-2.5">
-                  <span className="text-[11px] font-mono text-muted truncate max-w-[170px]">
+                {/* Footer Actions: IP + Steam Connect & Copy */}
+                <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-3 gap-2">
+                  <span className="text-[11px] font-mono text-muted truncate max-w-[130px] sm:max-w-[150px]" title={srv.ip}>
                     {srv.ip}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopyConnect(srv.ip)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-border/80 bg-surface/80 px-2 py-1 text-[10px] font-bold text-fg hover:border-accent hover:text-accent transition-colors"
-                    title="Скопировать команду подключения"
-                  >
-                    {isCopied ? (
-                      <>
-                        <Check className="size-3 text-success" />
-                        <span className="text-success">Скопировано!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="size-3" />
-                        <span>connect</span>
-                      </>
-                    )}
-                  </button>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <a
+                      href={`steam://connect/${srv.ip}`}
+                      className="inline-flex items-center gap-1 rounded-lg border border-accent/40 bg-accent/15 px-2.5 py-1 text-[11px] font-bold text-accent hover:bg-accent hover:text-accent-fg transition-all"
+                      title="Подключиться к серверу через Steam"
+                    >
+                      <Play className="size-3 fill-current" />
+                      <span>Играть</span>
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => handleCopyConnect(srv.ip)}
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-bold transition-all",
+                        isCopied
+                          ? "border-success/40 bg-success/20 text-success"
+                          : "border-border/80 bg-surface/80 text-muted hover:border-border hover:text-fg",
+                      )}
+                      title="Скопировать команду connect"
+                    >
+                      {isCopied ? (
+                        <>
+                          <Check className="size-3" />
+                          <span>Скопировано</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="size-3" />
+                          <span>connect</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             );
