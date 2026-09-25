@@ -4,6 +4,7 @@ import type {
   BackupsPayload,
   DailyPoint,
   DiscordClaim,
+  GameServersPayload,
   ModDetails,
   PlayerRecord,
   RosterPayload,
@@ -224,6 +225,19 @@ export const getSystemStatusFn = createServerFn({ method: "GET" })
       workerUpdatedAt: worker.updatedAt,
       checkedAt: Math.floor(Date.now() / 1000),
     };
+  });
+
+/**
+ * Реальные серверы и онлайн fearproject.ru (через воркер статистики).
+ * Из браузера этот фид недоступен: fearproject.ru не отдаёт CORS-заголовки.
+ */
+export const getServersFn = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async (): Promise<GameServersPayload> => {
+    const { fetchWorkerServers } = await import("./server/discord");
+    const data = await fetchWorkerServers();
+    if (!data) throw new Error("Воркер статистики недоступен.");
+    return data;
   });
 
 export const exportBackupFn = createServerFn({ method: "GET" })

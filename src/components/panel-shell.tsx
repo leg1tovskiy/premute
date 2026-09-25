@@ -49,7 +49,7 @@ import { StatusIndicator } from "@/components/status-indicator";
 import { Skeleton } from "@/components/skeletons";
 import { allowedTabs } from "@/lib/tabs";
 import { usePanel } from "@/lib/panel";
-import { getStatsFn, getRecentPunishmentsFn, type LivePunishmentItem } from "@/lib/fn";
+import { getServersFn, getStatsFn, getRecentPunishmentsFn, type LivePunishmentItem } from "@/lib/fn";
 import type { StatsPayload } from "@/lib/types";
 import { RANK_SHORT, RANK_TITLE } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
@@ -410,39 +410,25 @@ const PLACEHOLDER_SERVERS: FearServer[] = Array.from({ length: 6 }, (_, i) => ({
   ip: "—", port: 0, name: `Сервер #${i + 1}`, mode: "—", map: "—", players: 0, maxPlayers: 24,
 }));
 
+/**
+ * Реальные серверы FEAR: браузер не может обратиться к fearproject.ru напрямую
+ * (у API нет CORS-заголовков), поэтому берём данные через серверную функцию ->
+ * воркер статистики, который держит 30-секундный кэш этого же фида.
+ * Возвращаем топ-6 по заполненности.
+ */
 async function fetchFearServers(): Promise<FearServer[]> {
-  const res = await fetch("https://fearproject.ru/api/servers", {
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!res.ok) throw new Error(`fear servers HTTP ${res.status}`);
-  const list = (await res.json()) as Array<{
-    ip?: string;
-    port?: number;
-    site_name?: string;
-    name?: string;
-    mode?: { name?: string } | string;
-    live_data?: { map_name?: string; current_players?: number; max_players?: number };
-  }>;
-  return list
+  const data = await getServersFn();
+  return data.servers
     .filter((s) => s.ip && s.port)
-    .map((s) => {
-      const live = s.live_data ?? {};
-      const modeName =
-        typeof s.mode === "object" && s.mode !== null
-          ? (s.mode.name ?? "")
-          : typeof s.mode === "string"
-            ? s.mode
-            : "";
-      return {
-        ip: String(s.ip),
-        port: Number(s.port),
-        name: String(s.site_name ?? s.name ?? `${s.ip}:${s.port}`),
-        mode: modeName,
-        map: String(live.map_name ?? ""),
-        players: Number(live.current_players ?? 0),
-        maxPlayers: Number(live.max_players ?? 24),
-      };
-    })
+    .map((s) => ({
+      ip: s.ip,
+      port: s.port,
+      name: s.name || `${s.ip}:${s.port}`,
+      mode: s.mode,
+      map: s.map,
+      players: s.players,
+      maxPlayers: s.maxPlayers || 24,
+    }))
     .sort((a, b) => {
       const ra = a.players / (a.maxPlayers || 1);
       const rb = b.players / (b.maxPlayers || 1);
@@ -633,15 +619,22 @@ export function HomeTiles() {
   const banCount = useMemo(() => punishments.filter((p) => p.kind === "ban").length, [punishments]);
   const muteCount = useMemo(() => punishments.filter((p) => p.kind === "mute").length, [punishments]);
 
-  // ── CS2 Live Servers (fearproject.ru/api/servers, refresh every 30s) ──
+  // ── CS2 Live Servers (воркер статистики -> fearproject.ru, обновление каждые 30 с) ──
   const [servers, setServers] = useState<FearServer[]>(PLACEHOLDER_SERVERS);
   const [serversLoading, setServersLoading] = useState(true);
+  // Отличаем реальные данные от заглушек, чтобы не писать «онлайн» там, где связи нет.
+  const [serversLive, setServersLive] = useState(false);
 
   const loadServers = useCallback(() => {
     setServersLoading(true);
     fetchFearServers()
-      .then((data) => { if (data.length > 0) setServers(data); })
-      .catch(() => { /* keep last data */ })
+      .then((data) => {
+        if (data.length > 0) {
+          setServers(data);
+          setServersLive(true);
+        }
+      })
+      .catch(() => { /* keep last data — заглушки остаются на месте */ })
       .finally(() => setServersLoading(false));
   }, []);
 
@@ -654,6 +647,8 @@ export function HomeTiles() {
   const totalPlayers = useMemo(() => servers.reduce((acc, s) => acc + s.players, 0), [servers]);
   const maxTotalPlayers = useMemo(() => servers.reduce((acc, s) => acc + s.maxPlayers, 0), [servers]);
   const overallPct = maxTotalPlayers > 0 ? Math.round((totalPlayers / maxTotalPlayers) * 100) : 0;
+  // Нода «в сети», если FEAR отдал по ней живые данные (max_players > 0).
+  const onlineServers = useMemo(() => servers.filter((s) => s.maxPlayers > 0).length, [servers]);
 
   return (
     <section className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 sm:py-8 space-y-7">
@@ -806,7 +801,7 @@ export function HomeTiles() {
                 </span>
               </div>
               <p className="text-xs text-muted">
-                Серверы ранжированы от самых заполненных к менее заполненным · 6 нод в сети
+                Серверы ранжированы от самых заполненных к менее заполненным · {servers.length} нод в сети
               </p>
             </div>
           </div>
@@ -822,9 +817,29 @@ export function HomeTiles() {
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5 rounded-xl border border-success/30 bg-success/10 px-3 py-1.5 text-success font-semibold">
-              <span className="size-2 rounded-full bg-success animate-pulse" />
-              <span>6/6 онлайн</span>
+            <div
+              className={cn(
+                "flex items-center gap-1.5 rounded-xl border px-3 py-1.5 font-semibold",
+                serversLive
+                  ? "border-success/30 bg-success/10 text-success"
+                  : serversLoading
+                    ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+                    : "border-danger/30 bg-danger/10 text-danger",
+              )}
+            >
+              <span
+                className={cn(
+                  "size-2 rounded-full",
+                  serversLive ? "bg-success animate-pulse" : serversLoading ? "bg-amber-500" : "bg-danger",
+                )}
+              />
+              <span>
+                {serversLive
+                  ? `${onlineServers}/${servers.length} онлайн`
+                  : serversLoading
+                    ? "загрузка…"
+                    : "нет связи с FEAR"}
+              </span>
             </div>
           </div>
         </div>

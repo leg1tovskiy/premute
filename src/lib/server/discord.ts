@@ -12,6 +12,8 @@ import { createHash } from "node:crypto";
 import type {
   BackupsPayload,
   DailyPoint,
+  GameServer,
+  GameServersPayload,
   GuildMember,
   PlayerRecord,
   PunishmentRecord,
@@ -467,6 +469,28 @@ export async function fetchWorkerHealth(): Promise<{ ok: boolean; updatedAt: num
     return { ok: Boolean(json.ok), updatedAt: json.updatedAt ?? null };
   } catch {
     return { ok: false, updatedAt: null };
+  }
+}
+
+/**
+ * Реальные игровые серверы и онлайн fearproject.ru — воркер отдаёт свой
+ * 30-секундный кэш того же фида, что использует для /online.
+ */
+export async function fetchWorkerServers(): Promise<GameServersPayload | null> {
+  try {
+    const res = await fetch(`${STATS_WORKER_URL}/servers?s=${encodeURIComponent(panelSecret())}`, {
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      ok?: boolean;
+      updatedAt?: number;
+      servers?: GameServer[];
+    };
+    if (!json.ok || !Array.isArray(json.servers)) return null;
+    return { updatedAt: json.updatedAt ?? null, servers: json.servers };
+  } catch {
+    return null;
   }
 }
 

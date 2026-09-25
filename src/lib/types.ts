@@ -251,3 +251,32 @@ export type LogEntry = {
   ts: number;
   text: string;
 };
+
+/** Один игровой сервер FEAR (fearproject.ru/api/servers через воркер статистики). */
+export type GameServer = {
+  id: number | null;
+  ip: string;
+  port: number;
+  /** `ip:port` — готовая строка для `steam://connect/…`. */
+  addr: string;
+  name: string;
+  /** Тип сервера с сайта FEAR: MIRAGE, FPS+, DUSt2, Minions … */
+  type: string;
+  /** Режим: Public и т.п. */
+  mode: string;
+  /** Локация ноды: MSK, SPB … */
+  location: string;
+  domain: string;
+  isNew: boolean;
+  map: string;
+  players: number;
+  maxPlayers: number;
+  ctScore: number | null;
+  ttScore: number | null;
+};
+
+/** Ответ воркера на `/servers`: реальные серверы и онлайн fearproject.ru. */
+export type GameServersPayload = {
+  updatedAt: number | null;
+  servers: GameServer[];
+};
