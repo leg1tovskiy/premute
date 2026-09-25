@@ -394,100 +394,85 @@ function fmtMskDateTime(sec: number) {
   }
 }
 
-interface CS2Server {
-  id: string;
-  name: string;
-  mode: string;
-  map: string;
-  mapLabel: string;
-  mapIcon: string;
-  players: number;
-  maxPlayers: number;
-  ip: string;
-  tick: string;
-  location: string;
+/** Live server data from fearproject.ru/api/servers */
+interface FearServer {
+  ip: string;        // e.g. "85.119.149.121"
+  port: number;      // e.g. 27019
+  name: string;      // site_name, e.g. "MIRAGE #11"
+  mode: string;      // mode.name, e.g. "Public"
+  map: string;       // live_data.map_name
+  players: number;   // live_data.current_players
+  maxPlayers: number;// live_data.max_players
 }
 
-const CS2_SERVERS: CS2Server[] = [
-  {
-    id: "mirage",
-    name: "FEAR #2 | MIRAGE ONLY",
-    mode: "Mirage Only",
-    map: "de_mirage",
-    mapLabel: "Mirage",
-    mapIcon: "🏜️",
-    players: 24,
-    maxPlayers: 24,
-    ip: "cs.fearproject.ru:27016",
-    tick: "128 tick",
-    location: "MSK-1",
-  },
-  {
-    id: "retake1",
-    name: "FEAR #4 | RETAKE #1",
-    mode: "Retake Classic",
-    map: "de_inferno",
-    mapLabel: "Inferno",
-    mapIcon: "🏰",
-    players: 9,
-    maxPlayers: 9,
-    ip: "cs.fearproject.ru:27018",
-    tick: "128 tick",
-    location: "MSK-2",
-  },
-  {
-    id: "pub1",
-    name: "FEAR #1 | PUBLIC",
-    mode: "Public Classic",
-    map: "de_mirage",
-    mapLabel: "Mirage",
-    mapIcon: "🏜️",
-    players: 22,
-    maxPlayers: 24,
-    ip: "cs.fearproject.ru:27015",
-    tick: "128 tick",
-    location: "MSK-1",
-  },
-  {
-    id: "awp",
-    name: "FEAR #3 | AWP LEGO FAST",
-    mode: "AWP Only",
-    map: "awp_lego_2",
-    mapLabel: "AWP Lego 2",
-    mapIcon: "🎯",
-    players: 18,
-    maxPlayers: 20,
-    ip: "cs.fearproject.ru:27017",
-    tick: "128 tick",
-    location: "MSK-2",
-  },
-  {
-    id: "retake2",
-    name: "FEAR #5 | RETAKE #2",
-    mode: "Retake Classic",
-    map: "de_dust2",
-    mapLabel: "Dust II",
-    mapIcon: "☀️",
-    players: 7,
-    maxPlayers: 9,
-    ip: "cs.fearproject.ru:27019",
-    tick: "128 tick",
-    location: "MSK-1",
-  },
-  {
-    id: "duels",
-    name: "FEAR #6 | DUELS 1v1",
-    mode: "Duels Arena",
-    map: "aim_map",
-    mapLabel: "Aim Map",
-    mapIcon: "⚔️",
-    players: 12,
-    maxPlayers: 16,
-    ip: "cs.fearproject.ru:27020",
-    tick: "128 tick",
-    location: "MSK-3",
-  },
-];
+// Placeholder shown while API loads
+const PLACEHOLDER_SERVERS: FearServer[] = Array.from({ length: 6 }, (_, i) => ({
+  ip: "—", port: 0, name: `Сервер #${i + 1}`, mode: "—", map: "—", players: 0, maxPlayers: 24,
+}));
+
+async function fetchFearServers(): Promise<FearServer[]> {
+  const res = await fetch("https://fearproject.ru/api/servers", {
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) throw new Error(`fear servers HTTP ${res.status}`);
+  const list = (await res.json()) as Array<{
+    ip?: string;
+    port?: number;
+    site_name?: string;
+    name?: string;
+    mode?: { name?: string } | string;
+    live_data?: { map_name?: string; current_players?: number; max_players?: number };
+  }>;
+  return list
+    .filter((s) => s.ip && s.port)
+    .map((s) => {
+      const live = s.live_data ?? {};
+      const modeName =
+        typeof s.mode === "object" && s.mode !== null
+          ? (s.mode.name ?? "")
+          : typeof s.mode === "string"
+            ? s.mode
+            : "";
+      return {
+        ip: String(s.ip),
+        port: Number(s.port),
+        name: String(s.site_name ?? s.name ?? `${s.ip}:${s.port}`),
+        mode: modeName,
+        map: String(live.map_name ?? ""),
+        players: Number(live.current_players ?? 0),
+        maxPlayers: Number(live.max_players ?? 24),
+      };
+    })
+    .sort((a, b) => {
+      const ra = a.players / (a.maxPlayers || 1);
+      const rb = b.players / (b.maxPlayers || 1);
+      if (Math.abs(rb - ra) > 0.0001) return rb - ra;
+      return b.players - a.players;
+    })
+    .slice(0, 6);
+}
+
+
+// Map name → human label + emoji icon
+function mapMeta(rawMap: string): { label: string; icon: string } {
+  const m = rawMap.toLowerCase();
+  if (m.includes("mirage")) return { label: "Mirage", icon: "🏜️" };
+  if (m.includes("dust2") || m.includes("dust_2")) return { label: "Dust II", icon: "☀️" };
+  if (m.includes("inferno")) return { label: "Inferno", icon: "🏰" };
+  if (m.includes("awp_lego")) return { label: "AWP Lego", icon: "🎯" };
+  if (m.includes("nuke")) return { label: "Nuke", icon: "☢️" };
+  if (m.includes("overpass")) return { label: "Overpass", icon: "🌉" };
+  if (m.includes("ancient")) return { label: "Ancient", icon: "🏛️" };
+  if (m.includes("anubis")) return { label: "Anubis", icon: "🪬" };
+  if (m.includes("vertigo")) return { label: "Vertigo", icon: "🏗️" };
+  if (m.includes("sandstone")) return { label: "Sandstone", icon: "🏖️" };
+  if (m.includes("aim")) return { label: "Aim Map", icon: "⚔️" };
+  if (rawMap) return { label: rawMap, icon: "🗺️" };
+  return { label: "—", icon: "🗺️" };
+}
+
+
+
 
 const SAMPLE_PUNISHMENTS: LivePunishmentItem[] = [
   {
@@ -648,26 +633,27 @@ export function HomeTiles() {
   const banCount = useMemo(() => punishments.filter((p) => p.kind === "ban").length, [punishments]);
   const muteCount = useMemo(() => punishments.filter((p) => p.kind === "mute").length, [punishments]);
 
-  const sortedServers = useMemo(() => {
-    return [...CS2_SERVERS].sort((a, b) => {
-      const ratioA = a.players / a.maxPlayers;
-      const ratioB = b.players / b.maxPlayers;
-      if (Math.abs(ratioB - ratioA) > 0.0001) {
-        return ratioB - ratioA; // Higher fill percentage first
-      }
-      return b.players - a.players; // Secondary sort: more players
-    });
+  // ── CS2 Live Servers (fearproject.ru/api/servers, refresh every 30s) ──
+  const [servers, setServers] = useState<FearServer[]>(PLACEHOLDER_SERVERS);
+  const [serversLoading, setServersLoading] = useState(true);
+
+  const loadServers = useCallback(() => {
+    setServersLoading(true);
+    fetchFearServers()
+      .then((data) => { if (data.length > 0) setServers(data); })
+      .catch(() => { /* keep last data */ })
+      .finally(() => setServersLoading(false));
   }, []);
 
-  const totalPlayers = useMemo(
-    () => CS2_SERVERS.reduce((acc, s) => acc + s.players, 0),
-    [],
-  );
-  const maxTotalPlayers = useMemo(
-    () => CS2_SERVERS.reduce((acc, s) => acc + s.maxPlayers, 0),
-    [],
-  );
-  const overallPct = Math.round((totalPlayers / maxTotalPlayers) * 100);
+  useEffect(() => {
+    loadServers();
+    const id = setInterval(loadServers, 30_000);
+    return () => clearInterval(id);
+  }, [loadServers]);
+
+  const totalPlayers = useMemo(() => servers.reduce((acc, s) => acc + s.players, 0), [servers]);
+  const maxTotalPlayers = useMemo(() => servers.reduce((acc, s) => acc + s.maxPlayers, 0), [servers]);
+  const overallPct = maxTotalPlayers > 0 ? Math.round((totalPlayers / maxTotalPlayers) * 100) : 0;
 
   return (
     <section className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 sm:py-8 space-y-7">
@@ -844,10 +830,12 @@ export function HomeTiles() {
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {sortedServers.map((srv, index) => {
+          {servers.map((srv, index) => {
+            const ipPort = srv.port > 0 ? `${srv.ip}:${srv.port}` : srv.ip;
             const isFull = srv.players >= srv.maxPlayers;
-            const pct = Math.round((srv.players / srv.maxPlayers) * 100);
-            const isCopied = copiedIp === srv.ip;
+            const pct = srv.maxPlayers > 0 ? Math.round((srv.players / srv.maxPlayers) * 100) : 0;
+            const isCopied = copiedIp === ipPort;
+            const meta = mapMeta(srv.map);
 
             const rankLabel =
               index === 0
@@ -869,9 +857,10 @@ export function HomeTiles() {
 
             return (
               <div
-                key={srv.id}
+                key={ipPort || index}
                 className={cn(
                   "group relative flex flex-col justify-between rounded-2xl border bg-elevated/40 p-4 transition-all duration-200 hover:bg-elevated/75 hover:shadow-xl hover:-translate-y-0.5",
+                  serversLoading ? "animate-pulse" : "",
                   index === 0
                     ? "border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.06)]"
                     : "border-border/70 hover:border-accent/40",
@@ -914,18 +903,19 @@ export function HomeTiles() {
 
                     <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
                       <span className="inline-flex items-center gap-1 rounded-md bg-surface px-2 py-0.5 border border-border/70 font-semibold text-fg">
-                        <span>{srv.mapIcon}</span>
-                        <span>{srv.mapLabel}</span>
+                        <span>{meta.icon}</span>
+                        <span>{meta.label}</span>
                       </span>
-                      <span className="rounded-md bg-surface/70 px-1.5 py-0.5 border border-border/50 text-subtle font-mono text-[10px]">
-                        {srv.map}
-                      </span>
-                      <span className="rounded-md bg-accent/10 px-1.5 py-0.5 border border-accent/25 text-accent font-medium text-[10px]">
-                        {srv.mode}
-                      </span>
-                      <span className="rounded-md bg-surface/60 px-1.5 py-0.5 border border-border/40 text-muted font-mono text-[10px]">
-                        {srv.tick}
-                      </span>
+                      {srv.map && (
+                        <span className="rounded-md bg-surface/70 px-1.5 py-0.5 border border-border/50 text-subtle font-mono text-[10px]">
+                          {srv.map}
+                        </span>
+                      )}
+                      {srv.mode && (
+                        <span className="rounded-md bg-accent/10 px-1.5 py-0.5 border border-accent/25 text-accent font-medium text-[10px]">
+                          {srv.mode}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -953,13 +943,13 @@ export function HomeTiles() {
 
                 {/* Footer Actions: IP + Steam Connect & Copy */}
                 <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-3 gap-2">
-                  <span className="text-[11px] font-mono text-muted truncate max-w-[130px] sm:max-w-[150px]" title={srv.ip}>
-                    {srv.ip}
+                  <span className="text-[11px] font-mono text-muted truncate max-w-[130px] sm:max-w-[150px]" title={ipPort}>
+                    {ipPort}
                   </span>
 
                   <div className="flex items-center gap-1.5 shrink-0">
                     <a
-                      href={`steam://connect/${srv.ip}`}
+                      href={`steam://connect/${ipPort}`}
                       className="inline-flex items-center gap-1 rounded-lg border border-accent/40 bg-accent/15 px-2.5 py-1 text-[11px] font-bold text-accent hover:bg-accent hover:text-accent-fg transition-all"
                       title="Подключиться к серверу через Steam"
                     >
@@ -969,7 +959,7 @@ export function HomeTiles() {
 
                     <button
                       type="button"
-                      onClick={() => handleCopyConnect(srv.ip)}
+                      onClick={() => handleCopyConnect(ipPort)}
                       className={cn(
                         "inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-bold transition-all",
                         isCopied
@@ -994,12 +984,12 @@ export function HomeTiles() {
                 </div>
               </div>
             );
-          })}
-        </div>
+          })}        </div>
       </div>
 
       {/* ── Live Punishments Feed (Recent Bans & Mutes) ─────────────── */}
       <div className="rounded-3xl border border-border/80 bg-surface/90 glass-panel p-5 sm:p-6 shadow-sm">
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border/60 gap-4">
           <div className="flex items-center gap-2.5">
             <div className="grid size-9 place-items-center rounded-xl border border-danger/30 bg-danger/15 text-danger shadow-sm">
