@@ -155,7 +155,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
               </span>
               Серверы FEAR
             </span>
-            <span className="text-[10px] font-mono text-muted">128 tick</span>
+            <span className="text-[10px] font-mono text-muted">Sub-tick</span>
           </div>
           <p className="mt-1 text-[11px] text-muted">Синхронизация активна</p>
         </div>
@@ -405,10 +405,11 @@ interface FearServer {
   maxPlayers: number;// live_data.max_players
 }
 
-// Placeholder shown while API loads
-const PLACEHOLDER_SERVERS: FearServer[] = Array.from({ length: 6 }, (_, i) => ({
-  ip: "—", port: 0, name: `Сервер #${i + 1}`, mode: "—", map: "—", players: 0, maxPlayers: 24,
-}));
+/** Снимок фида: `top` заполняет сетку, `total`/`online` считаются по всем серверам FEAR. */
+type FearServersSnapshot = { top: FearServer[]; total: number; online: number };
+
+/** Сколько слотов в сетке серверов (топ по заполненности). */
+const SERVERS_GRID_SIZE = 6;
 
 /**
  * Реальные серверы FEAR: браузер не может обратиться к fearproject.ru напрямую
@@ -416,10 +417,10 @@ const PLACEHOLDER_SERVERS: FearServer[] = Array.from({ length: 6 }, (_, i) => ({
  * воркер статистики, который держит 30-секундный кэш этого же фида.
  * Возвращаем топ-6 по заполненности.
  */
-async function fetchFearServers(): Promise<FearServer[]> {
+async function fetchFearServers(): Promise<FearServersSnapshot> {
   const data = await getServersFn();
-  return data.servers
-    .filter((s) => s.ip && s.port)
+  const live = data.servers.filter((s) => s.ip && s.port);
+  const top = live
     .map((s) => ({
       ip: s.ip,
       port: s.port,
@@ -435,7 +436,12 @@ async function fetchFearServers(): Promise<FearServer[]> {
       if (Math.abs(rb - ra) > 0.0001) return rb - ra;
       return b.players - a.players;
     })
-    .slice(0, 6);
+    .slice(0, SERVERS_GRID_SIZE);
+  return {
+    top,
+    total: live.length,
+    online: live.reduce((acc, s) => acc + (s.players > 0 ? s.players : 0), 0),
+  };
 }
 
 
@@ -620,21 +626,34 @@ export function HomeTiles() {
   const muteCount = useMemo(() => punishments.filter((p) => p.kind === "mute").length, [punishments]);
 
   // ── CS2 Live Servers (воркер статистики -> fearproject.ru, обновление каждые 30 с) ──
-  const [servers, setServers] = useState<FearServer[]>(PLACEHOLDER_SERVERS);
+  // Выдуманных «карточек-заглушек» здесь нет: пока данных нет — скелетоны, а если
+  // воркер недоступен — явное сообщение вместо фейковых серверов.
+  const [servers, setServers] = useState<FearServer[]>([]);
   const [serversLoading, setServersLoading] = useState(true);
-  // Отличаем реальные данные от заглушек, чтобы не писать «онлайн» там, где связи нет.
   const [serversLive, setServersLive] = useState(false);
+  const [serversError, setServersError] = useState<string | null>(null);
+  // Счётчики по всему фиду FEAR (для шапки), а не только по 6 слотам сетки.
+  const [serversFeed, setServersFeed] = useState<{ total: number; online: number }>({
+    total: 0,
+    online: 0,
+  });
 
   const loadServers = useCallback(() => {
     setServersLoading(true);
     fetchFearServers()
-      .then((data) => {
-        if (data.length > 0) {
-          setServers(data);
+      .then((snap) => {
+        if (snap.top.length > 0) {
+          setServers(snap.top);
+          setServersFeed({ total: snap.total, online: snap.online });
           setServersLive(true);
+          setServersError(null);
         }
       })
-      .catch(() => { /* keep last data — заглушки остаются на месте */ })
+      .catch((e) => {
+        // Уже показанные данные не выбрасываем, но если показывать нечего —
+        // об этом сообщаем прямо, а не подсовываем пустышки.
+        setServersError(e instanceof Error ? e.message : "Ошибка загрузки серверов");
+      })
       .finally(() => setServersLoading(false));
   }, []);
 
@@ -649,6 +668,9 @@ export function HomeTiles() {
   const overallPct = maxTotalPlayers > 0 ? Math.round((totalPlayers / maxTotalPlayers) * 100) : 0;
   // Нода «в сети», если FEAR отдал по ней живые данные (max_players > 0).
   const onlineServers = useMemo(() => servers.filter((s) => s.maxPlayers > 0).length, [servers]);
+  // Пока данных нет, нули не выдаём за правду.
+  const fillLabel = servers.length > 0 ? `${totalPlayers} / ${maxTotalPlayers}` : "— / —";
+  const pctLabel = servers.length > 0 ? `${overallPct}%` : "—";
 
   return (
     <section className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 sm:py-8 space-y-7">
@@ -686,9 +708,11 @@ export function HomeTiles() {
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-elevated/70 px-3 py-1.5 text-xs text-muted font-mono">
                 <span className="size-2 rounded-full bg-success animate-ping" />
-                <span>14 серверов CS2</span>
+                <span>{serversFeed.total > 0 ? `${serversFeed.total} серверов CS2` : "Серверы CS2"}</span>
                 <span className="text-subtle">&middot;</span>
-                <span className="text-fg font-semibold">128 tick</span>
+                <span className="text-fg font-semibold">
+                  {serversLive ? `${serversFeed.online} игроков онлайн` : "онлайн уточняется"}
+                </span>
               </span>
             </div>
           </div>
@@ -810,10 +834,10 @@ export function HomeTiles() {
             <div className="flex items-center gap-1.5 rounded-xl border border-border/70 bg-elevated/60 px-3 py-1.5 text-muted">
               <Users className="size-3.5 text-accent" />
               <span>
-                <strong className="text-fg">{totalPlayers}</strong> / {maxTotalPlayers} в игре
+                <strong className="text-fg">{fillLabel}</strong> в игре
               </span>
               <span className="rounded bg-accent/20 px-1.5 py-0.5 text-[10px] font-bold text-accent">
-                {overallPct}%
+                {pctLabel}
               </span>
             </div>
 
@@ -845,6 +869,61 @@ export function HomeTiles() {
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Загрузка: ровно SERVERS_GRID_SIZE слотов-скелетонов, без выдуманных серверов */}
+          {servers.length === 0 &&
+            serversLoading &&
+            Array.from({ length: SERVERS_GRID_SIZE }).map((_, i) => (
+              <div key={`slot-${i}`} className="rounded-2xl border border-border/70 bg-elevated/40 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="h-5 w-20" />
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <Skeleton className="size-2 rounded-full" />
+                  <Skeleton className="h-4 w-40 max-w-full" />
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <Skeleton className="h-5 w-20" />
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-5 w-14" />
+                </div>
+                <div className="mt-4 space-y-2">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-2 w-full rounded-full" />
+                </div>
+                <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-3">
+                  <Skeleton className="h-4 w-28" />
+                  <div className="flex items-center gap-1.5">
+                    <Skeleton className="h-7 w-16" />
+                    <Skeleton className="h-7 w-20" />
+                  </div>
+                </div>
+              </div>
+            ))}
+
+          {/* Данных нет и получить не удалось — говорим прямо, а не рисуем пустышки */}
+          {servers.length === 0 && !serversLoading && (
+            <div className="col-span-1 flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 bg-elevated/30 p-10 text-center sm:col-span-2 lg:col-span-3">
+              <span className="grid size-10 place-items-center rounded-2xl border border-danger/30 bg-danger/10 text-danger">
+                <Server className="size-5" />
+              </span>
+              <div>
+                <p className="text-sm font-bold text-fg">Нет данных о серверах FEAR</p>
+                <p className="mt-1 text-xs text-muted">
+                  {serversError ?? "Воркер статистики не ответил — данные подтянутся автоматически."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={loadServers}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-accent/40 bg-accent/15 px-3 py-1.5 text-xs font-bold text-accent transition-all hover:bg-accent hover:text-accent-fg"
+              >
+                <RefreshCw className="size-3.5" />
+                Обновить сейчас
+              </button>
+            </div>
+          )}
+
           {servers.map((srv, index) => {
             const ipPort = srv.port > 0 ? `${srv.ip}:${srv.port}` : srv.ip;
             const isFull = srv.players >= srv.maxPlayers;
@@ -872,10 +951,9 @@ export function HomeTiles() {
 
             return (
               <div
-                key={ipPort || index}
+                key={srv.port > 0 ? ipPort : `server-${index}`}
                 className={cn(
                   "group relative flex flex-col justify-between rounded-2xl border bg-elevated/40 p-4 transition-all duration-200 hover:bg-elevated/75 hover:shadow-xl hover:-translate-y-0.5",
-                  serversLoading ? "animate-pulse" : "",
                   index === 0
                     ? "border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.06)]"
                     : "border-border/70 hover:border-accent/40",
@@ -1189,7 +1267,7 @@ export function HomeTiles() {
           </div>
           <div>
             <p className="font-bold text-fg">CS2 Live Sync</p>
-            <p className="text-[11px] text-muted">Моментальное применение на 14 серверах</p>
+            <p className="text-[11px] text-muted">Моментальное применение на всех серверах</p>
           </div>
         </div>
 
