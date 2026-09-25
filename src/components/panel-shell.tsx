@@ -415,7 +415,7 @@ const SERVERS_GRID_SIZE = 6;
  * Реальные серверы FEAR: браузер не может обратиться к fearproject.ru напрямую
  * (у API нет CORS-заголовков), поэтому берём данные через серверную функцию ->
  * воркер статистики, который держит 30-секундный кэш этого же фида.
- * Возвращаем топ-6 по заполненности.
+ * Сортируем строго по реальному онлайну игроков (убывание). При равном онлайне — выше тот, у кого выше процент заполненности.
  */
 async function fetchFearServers(): Promise<FearServersSnapshot> {
   const data = await getServersFn();
@@ -431,10 +431,10 @@ async function fetchFearServers(): Promise<FearServersSnapshot> {
       maxPlayers: s.maxPlayers || 24,
     }))
     .sort((a, b) => {
+      if (b.players !== a.players) return b.players - a.players;
       const ra = a.players / (a.maxPlayers || 1);
       const rb = b.players / (b.maxPlayers || 1);
-      if (Math.abs(rb - ra) > 0.0001) return rb - ra;
-      return b.players - a.players;
+      return rb - ra;
     })
     .slice(0, SERVERS_GRID_SIZE);
   return {
