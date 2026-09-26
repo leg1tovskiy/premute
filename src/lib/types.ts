@@ -106,6 +106,8 @@ export type PunishmentRecord = {
   counted: boolean;
   excluded: boolean;
   unpunishAdmin: string | null;
+  avatar?: string | null;
+  adminAvatar?: string | null;
 };
 
 export type ModDetails = {

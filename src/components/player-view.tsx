@@ -52,7 +52,8 @@ function fmtDateTime(sec: number) {
 
 function recordStatus(r: PlayerRecord): { label: string; className: string } {
   if (r.unpunishAdmin || r.status === 2) return { label: "Снято", className: "text-subtle" };
-  if (r.expires && r.expires <= Math.floor(Date.now() / 1000)) {
+  if (r.status === 3) return { label: "Выкуплен", className: "text-accent font-semibold" };
+  if (r.status === 4 || (r.expires && r.expires <= Math.floor(Date.now() / 1000))) {
     return { label: "Истёк", className: "text-subtle" };
   }
   return { label: "Активен", className: "text-success font-bold" };
@@ -99,6 +100,7 @@ export function PlayerView() {
   }, [records, kind, search]);
 
   const playerName = records?.[0]?.player ?? null;
+  const playerAvatar = records?.find((r) => r.avatar)?.avatar ?? null;
   const initial = (playerName?.trim().charAt(0) || "?").toUpperCase();
 
   function exportCsv() {
@@ -165,16 +167,24 @@ export function PlayerView() {
       <article className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-r from-surface via-surface/95 to-elevated/70 p-6 sm:p-7 shadow-2xl glass-panel cyber-border-glow">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4 sm:gap-5">
-            <span className="grid size-16 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-surface to-elevated text-2xl font-black text-fg border-2 border-border/80 shadow-md">
-              {initial}
-            </span>
+            {playerAvatar ? (
+              <img
+                src={playerAvatar}
+                alt={playerName ?? "Avatar"}
+                className="size-16 shrink-0 rounded-2xl object-cover border-2 border-border/80 shadow-md ring-2 ring-accent/20"
+              />
+            ) : (
+              <span className="grid size-16 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-surface to-elevated text-2xl font-black text-fg border-2 border-border/80 shadow-md">
+                {initial}
+              </span>
+            )}
             <div className="min-w-0">
               <h1 className="truncate text-xl sm:text-2xl font-black text-fg">
                 {playerName ?? "Игрок"}
               </h1>
               <p className="mt-0.5 truncate font-mono text-xs text-subtle">{steamid}</p>
               <div className="mt-1 flex items-center gap-3 text-xs text-muted">
-                <span>{month ? `Период: ${month}` : "Текущий месяц"}</span>
+                <span>{month ? `Период: ${month}` : "Вся история"}</span>
                 <span>&middot;</span>
                 <span className="font-bold text-fg">{(records ?? []).length} наказаний</span>
               </div>
@@ -277,7 +287,7 @@ export function PlayerView() {
         {visible.length === 0 ? (
           <p className="px-5 py-12 text-center text-xs text-muted">
             {!records?.length
-              ? "За текущий месяц наказаний нет."
+              ? "Наказаний не найдено."
               : "Ничего не найдено по заданному фильтру."}
           </p>
         ) : (
@@ -304,10 +314,19 @@ export function PlayerView() {
                     <p className="mt-1 text-xs font-semibold text-fg leading-snug">
                       {r.reason || "Причина не указана"}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-muted">
-                      Выдал: <span className="font-bold text-fg">{r.adminName}</span>
-                      {r.adminRank ? ` (${r.adminRank})` : ""}
-                    </p>
+                    <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted">
+                      {r.adminAvatar ? (
+                        <img
+                          src={r.adminAvatar}
+                          alt=""
+                          className="size-4.5 rounded-full object-cover shrink-0 border border-border/70"
+                        />
+                      ) : null}
+                      <span>
+                        Выдал: <span className="font-bold text-fg">{r.adminName}</span>
+                        {r.adminRank ? ` (${r.adminRank})` : ""}
+                      </span>
+                    </div>
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="text-xs font-mono tabular-nums text-muted">{r.durationLabel || "—"}</p>
@@ -323,12 +342,10 @@ export function PlayerView() {
         )}
       </section>
 
-      {!records?.length ? (
-        <p className="flex items-center gap-2 text-xs text-subtle">
-          <ShieldAlert className="size-3.5 text-accent" />
-          Система хранит наказания текущего месяца; полную историю за все время смотрите в профиле FEAR.
-        </p>
-      ) : null}
+      <p className="flex items-center gap-2 text-xs text-subtle">
+        <ShieldAlert className="size-3.5 text-accent" />
+        История всех наказаний игрока синхронизирована с серверами FearProject за всё время.
+      </p>
     </div>
   );
 }
