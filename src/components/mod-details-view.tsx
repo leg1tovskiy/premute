@@ -583,7 +583,7 @@ export function ModDetailsView() {
                     {(r.player.trim().charAt(0) || "?").toUpperCase()}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <a
                         href={fearProfileUrl(r.playerSteamid)}
                         target="_blank"
@@ -592,8 +592,18 @@ export function ModDetailsView() {
                       >
                         {r.player}
                       </a>
+                      <Link
+                        to="/player/$steamid"
+                        params={{ steamid: r.playerSteamid }}
+                        className="inline-flex items-center gap-1 rounded-md border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[10px] font-bold text-accent hover:bg-accent hover:text-accent-fg transition-all shrink-0"
+                        title="Открыть досье игрока"
+                      >
+                        <Shield className="size-2.5" />
+                        Досье
+                      </Link>
                       <span className="font-mono text-[10px] text-subtle">{r.playerSteamid}</span>
                     </div>
+
                     {r.reason ? (
                       <p className="mt-0.5 line-clamp-2 text-xs text-muted leading-tight" title={r.reason}>
                         {r.reason}
