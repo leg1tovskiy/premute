@@ -140,6 +140,14 @@ export type LastMonthTop = {
   steamid: string | null;
 };
 
+export type AllTimeRecord = {
+  name: string;
+  rank: number | null;
+  total: number;
+  steamid: string | null;
+  month?: string | null;
+};
+
 export type StatsPayload = {
   month: string;
   updatedAt: number;
@@ -154,6 +162,7 @@ export type StatsPayload = {
   stale: boolean;
   isMonthFirst?: boolean;
   lastMonthTop?: LastMonthTop | null;
+  allTimeRecord?: AllTimeRecord | null;
   /** Итоги прошлого месяца из архива (если есть). */
   prevTotals?: {
     month: string;

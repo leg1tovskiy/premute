@@ -241,6 +241,54 @@ export function TopsView() {
     };
   }, [data?.moderators, rows]);
 
+  // All-time monthly record holder (baseline minilyyy 846, updates dynamically if beaten)
+  const recordHolder = useMemo(() => {
+    let best = data?.allTimeRecord ?? {
+      name: "minilyyy",
+      rank: 2,
+      total: 846,
+      steamid: "76561199886218120",
+      month: "Сентябрь 2026 г.",
+    };
+
+    if (data?.moderators?.length) {
+      for (const m of data.moderators) {
+        if (TOP_RANKS.has(rankOf(m)) && m.total > best.total) {
+          best = {
+            name: m.name,
+            rank: m.rank,
+            total: m.total,
+            steamid: m.steamid,
+            month: data.month || "Текущий месяц",
+          };
+        }
+      }
+    }
+    return best;
+  }, [data?.allTimeRecord, data?.moderators, data?.month]);
+
+  const recordAvatar = useMemo(() => {
+    if (!recordHolder) return null;
+    return (
+      data?.moderators?.find(
+        (m) =>
+          (recordHolder.steamid && m.steamid === recordHolder.steamid) ||
+          m.name.toLowerCase() === recordHolder.name.toLowerCase(),
+      )?.avatar ?? null
+    );
+  }, [data?.moderators, recordHolder]);
+
+  const lastMonthAvatar = useMemo(() => {
+    if (!data?.lastMonthTop) return null;
+    return (
+      data?.moderators?.find(
+        (m) =>
+          (data.lastMonthTop?.steamid && m.steamid === data.lastMonthTop.steamid) ||
+          m.name.toLowerCase() === data.lastMonthTop?.name.toLowerCase(),
+      )?.avatar ?? null
+    );
+  }, [data?.moderators, data?.lastMonthTop]);
+
   // Monthly Nominations
   const nominations = useMemo(() => {
     if (!data?.moderators || data.moderators.length === 0) return null;
@@ -468,12 +516,86 @@ export function TopsView() {
         </div>
       ) : null}
 
+      {/* ── All-Time Monthly Record Banner (Always displayed above last month top) ── */}
+      {recordHolder ? (
+        <div className="relative overflow-hidden rounded-3xl border border-accent/60 bg-gradient-to-r from-accent/20 via-surface/95 to-gold/15 p-5 sm:p-6 shadow-xl cyber-border-glow">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="relative shrink-0">
+                <div className="grid size-14 place-items-center rounded-2xl bg-accent/20 border border-accent/40 text-accent shadow-lg shadow-accent/20 overflow-hidden">
+                  {recordAvatar ? (
+                    <img src={recordAvatar} alt={recordHolder.name} className="size-full object-cover" />
+                  ) : (
+                    <Flame className="size-7 text-accent animate-pulse" />
+                  )}
+                </div>
+                <div className="absolute -bottom-1 -right-1 grid size-5.5 place-items-center rounded-full bg-accent text-accent-fg text-[11px] shadow border border-surface">
+                  🔥
+                </div>
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-accent flex items-center gap-1.5">
+                    <Flame className="size-3.5 fill-accent/30 text-accent animate-pulse" />
+                    Рекорд по общим наказаниям за месяц
+                  </p>
+                  {recordHolder.month ? (
+                    <span className="rounded-md bg-accent/15 px-2 py-0.5 text-[10px] font-bold text-accent border border-accent/25 font-mono">
+                      {recordHolder.month}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <p className="text-lg font-black text-fg sm:text-xl truncate">
+                    {recordHolder.steamid ? (
+                      <a
+                        href={fearProfileUrl(recordHolder.steamid)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:underline hover:text-accent transition-colors"
+                      >
+                        {recordHolder.name}
+                      </a>
+                    ) : (
+                      recordHolder.name
+                    )}
+                  </p>
+                  <span className="text-xs font-semibold text-muted">
+                    ({RANK_SHORT[Number(recordHolder.rank ?? 0)] ?? "мод"})
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-muted">
+                  Рекордное количество наказаний:{" "}
+                  <span className="font-extrabold text-accent tabular-nums text-sm">
+                    {recordHolder.total}
+                  </span>{" "}
+                  {recordHolder.name.toLowerCase() === "minilyyy" && recordHolder.total === 846 ? (
+                    <span className="text-subtle font-mono text-[11px]">(абсолютный максимум)</span>
+                  ) : (
+                    <span className="text-success font-mono text-[11px] font-bold">(новый рекорд!)</span>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {/* ── Last Month Champion Banner ─────────────────────────────── */}
-      {data.isMonthFirst && data.lastMonthTop ? (
+      {data.lastMonthTop ? (
         <div className="relative overflow-hidden rounded-3xl border border-gold/60 bg-gradient-to-r from-gold/20 via-surface/95 to-gold/10 p-5 sm:p-6 shadow-xl">
           <div className="flex items-center gap-4">
-            <div className="grid size-14 place-items-center rounded-2xl bg-gold/20 border border-gold/40 text-gold shadow-lg shadow-gold/20">
-              <Crown className="size-7 animate-bounce" />
+            <div className="relative shrink-0">
+              <div className="grid size-14 place-items-center rounded-2xl bg-gold/20 border border-gold/40 text-gold shadow-lg shadow-gold/20 overflow-hidden">
+                {lastMonthAvatar ? (
+                  <img src={lastMonthAvatar} alt={data.lastMonthTop.name} className="size-full object-cover" />
+                ) : (
+                  <Crown className="size-7 animate-bounce" />
+                )}
+              </div>
+              <div className="absolute -bottom-1 -right-1 grid size-5.5 place-items-center rounded-full bg-gold text-surface text-[11px] shadow border border-surface font-bold">
+                👑
+              </div>
             </div>
             <div>
               <p className="text-xs font-black uppercase tracking-[0.16em] text-gold">
