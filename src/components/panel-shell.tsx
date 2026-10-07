@@ -81,7 +81,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const setPaletteOpen = usePalette((s) => s.setOpen);
-  const tabs = allowedTabs(profile.caps);
+  const tabs = allowedTabs(profile.caps, profile);
   const [mobileOpen, setMobileOpen] = useState(false);
   const mskTime = useMskClock();
 
@@ -569,7 +569,7 @@ const SAMPLE_PUNISHMENTS: LivePunishmentItem[] = [
 export function HomeTiles() {
   const { profile } = usePanel();
   const caps = profile.caps;
-  const tiles = allowedTabs(caps);
+  const tiles = allowedTabs(caps, profile);
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState("");

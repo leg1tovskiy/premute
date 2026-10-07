@@ -36,11 +36,11 @@ function BootScreen({ error }: { error?: string | null }) {
 }
 
 const LOCAL_DEV_PROFILE: StaffProfile = {
-  userId: "dev-user",
+  userId: "652399540384694292",
   displayName: "Администратор (Local)",
   email: "admin@fearproject.ru",
   image: null,
-  discordId: "1234567890",
+  discordId: "652399540384694292",
   tag: "FearAdmin",
   isRoot: true,
   isOwner: true,

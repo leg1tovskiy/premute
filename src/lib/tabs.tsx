@@ -7,7 +7,8 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import type { Caps } from "@/lib/types";
+import type { Caps, StaffProfile } from "@/lib/types";
+import { canAccessVlada } from "@/lib/vlada-access";
 
 export type TabId = "stats" | "tops" | "suspicious" | "mods" | "admin" | "vlada";
 
@@ -31,6 +32,11 @@ export const TABS: TabDef[] = [
   { id: "vlada", to: "/vlada", label: "для Влады", desc: "Книга поздравлений в стиле Minecraft", icon: Heart, cap: "canStats" },
 ];
 
-export function allowedTabs(caps: Caps): TabDef[] {
-  return TABS.filter((t) => !t.cap || caps[t.cap]);
+export function allowedTabs(caps: Caps, profile?: StaffProfile | null): TabDef[] {
+  return TABS.filter((t) => {
+    if (t.id === "vlada") {
+      return canAccessVlada(profile);
+    }
+    return !t.cap || caps[t.cap];
+  });
 }
