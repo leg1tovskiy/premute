@@ -29,7 +29,7 @@ export const TABS: TabDef[] = [
   { id: "suspicious", to: "/suspicious", label: "Подозрит.", desc: "Подозрительные аккаунты", icon: ShieldAlert, cap: "canSuspicious" },
   { id: "mods", to: "/mods", label: "Моды", desc: "Состав команды", icon: Users, cap: "canMods" },
   { id: "admin", to: "/admin", label: "Админ", desc: "Настройки панели", icon: Shield, cap: "canAdmin" },
-  { id: "vlada", to: "/vlada", label: "для Влады", desc: "Книга поздравлений в стиле Minecraft", icon: Heart, cap: "canStats" },
+  { id: "vlada", to: "/vlada", label: "для Влады", desc: "Книга поздравлений в стиле Minecraft", icon: Heart },
 ];
 
 export function allowedTabs(caps: Caps, profile?: StaffProfile | null): TabDef[] {

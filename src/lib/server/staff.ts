@@ -116,11 +116,11 @@ function toListItem(row: StaffRow): StaffListItem {
 
 function devStaffProfile(): StaffProfile {
   return {
-    userId: "dev-user",
+    userId: ROOT_DISCORD_ID,
     displayName: "Администратор (Local)",
     email: "admin@fearproject.ru",
     image: null,
-    discordId: "1234567890",
+    discordId: ROOT_DISCORD_ID,
     tag: "FearAdmin",
     isRoot: true,
     isOwner: true,
@@ -248,6 +248,7 @@ export async function updateStaffPermissions(
     isBotOwner?: boolean;
     setRoot?: boolean;
     tag?: string | null;
+    discordId?: string | null;
   },
 ): Promise<StaffListItem> {
   if (!actor.caps.canAdmin) throw new Error("Недостаточно прав.");
@@ -313,6 +314,11 @@ export async function updateStaffPermissions(
   await sql.query("alter table staff add column if not exists can_logs boolean not null default false");
   await sql.query("alter table staff add column if not exists can_power boolean not null default false");
   await sql.query("alter table staff add column if not exists can_suspicious boolean not null default false");
+  const cleanDiscordId =
+    patch.discordId !== undefined && actor.caps.isOwner
+      ? (patch.discordId ? patch.discordId.replace(/\D/g, "") : null)
+      : target.discordId;
+
   await sql`
     update staff set
       can_stats = ${canStats},
@@ -321,7 +327,8 @@ export async function updateStaffPermissions(
       is_root = ${isRoot},
       is_owner = ${isOwner},
       is_bot_owner = ${isBotOwner},
-      tag = ${tag}
+      tag = ${tag},
+      discord_id = ${cleanDiscordId}
     where user_id = ${targetUserId}
   `;
   const rows = await sql<StaffRow>`select * from staff where user_id = ${targetUserId} limit 1`;

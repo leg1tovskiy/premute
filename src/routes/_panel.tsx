@@ -10,6 +10,7 @@ import { LoginScreen } from "@/components/login-screen";
 import { PanelShell } from "@/components/panel-shell";
 import { WaitingView } from "@/components/waiting-view";
 import { CommandPalette } from "@/components/command-palette";
+import { canAccessVlada } from "@/lib/vlada-access";
 import type { StaffProfile } from "@/lib/types";
 
 export const Route = createFileRoute("/_panel")({ component: PanelLayout });
@@ -120,7 +121,7 @@ function PanelLayout() {
     if (!authUser) return <LoginScreen />;
   }
   if (!profile) return <BootScreen error={error} />;
-  if (profile.caps.waiting) {
+  if (profile.caps.waiting && !canAccessVlada(profile)) {
     return (
       <>
         <WaitingView profile={profile} onUpdate={setProfile} />
