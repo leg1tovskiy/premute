@@ -178,18 +178,11 @@ export function AdminView({ me }: { me: StaffProfile }) {
                     </div>
 
                     {me.caps.isOwner ? (
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        <TagField
-                          value={u.tag}
-                          disabled={locked}
-                          onSave={(tag) => void patch(u.userId, { ...u, tag })}
-                        />
-                        <DiscordIdField
-                          value={u.discordId}
-                          disabled={locked}
-                          onSave={(did) => void patch(u.userId, { ...u, discordId: did })}
-                        />
-                      </div>
+                      <TagField
+                        value={u.tag}
+                        disabled={locked}
+                        onSave={(tag) => void patch(u.userId, { ...u, tag })}
+                      />
                     ) : null}
                   </div>
 
@@ -285,42 +278,6 @@ function TagField({
         onChange={(e) => setText(e.target.value)}
         onBlur={() => {
           const next = text.trim() || null;
-          if (next !== (value || null)) onSave(next);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-        }}
-      />
-    </label>
-  );
-}
-
-function DiscordIdField({
-  value,
-  disabled,
-  onSave,
-}: {
-  value: string | null;
-  disabled?: boolean;
-  onSave: (discordId: string | null) => void;
-}) {
-  const [text, setText] = useState(value ?? "");
-  useEffect(() => {
-    setText(value ?? "");
-  }, [value]);
-  return (
-    <label className="grid gap-1 text-[11px] font-bold text-muted">
-      Discord ID
-      <Input
-        className="h-8 w-44 rounded-xl text-xs font-mono"
-        maxLength={24}
-        disabled={disabled}
-        placeholder="652399540384694292"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={() => {
-          const digits = text.replace(/\D/g, "");
-          const next = digits.length >= 17 ? digits : null;
           if (next !== (value || null)) onSave(next);
         }}
         onKeyDown={(e) => {

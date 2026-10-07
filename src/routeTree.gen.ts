@@ -18,7 +18,6 @@ import { Route as PanelModsRouteImport } from './routes/_panel.mods'
 import { Route as PanelStatsRouteImport } from './routes/_panel.stats'
 import { Route as PanelSuspiciousRouteImport } from './routes/_panel.suspicious'
 import { Route as PanelTopsRouteImport } from './routes/_panel.tops'
-import { Route as PanelVladaRouteImport } from './routes/_panel.vlada'
 import { Route as PanelPlayerSteamidRouteImport } from './routes/_panel.player.$steamid'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
@@ -66,11 +65,6 @@ const PanelTopsRoute = PanelTopsRouteImport.update({
   path: '/tops',
   getParentRoute: () => PanelRoute,
 } as any)
-const PanelVladaRoute = PanelVladaRouteImport.update({
-  id: '/vlada',
-  path: '/vlada',
-  getParentRoute: () => PanelRoute,
-} as any)
 const PanelPlayerSteamidRoute = PanelPlayerSteamidRouteImport.update({
   id: '/player/$steamid',
   path: '/player/$steamid',
@@ -91,7 +85,6 @@ export interface FileRoutesByFullPath {
   '/stats': typeof PanelStatsRoute
   '/suspicious': typeof PanelSuspiciousRoute
   '/tops': typeof PanelTopsRoute
-  '/vlada': typeof PanelVladaRoute
   '/player/$steamid': typeof PanelPlayerSteamidRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
@@ -103,7 +96,6 @@ export interface FileRoutesByTo {
   '/stats': typeof PanelStatsRoute
   '/suspicious': typeof PanelSuspiciousRoute
   '/tops': typeof PanelTopsRoute
-  '/vlada': typeof PanelVladaRoute
   '/': typeof PanelIndexRoute
   '/player/$steamid': typeof PanelPlayerSteamidRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -118,7 +110,6 @@ export interface FileRoutesById {
   '/_panel/stats': typeof PanelStatsRoute
   '/_panel/suspicious': typeof PanelSuspiciousRoute
   '/_panel/tops': typeof PanelTopsRoute
-  '/_panel/vlada': typeof PanelVladaRoute
   '/_panel/': typeof PanelIndexRoute
   '/_panel/player/$steamid': typeof PanelPlayerSteamidRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -134,7 +125,6 @@ export interface FileRouteTypes {
     | '/stats'
     | '/suspicious'
     | '/tops'
-    | '/vlada'
     | '/player/$steamid'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
@@ -146,7 +136,6 @@ export interface FileRouteTypes {
     | '/stats'
     | '/suspicious'
     | '/tops'
-    | '/vlada'
     | '/'
     | '/player/$steamid'
     | '/api/auth/$'
@@ -160,7 +149,6 @@ export interface FileRouteTypes {
     | '/_panel/stats'
     | '/_panel/suspicious'
     | '/_panel/tops'
-    | '/_panel/vlada'
     | '/_panel/'
     | '/_panel/player/$steamid'
     | '/api/auth/$'
@@ -237,13 +225,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PanelTopsRouteImport
       parentRoute: typeof PanelRoute
     }
-    '/_panel/vlada': {
-      id: '/_panel/vlada'
-      path: '/vlada'
-      fullPath: '/vlada'
-      preLoaderRoute: typeof PanelVladaRouteImport
-      parentRoute: typeof PanelRoute
-    }
     '/_panel/player/$steamid': {
       id: '/_panel/player/$steamid'
       path: '/player/$steamid'
@@ -268,7 +249,6 @@ interface PanelRouteChildren {
   PanelStatsRoute: typeof PanelStatsRoute
   PanelSuspiciousRoute: typeof PanelSuspiciousRoute
   PanelTopsRoute: typeof PanelTopsRoute
-  PanelVladaRoute: typeof PanelVladaRoute
   PanelIndexRoute: typeof PanelIndexRoute
   PanelPlayerSteamidRoute: typeof PanelPlayerSteamidRoute
 }
@@ -280,7 +260,6 @@ const PanelRouteChildren: PanelRouteChildren = {
   PanelStatsRoute: PanelStatsRoute,
   PanelSuspiciousRoute: PanelSuspiciousRoute,
   PanelTopsRoute: PanelTopsRoute,
-  PanelVladaRoute: PanelVladaRoute,
   PanelIndexRoute: PanelIndexRoute,
   PanelPlayerSteamidRoute: PanelPlayerSteamidRoute,
 }

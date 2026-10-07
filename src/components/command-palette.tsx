@@ -24,7 +24,7 @@ export function CommandPalette() {
   const { profile } = usePanel();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
-  const tabs = allowedTabs(profile.caps, profile);
+  const tabs = allowedTabs(profile.caps);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {

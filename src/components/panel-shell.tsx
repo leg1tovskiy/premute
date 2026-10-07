@@ -81,7 +81,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const setPaletteOpen = usePalette((s) => s.setOpen);
-  const tabs = allowedTabs(profile.caps, profile);
+  const tabs = allowedTabs(profile.caps);
   const [mobileOpen, setMobileOpen] = useState(false);
   const mskTime = useMskClock();
 
@@ -309,14 +309,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
         </header>
 
         {/* Page Content */}
-        <main
-          className={cn(
-            "flex-1",
-            pathname.startsWith("/vlada") ? "overflow-hidden pb-0" : "pb-16 md:pb-6",
-          )}
-        >
-          {children}
-        </main>
+        <main className="flex-1 pb-16 md:pb-6">{children}</main>
       </div>
 
       {/* ── Mobile Drawer ───────────────────────────────────────────── */}
@@ -569,7 +562,7 @@ const SAMPLE_PUNISHMENTS: LivePunishmentItem[] = [
 export function HomeTiles() {
   const { profile } = usePanel();
   const caps = profile.caps;
-  const tiles = allowedTabs(caps, profile);
+  const tiles = allowedTabs(caps);
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -784,10 +777,10 @@ export function HomeTiles() {
               Разделы панели управления
             </h2>
           </div>
-          <span className="text-[11px] text-muted font-mono">{tiles.length} разделов</span>
+          <span className="text-[11px] text-muted font-mono">5 разделов</span>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {tiles.map((i) => {
             const Icon = i.icon;
             return (

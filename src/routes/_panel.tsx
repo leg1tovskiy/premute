@@ -10,7 +10,6 @@ import { LoginScreen } from "@/components/login-screen";
 import { PanelShell } from "@/components/panel-shell";
 import { WaitingView } from "@/components/waiting-view";
 import { CommandPalette } from "@/components/command-palette";
-import { canAccessVlada } from "@/lib/vlada-access";
 import type { StaffProfile } from "@/lib/types";
 
 export const Route = createFileRoute("/_panel")({ component: PanelLayout });
@@ -37,11 +36,11 @@ function BootScreen({ error }: { error?: string | null }) {
 }
 
 const LOCAL_DEV_PROFILE: StaffProfile = {
-  userId: "652399540384694292",
+  userId: "dev-user",
   displayName: "Администратор (Local)",
   email: "admin@fearproject.ru",
   image: null,
-  discordId: "652399540384694292",
+  discordId: "1234567890",
   tag: "FearAdmin",
   isRoot: true,
   isOwner: true,
@@ -121,7 +120,7 @@ function PanelLayout() {
     if (!authUser) return <LoginScreen />;
   }
   if (!profile) return <BootScreen error={error} />;
-  if (profile.caps.waiting && !canAccessVlada(profile)) {
+  if (profile.caps.waiting) {
     return (
       <>
         <WaitingView profile={profile} onUpdate={setProfile} />
