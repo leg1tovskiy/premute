@@ -309,7 +309,14 @@ export function PanelShell({ children }: { children: ReactNode }) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 pb-16 md:pb-6">{children}</main>
+        <main
+          className={cn(
+            "flex-1",
+            pathname.startsWith("/vlada") ? "overflow-hidden pb-0" : "pb-16 md:pb-6",
+          )}
+        >
+          {children}
+        </main>
       </div>
 
       {/* ── Mobile Drawer ───────────────────────────────────────────── */}
@@ -777,10 +784,10 @@ export function HomeTiles() {
               Разделы панели управления
             </h2>
           </div>
-          <span className="text-[11px] text-muted font-mono">5 разделов</span>
+          <span className="text-[11px] text-muted font-mono">{tiles.length} разделов</span>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
           {tiles.map((i) => {
             const Icon = i.icon;
             return (

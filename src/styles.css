@@ -1,5 +1,32 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Minecraft";
+  src: url("/fonts/MinecraftDefault-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Minecraft";
+  src: url("/fonts/MinecraftDefault-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+.font-minecraft {
+  font-family: "Minecraft", monospace;
+  font-smooth: never;
+  -webkit-font-smoothing: none;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
 @theme {
   --color-bg: #0c0d10;
   --color-surface: #15171c;
@@ -337,12 +364,228 @@
     mask-composite: exclude;
     pointer-events: none;
   }
+
+  /* Minecraft Authentic UI Components */
+  .mc-button {
+    position: relative;
+    border: 2px solid #000000;
+    background: #737373;
+    box-shadow: inset -2px -4px 0px 0px #3c3c3c, inset 2px 2px 0px 0px #ffffff;
+    color: #ffffff;
+    text-shadow: 2px 2px 0px #3f3f3f;
+    image-rendering: pixelated;
+    transition: filter 0.08s ease;
+  }
+
+  .mc-button:hover:not(:disabled) {
+    background: #8b8b8b;
+    box-shadow: inset -2px -4px 0px 0px #4d4d4d, inset 2px 2px 0px 0px #ffffff;
+    color: #ffffa0;
+    text-shadow: 2px 2px 0px #3f3f3f;
+  }
+
+  .mc-button:active:not(:disabled) {
+    box-shadow: inset 2px 2px 0px 0px #3c3c3c, inset -2px -2px 0px 0px #ffffff;
+  }
+
+  .mc-button:disabled {
+    background: #505050;
+    color: #a0a0a0;
+    text-shadow: 2px 2px 0px #202020;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+}
+
+/* ── Minecraft Book Authentic Page Flip / Curl Animations ────────────────────── */
+@keyframes mcPeelForward {
+  0% {
+    clip-path: polygon(0% 0%, 106% 0%, 102% 100%, 0% 100%);
+  }
+  100% {
+    clip-path: polygon(0% 0%, 0% 0%, -10% 100%, 0% 100%);
+  }
+}
+
+@keyframes mcPeelBackward {
+  0% {
+    clip-path: polygon(0% 0%, 0% 0%, -10% 100%, 0% 100%);
+  }
+  100% {
+    clip-path: polygon(0% 0%, 106% 0%, 102% 100%, 0% 100%);
+  }
+}
+
+@keyframes mcCurlRibbonForward {
+  0% {
+    left: calc(100% - 18px);
+    opacity: 0.4;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    left: -36px;
+    opacity: 0;
+  }
+}
+
+@keyframes mcCurlRibbonBackward {
+  0% {
+    left: -36px;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    left: calc(100% - 18px);
+    opacity: 0;
+  }
+}
+
+@keyframes mcCurlShadowForward {
+  0% {
+    left: calc(100% - 10px);
+    opacity: 0.2;
+  }
+  20% {
+    opacity: 0.6;
+  }
+  80% {
+    opacity: 0.5;
+  }
+  100% {
+    left: -30px;
+    opacity: 0;
+  }
+}
+
+@keyframes mcCurlShadowBackward {
+  0% {
+    left: -30px;
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.5;
+  }
+  80% {
+    opacity: 0.6;
+  }
+  100% {
+    left: calc(100% - 10px);
+    opacity: 0;
+  }
+}
+
+.mc-peel-forward {
+  animation: mcPeelForward 0.48s cubic-bezier(0.25, 0.1, 0.25, 1) forwards !important;
+  will-change: clip-path;
+}
+
+.mc-peel-backward {
+  animation: mcPeelBackward 0.48s cubic-bezier(0.25, 0.1, 0.25, 1) forwards !important;
+  will-change: clip-path;
+}
+
+.mc-curl-ribbon-forward {
+  animation: mcCurlRibbonForward 0.48s cubic-bezier(0.25, 0.1, 0.25, 1) forwards !important;
+  will-change: left, opacity;
+  background: linear-gradient(
+    to right,
+    rgba(60, 35, 15, 0.35) 0%,
+    rgba(120, 80, 40, 0.18) 18%,
+    #fdf6e4 38%,
+    #ffffff 58%,
+    #fbf2dc 78%,
+    rgba(80, 45, 15, 0.28) 92%,
+    rgba(40, 20, 5, 0.5) 100%
+  );
+  box-shadow: 14px 0 24px -2px rgba(35, 18, 5, 0.45),
+              24px 0 38px -4px rgba(25, 12, 3, 0.3);
+  transform: skewY(-2.5deg) scaleY(1.02);
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+}
+
+.mc-curl-ribbon-backward {
+  animation: mcCurlRibbonBackward 0.48s cubic-bezier(0.25, 0.1, 0.25, 1) forwards !important;
+  will-change: left, opacity;
+  background: linear-gradient(
+    to right,
+    rgba(40, 20, 5, 0.5) 0%,
+    rgba(80, 45, 15, 0.28) 8%,
+    #fbf2dc 22%,
+    #ffffff 42%,
+    #fdf6e4 62%,
+    rgba(120, 80, 40, 0.18) 82%,
+    rgba(60, 35, 15, 0.35) 100%
+  );
+  box-shadow: -14px 0 24px -2px rgba(35, 18, 5, 0.45),
+              -24px 0 38px -4px rgba(25, 12, 3, 0.3);
+  transform: skewY(-2.5deg) scaleY(1.02);
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+}
+
+.mc-curl-shadow-forward {
+  animation: mcCurlShadowForward 0.48s cubic-bezier(0.25, 0.1, 0.25, 1) forwards !important;
+  will-change: left, opacity;
+  background: linear-gradient(to right, rgba(40, 20, 5, 0.38) 0%, rgba(40, 20, 5, 0) 100%);
+}
+
+.mc-curl-shadow-backward {
+  animation: mcCurlShadowBackward 0.48s cubic-bezier(0.25, 0.1, 0.25, 1) forwards !important;
+  will-change: left, opacity;
+  background: linear-gradient(to left, rgba(40, 20, 5, 0.38) 0%, rgba(40, 20, 5, 0) 100%);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *:not([class*="mc-"]):not([class*="mc-"] *) {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── Halloween Spooky Effects ────────────────────────────────────────── */
+@keyframes pumpkinGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 12px rgba(255, 120, 0, 0.7)) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.65));
+    transform: rotate(8deg) scale(1);
+  }
+  30% {
+    filter: drop-shadow(0 0 20px rgba(255, 150, 0, 0.95)) drop-shadow(0 0 32px rgba(255, 90, 0, 0.5)) drop-shadow(0 6px 14px rgba(0, 0, 0, 0.7));
+    transform: rotate(9.5deg) scale(1.025);
+  }
+  65% {
+    filter: drop-shadow(0 0 13px rgba(255, 110, 0, 0.75)) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.65));
+    transform: rotate(7.2deg) scale(0.99);
+  }
+}
+
+.halloween-pumpkin-glow {
+  animation: pumpkinGlow 3.8s ease-in-out infinite;
+  will-change: transform, filter;
+}
+
+@keyframes spookyFloat {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translateY(-20px) scale(1.2);
+    opacity: 0.7;
+  }
+}
+
+.halloween-ember {
+  animation: spookyFloat 6s ease-in-out infinite;
+}
+

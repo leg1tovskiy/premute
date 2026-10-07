@@ -1,5 +1,10 @@
 node_modules/
-.vercel/
 dist/
+.output/
+.nitro/
+.vite/
 *.log
 .DS_Store
+.env.local
+.env.*.local
+public/__test*.png
