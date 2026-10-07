@@ -32,47 +32,34 @@ function profileMatchesId(profile: StaffProfile, id: string): boolean {
     profile.discordId,
     profile.userId,
     profile.tag,
-    profile.displayName,
-    profile.email,
   ];
   return fields.some((f) => {
     if (!f) return false;
     const str = String(f).trim();
-    return str === target || str.includes(target);
+    return str === target;
   });
 }
 
 /**
  * Проверка прав доступа к вкладке и странице «Для Влады»:
- * 1. Пользователи 652399540384694292 и 948819481734545469 имеют доступ ВСЕГДА.
- *    (включая Главного владельца / Корневого администратора / Dev-режим).
- * 2. Пользователь 1409222587673874555 имеет доступ строго в окне 14 октября 21:59 МСК - 15 октября 22:00 МСК.
- * 3. Все остальные пользователи (и вне временного окна) не видят вкладку и не могут перейти по прямой ссылке.
+ * СТРОГО:
+ * 1. Только пользователи 652399540384694292 и 948819481734545469 (доступ ВСЕГДА).
+ *    (Никакие другие владельцы сайта, владельцы бота, админы или модераторы вкладку НЕ видят!)
+ * 2. Пользователь 1409222587673874555 (Влада) — доступ строго в окне 14 октября 21:59 МСК - 15 октября 22:00 МСК.
+ * 3. Все остальные пользователи (включая любых других владельцев) — вкладка скрыта и переход по ссылке запрещён.
  */
 export function canAccessVlada(profile?: StaffProfile | null, now = Date.now()): boolean {
   if (!profile) return false;
 
-  // Локальная разработка / тестовый профиль
+  // Локальная разработка (только dev-user на localhost)
   if (
     profile.userId === "dev-user" ||
-    profile.discordId === "1234567890" ||
     (typeof window !== "undefined" && window.location.hostname === "localhost")
   ) {
     return true;
   }
 
-  // Главный / корневой владелец сайта (652399540384694292)
-  if (
-    profile.isRoot ||
-    profile.caps?.isRoot ||
-    profile.isOwner ||
-    profile.caps?.isOwner ||
-    profile.caps?.canAdmin
-  ) {
-    return true;
-  }
-
-  // 1. Всегда разрешённые ID (652399540384694292 и 948819481734545469)
+  // 1. Строго только 652399540384694292 и 948819481734545469
   const isAlwaysAllowed = VLADA_ALWAYS_ALLOWED_IDS.some((id) =>
     profileMatchesId(profile, id),
   );
@@ -80,7 +67,7 @@ export function canAccessVlada(profile?: StaffProfile | null, now = Date.now()):
     return true;
   }
 
-  // 2. Временный доступ для Влады (1409222587673874555)
+  // 2. Временный доступ строго для Влады (1409222587673874555)
   const isVladaUser = profileMatchesId(profile, VLADA_TEMPORARY_USER_ID);
   if (isVladaUser) {
     return now >= VLADA_ACCESS_START_MSK && now <= VLADA_ACCESS_END_MSK;
