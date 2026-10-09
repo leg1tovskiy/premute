@@ -141,6 +141,16 @@ export const THEMES = [
     desc: "Глубокий винтажный мерло и нежные пудровые оттенки",
   },
   {
+    id: "monochrome",
+    label: "Черно-белая",
+    kind: "dark",
+    color: "#ffffff",
+    bg: "#09090b",
+    surface: "#121215",
+    badge: "⬛ Монохром",
+    desc: "Строгий контрастный черно-белый стиль без цветных оттенков",
+  },
+  {
     id: "light",
     label: "Светлая",
     kind: "light",

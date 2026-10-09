@@ -231,7 +231,24 @@
   --color-embed: #f472b6;
 }
 
-/* 14. Light (Clean Studio Light) */
+/* 14. Monochrome / Черно-белая (Deep Noir & Crisp White) */
+:root[data-theme="monochrome"] {
+  --color-bg: #09090b;
+  --color-surface: #121215;
+  --color-elevated: #1a1a20;
+  --color-fg: #f4f4f6;
+  --color-muted: #a1a1aa;
+  --color-subtle: #71717a;
+  --color-border: color-mix(in oklab, var(--color-fg) 14%, transparent);
+  --color-border-strong: color-mix(in oklab, var(--color-fg) 25%, transparent);
+  --color-accent: #ffffff;
+  --color-accent-fg: #09090b;
+  --color-embed: #e4e4e7;
+  --color-chart-bans: #ffffff;
+  --color-chart-mutes: #71717a;
+}
+
+/* 15. Light (Clean Studio Light) */
 :root[data-theme="light"] {
   color-scheme: light;
   --color-bg: #f4f5f8;
