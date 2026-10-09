@@ -421,7 +421,11 @@ export async function updateStaffPermissions(
   if (steamidUpdate && (target.discordId || targetRows[0]?.discord_id)) {
     const disc = target.discordId || targetRows[0]?.discord_id;
     try {
-      await sql`update mod_roster set discord = ${disc} where steamid = ${steamidUpdate}`;
+      await sql`
+        insert into mod_roster (steamid, name, rank, discord)
+        values (${steamidUpdate}, ${target.displayName || target.email || steamidUpdate}, 1, ${disc})
+        on conflict (steamid) do update set discord = excluded.discord
+      `;
     } catch {
       /* игнорируем */
     }

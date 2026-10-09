@@ -173,6 +173,13 @@ export function AdminView({ me }: { me: StaffProfile }) {
                           <Badge tone="accent" className="font-bold">владелец сайта</Badge>
                         ) : null}
                         {u.tag ? <Badge className="font-bold font-mono text-[10px]">{u.tag}</Badge> : null}
+                        {u.isOwner || u.canStats ? (
+                          <Badge tone="success" className="font-bold text-[10px]">Вся статистика</Badge>
+                        ) : u.mySteamId ? (
+                          <Badge tone="accent" className="font-bold text-[10px]">Только своя стата</Badge>
+                        ) : (
+                          <Badge tone="muted" className="font-bold text-[10px]">Стата закрыта</Badge>
+                        )}
                       </div>
 
                       <p className="mt-0.5 text-xs text-subtle font-mono">
@@ -200,7 +207,8 @@ export function AdminView({ me }: { me: StaffProfile }) {
 
                   <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-border/60 bg-elevated/60 p-3.5">
                     <Toggle
-                      label="Общая статистика"
+                      label="Полная статистика (все)"
+                      hint="Включено: доступ ко всей статистике и топам. Выключено: если указан SteamID — видит только свою личную статистику."
                       checked={u.isOwner || u.canStats}
                       disabled={locked || u.isOwner}
                       onChange={(v) => void patch(u.userId, { ...u, canStats: v })}
@@ -395,16 +403,23 @@ function Toggle({
   checked,
   disabled,
   onChange,
+  hint,
 }: {
   label: string;
   checked: boolean;
   disabled?: boolean;
   onChange: (v: boolean) => void;
+  hint?: string;
 }) {
   return (
-    <label className="flex items-center gap-2 text-xs font-medium text-fg cursor-pointer select-none">
+    <label
+      title={hint}
+      className={`flex items-center gap-2 text-xs font-medium text-fg select-none ${
+        disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+      }`}
+    >
       <Switch checked={checked} disabled={disabled} onCheckedChange={onChange} />
-      {label}
+      <span>{label}</span>
     </label>
   );
 }

@@ -54,6 +54,27 @@ export function WaitingView({
     };
   }, [claimId, phase, onUpdate]);
 
+  // Фоновая проверка: если администратор выдал права или привязал SteamID, окно ожидания сразу откроет панель
+  useEffect(() => {
+    if (phase === "pending") return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const next = await getMe({ data: {} });
+        if (!cancelled && !next.caps.waiting) {
+          onUpdate(next);
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+    const t = setInterval(() => void poll(), 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [phase, onUpdate]);
+
   async function save(e: FormEvent) {
     e.preventDefault();
     setBusy(true);

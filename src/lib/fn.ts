@@ -123,7 +123,36 @@ export const getStatsFn = createServerFn({ method: "POST" })
           removed: mine.removed,
           excluded: mine.excluded,
         };
+      } else {
+        const emptyMine = {
+          steamid: mySteamId,
+          name: me.displayName || me.email || mySteamId,
+          discord: me.discordId || null,
+          avatar: me.image || null,
+          rank: null,
+          norma: null,
+          bans: 0,
+          mutes: 0,
+          total: 0,
+          weekTotal: 0,
+          removed: 0,
+          excluded: 0,
+          lastSeenName: null,
+          lastOnline: null,
+          pct: null,
+          done: false,
+          slug: mySteamId,
+        };
+        payload.moderators = [emptyMine];
+        payload.totals = {
+          bans: 0,
+          mutes: 0,
+          total: 0,
+          removed: 0,
+          excluded: 0,
+        };
       }
+      payload.prevTotals = undefined;
     }
     return payload;
   });
@@ -148,6 +177,27 @@ export const getModDetailsFn = createServerFn({ method: "POST" })
       const steamid = await findBySlug(needle);
       if (steamid) mod = mods.find((m) => m.steamid === steamid);
     }
+    if (!mod && !me.caps.canGeneralStats && (needle === me.mySteamId || slug === me.mySteamId)) {
+      mod = {
+        steamid: me.mySteamId!,
+        name: me.displayName || me.email || me.mySteamId!,
+        discord: me.discordId || null,
+        avatar: me.image || null,
+        rank: null,
+        norma: null,
+        bans: 0,
+        mutes: 0,
+        total: 0,
+        weekTotal: 0,
+        removed: 0,
+        excluded: 0,
+        lastSeenName: null,
+        lastOnline: null,
+        pct: null,
+        done: false,
+        slug: me.mySteamId!,
+      };
+    }
     if (!mod) return null;
 
     if (!me.caps.canGeneralStats && me.mySteamId !== mod.steamid) {
@@ -171,6 +221,7 @@ export const getDailyStatsFn = createServerFn({ method: "GET" })
     const { getStaff } = await import("./server/staff");
     const me = await getStaff(context.userId);
     if (!me?.caps.canStats) throw new Error("Нет доступа к статистике.");
+    if (!me?.caps.canGeneralStats) return [];
     const { fetchWorkerDaily } = await import("./server/discord");
     const data = await fetchWorkerDaily();
     return data?.days ?? [];
@@ -492,10 +543,15 @@ export const getRecentPunishmentsFn = createServerFn({ method: "GET" })
       const stats = await loadStats({ refresh: false });
       const { fetchWorkerPunishments } = await import("./server/discord");
 
-      const activeMods = (stats.moderators || [])
+      let activeMods = (stats.moderators || [])
         .filter((m) => (m.rank ?? 0) <= 3 && m.total > 0)
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 5);
+        .sort((a, b) => b.total - a.total);
+
+      if (!me.caps.canGeneralStats) {
+        activeMods = activeMods.filter((m) => m.steamid === me.mySteamId);
+      } else {
+        activeMods = activeMods.slice(0, 5);
+      }
 
       const results = await Promise.allSettled(
         activeMods.map((m) => fetchWorkerPunishments(m.steamid)),
