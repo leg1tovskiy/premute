@@ -15,6 +15,7 @@ export type Caps = {
   canGrantOwner: boolean;
   canGrantBotOwner: boolean;
   waiting: boolean;
+  isBanned?: boolean;
 };
 
 export type StaffProfile = {
@@ -28,6 +29,7 @@ export type StaffProfile = {
   isRoot: boolean;
   isOwner: boolean;
   isBotOwner: boolean;
+  isBanned: boolean;
   canStats: boolean;
   canSuspicious: boolean;
   canModeration: boolean;

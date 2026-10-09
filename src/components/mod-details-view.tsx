@@ -224,8 +224,15 @@ function ModDailyCharts({
   );
 }
 
-export function ModDetailsView() {
-  const { slug } = useParams({ from: "/_panel/$slug" });
+export function ModDetailsView({
+  explicitSlug,
+  hideBackLink,
+}: {
+  explicitSlug?: string;
+  hideBackLink?: boolean;
+} = {}) {
+  const params = useParams({ strict: false }) as { slug?: string };
+  const slug = explicitSlug || params.slug || "";
   const [data, setData] = useState<ModDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -234,6 +241,10 @@ export function ModDetailsView() {
   const [search, setSearch] = useState("");
 
   async function load() {
+    if (!slug) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -307,13 +318,15 @@ export function ModDetailsView() {
         <p className="mt-2 text-xs text-muted">
           Возможно, ссылка устарела или модератор больше не состоит в составе.
         </p>
-        <Link
-          to="/stats"
-          className="mt-6 inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-elevated px-4 text-xs font-bold text-muted hover:text-fg"
-        >
-          <ChevronLeft className="size-4" />
-          Вернуться к статистике
-        </Link>
+        {!hideBackLink && (
+          <Link
+            to="/stats"
+            className="mt-6 inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-elevated px-4 text-xs font-bold text-muted hover:text-fg"
+          >
+            <ChevronLeft className="size-4" />
+            Вернуться к статистике
+          </Link>
+        )}
       </div>
     );
   }
@@ -329,15 +342,17 @@ export function ModDetailsView() {
   return (
     <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 sm:py-8 space-y-6 animate-in fade-in duration-300">
       {/* ── Top Back Link ──────────────────────────────────────────── */}
-      <div>
-        <Link
-          to="/stats"
-          className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-elevated/70 px-3 py-1.5 text-xs font-bold text-muted hover:border-accent hover:text-fg transition-all shadow-sm"
-        >
-          <ArrowLeft className="size-3.5" />
-          Назад к общей статистике
-        </Link>
-      </div>
+      {!hideBackLink && (
+        <div>
+          <Link
+            to="/stats"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-elevated/70 px-3 py-1.5 text-xs font-bold text-muted hover:border-accent hover:text-fg transition-all shadow-sm"
+          >
+            <ArrowLeft className="size-3.5" />
+            Назад к общей статистике
+          </Link>
+        </div>
+      )}
 
       {/* ── Moderator Hero Profile Card ────────────────────────────── */}
       <article className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-r from-surface via-surface/95 to-elevated/70 p-6 sm:p-8 shadow-2xl glass-panel cyber-border-glow">

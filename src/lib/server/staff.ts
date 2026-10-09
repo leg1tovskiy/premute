@@ -30,9 +30,32 @@ export function computeCaps(
     can_mods: unknown;
     can_logs: unknown;
     can_power: unknown;
+    is_banned?: unknown;
   },
   mySteamId?: string | null,
 ): Caps {
+  const isBanned = flag(row.is_banned);
+  if (isBanned) {
+    return {
+      isRoot: false,
+      isOwner: false,
+      canStats: false,
+      canGeneralStats: false,
+      canOwnStats: false,
+      canSuspicious: false,
+      canModeration: false,
+      canVoice: false,
+      canMods: false,
+      canLogs: false,
+      canPower: false,
+      canConsole: false,
+      canAdmin: false,
+      canGrantOwner: false,
+      canGrantBotOwner: false,
+      waiting: false,
+      isBanned: true,
+    };
+  }
   const isRoot = flag(row.is_root);
   // «Владелец сайта» — полный доступ к сайту. «Владелец бота» (красный) — команды Discord.
   const isOwner = isRoot || flag(row.is_owner);
@@ -67,6 +90,7 @@ export function computeCaps(
     // Назначать/снимать «владельцев бота» может только корневой владелец.
     canGrantBotOwner: isRoot,
     waiting: !(canStats || canSuspicious || canModeration || canVoice || canMods || canLogs || canPower || canConsole || canAdmin),
+    isBanned: false,
   };
 }
 
@@ -100,6 +124,7 @@ type StaffRow = {
   is_root: unknown;
   is_owner: unknown;
   is_bot_owner: unknown;
+  is_banned?: unknown;
   can_stats: unknown;
   can_suspicious: unknown;
   can_moderation: unknown;
@@ -113,7 +138,16 @@ type StaffRow = {
 };
 
 function toProfile(row: StaffRow, mySteamId?: string | null): StaffProfile {
-  const effectiveSteamId = (row.steamid ? String(row.steamid).trim() : null) || mySteamId || null;
+  let effectiveSteamId: string | null = null;
+  const sid = row.steamid ? String(row.steamid).trim() : null;
+  if (sid === "none" || sid === "null" || sid === "") {
+    effectiveSteamId = null;
+  } else if (sid) {
+    effectiveSteamId = sid;
+  } else if (mySteamId) {
+    effectiveSteamId = mySteamId;
+  }
+  const isBanned = flag(row.is_banned);
   const caps = computeCaps(row, effectiveSteamId);
   return {
     userId: row.user_id,
@@ -126,6 +160,7 @@ function toProfile(row: StaffRow, mySteamId?: string | null): StaffProfile {
     isRoot: caps.isRoot,
     isOwner: caps.isOwner,
     isBotOwner: flag(row.is_bot_owner) && !caps.isRoot,
+    isBanned,
     canStats: caps.canGeneralStats,
     canSuspicious: flag(row.can_suspicious),
     canModeration: flag(row.can_moderation),
@@ -156,6 +191,7 @@ function devStaffProfile(): StaffProfile {
     isRoot: true,
     isOwner: true,
     isBotOwner: true,
+    isBanned: false,
     canStats: true,
     canSuspicious: true,
     canModeration: true,
@@ -177,6 +213,7 @@ function devStaffProfile(): StaffProfile {
         can_mods: true,
         can_logs: true,
         can_power: true,
+        is_banned: false,
       },
       "76561198805786012",
     ),
@@ -247,9 +284,10 @@ export async function upsertStaff(
   const rows = await sql<StaffRow>`select * from staff where user_id = ${userId} limit 1`;
   if (!rows[0]) return devStaffProfile();
 
+  const isExplicitlyCleared = rows[0].steamid === "none" || rows[0].steamid === "null";
   const { readRoster } = await import("./roster");
   const roster = await readRoster();
-  const mySteamId = findSteamIdInRoster(roster, rows[0].discord_id, rows[0].display_name);
+  const mySteamId = isExplicitlyCleared ? null : (rows[0].steamid || findSteamIdInRoster(roster, rows[0].discord_id, rows[0].display_name));
   return toProfile(rows[0], mySteamId);
 }
 
@@ -261,19 +299,23 @@ export async function getStaff(userId: string): Promise<StaffProfile | null> {
   const rows = await sql<StaffRow>`select * from staff where user_id = ${userId} limit 1`;
   if (!rows[0]) return null;
 
+  const isExplicitlyCleared = rows[0].steamid === "none" || rows[0].steamid === "null";
   const { readRoster } = await import("./roster");
   const roster = await readRoster();
-  const mySteamId = findSteamIdInRoster(roster, rows[0].discord_id, rows[0].display_name);
+  const mySteamId = isExplicitlyCleared ? null : (rows[0].steamid || findSteamIdInRoster(roster, rows[0].discord_id, rows[0].display_name));
   return toProfile(rows[0], mySteamId);
 }
 
 export async function listStaff(): Promise<StaffListItem[]> {
   const sql = await getSql();
+  await sql.query("alter table staff add column if not exists is_banned boolean not null default false");
+  await sql.query("alter table staff add column if not exists steamid text");
   const rows = await sql<StaffRow>`select * from staff order by is_root desc, is_owner desc, last_seen desc`;
   const { readRoster } = await import("./roster");
   const roster = await readRoster();
   return rows.map((row) => {
-    const mySteamId = findSteamIdInRoster(roster, row.discord_id, row.display_name);
+    const isExplicitlyCleared = row.steamid === "none" || row.steamid === "null";
+    const mySteamId = isExplicitlyCleared ? null : (row.steamid || findSteamIdInRoster(roster, row.discord_id, row.display_name));
     return toListItem(row, mySteamId);
   });
 }
@@ -330,6 +372,7 @@ export async function updateStaffPermissions(
     canMods?: boolean;
     isOwner?: boolean;
     isBotOwner?: boolean;
+    isBanned?: boolean;
     setRoot?: boolean;
     tag?: string | null;
     steamid?: string | null;
@@ -337,12 +380,35 @@ export async function updateStaffPermissions(
 ): Promise<StaffListItem> {
   if (!actor.caps.canAdmin) throw new Error("Недостаточно прав.");
   const sql = await getSql();
+  await sql.query("alter table staff add column if not exists is_banned boolean not null default false");
+  await sql.query("alter table staff add column if not exists steamid text");
+  await sql.query("alter table staff add column if not exists tag text");
+  await sql.query("alter table staff add column if not exists is_bot_owner boolean not null default false");
+  await sql.query("alter table staff add column if not exists can_logs boolean not null default false");
+  await sql.query("alter table staff add column if not exists can_power boolean not null default false");
+  await sql.query("alter table staff add column if not exists can_suspicious boolean not null default false");
+
   const targetRows = await sql<StaffRow>`select * from staff where user_id = ${targetUserId} limit 1`;
   if (!targetRows.length) throw new Error("Пользователь не найден.");
   const target = toProfile(targetRows[0]);
 
   const isMainOwner = target.userId === ROOT_DISCORD_ID || target.discordId === ROOT_DISCORD_ID;
   const actorIsMainOwner = actor.userId === ROOT_DISCORD_ID || actor.discordId === ROOT_DISCORD_ID;
+
+  if (patch.isBanned !== undefined) {
+    if (isMainOwner || target.isRoot) {
+      throw new Error("Нельзя забанить владельца.");
+    }
+    if (targetUserId === actor.userId) {
+      throw new Error("Нельзя забанить самого себя.");
+    }
+    await sql`update staff set is_banned = ${patch.isBanned} where user_id = ${targetUserId}`;
+    if (patch.isBanned) {
+      try {
+        await sql`delete from "session" where "userId" = ${targetUserId}`;
+      } catch {}
+    }
+  }
 
   // Тумблер «красный Владелец» ↔ «Корневой владелец» — только для главного владельца 652...
   const togglingOwnership = patch.setRoot !== undefined;
@@ -393,18 +459,21 @@ export async function updateStaffPermissions(
   }
   const tag = patch.tag !== undefined ? sanitizeTag(patch.tag) : target.tag;
 
-  await sql.query("alter table staff add column if not exists steamid text");
   let steamidUpdate = targetRows[0]?.steamid ?? null;
   if (patch.steamid !== undefined) {
-    const rawSid = patch.steamid ? String(patch.steamid).trim().replace(/\D/g, "") : null;
-    steamidUpdate = rawSid && rawSid.length >= 16 ? rawSid : null;
+    if (patch.steamid === null || patch.steamid === "" || patch.steamid === "none") {
+      steamidUpdate = "none";
+      if (target.discordId) {
+        try {
+          await sql`update mod_roster set discord = null where discord = ${target.discordId}`;
+        } catch {}
+      }
+    } else {
+      const rawSid = String(patch.steamid).trim().replace(/\D/g, "");
+      steamidUpdate = rawSid.length >= 16 ? rawSid : "none";
+    }
   }
 
-  await sql.query("alter table staff add column if not exists tag text");
-  await sql.query("alter table staff add column if not exists is_bot_owner boolean not null default false");
-  await sql.query("alter table staff add column if not exists can_logs boolean not null default false");
-  await sql.query("alter table staff add column if not exists can_power boolean not null default false");
-  await sql.query("alter table staff add column if not exists can_suspicious boolean not null default false");
   await sql`
     update staff set
       can_stats = ${canStats},
@@ -418,7 +487,7 @@ export async function updateStaffPermissions(
     where user_id = ${targetUserId}
   `;
   const rows = await sql<StaffRow>`select * from staff where user_id = ${targetUserId} limit 1`;
-  if (steamidUpdate && (target.discordId || targetRows[0]?.discord_id)) {
+  if (steamidUpdate && steamidUpdate !== "none" && (target.discordId || targetRows[0]?.discord_id)) {
     const disc = target.discordId || targetRows[0]?.discord_id;
     try {
       await sql`
@@ -445,10 +514,42 @@ export async function updateStaffPermissions(
       console.error("[staff] sync owners:", e instanceof Error ? e.message : e);
     }
   }
+  const isExplicitlyCleared = rows[0]?.steamid === "none" || rows[0]?.steamid === "null";
   const { readRoster } = await import("./roster");
   const roster = await readRoster();
-  const mySteamId = rows[0]?.steamid || findSteamIdInRoster(roster, rows[0]?.discord_id, rows[0]?.display_name);
+  const mySteamId = isExplicitlyCleared
+    ? null
+    : (rows[0]?.steamid || findSteamIdInRoster(roster, rows[0]?.discord_id, rows[0]?.display_name));
   return toListItem(rows[0], mySteamId);
+}
+
+export async function deleteStaffUser(actor: StaffProfile, targetUserId: string): Promise<void> {
+  if (!actor.caps.canAdmin) throw new Error("Недостаточно прав.");
+  if (targetUserId === actor.userId) throw new Error("Нельзя удалить собственный аккаунт.");
+  const sql = await getSql();
+  const targetRows = await sql<StaffRow>`select * from staff where user_id = ${targetUserId} limit 1`;
+  if (!targetRows.length) throw new Error("Пользователь не найден.");
+  const target = toProfile(targetRows[0]);
+  const isMainOwner = target.userId === ROOT_DISCORD_ID || target.discordId === ROOT_DISCORD_ID;
+  if (isMainOwner || target.isRoot) {
+    throw new Error("Нельзя удалить владельца.");
+  }
+
+  if (target.discordId) {
+    try {
+      await sql`update mod_roster set discord = null where discord = ${target.discordId}`;
+    } catch {}
+  }
+  await sql`delete from staff where user_id = ${targetUserId}`;
+  try {
+    await sql`delete from "session" where "userId" = ${targetUserId}`;
+  } catch {}
+  try {
+    await sql`delete from "account" where "userId" = ${targetUserId}`;
+  } catch {}
+  try {
+    await sql`delete from "user" where "id" = ${targetUserId}`;
+  } catch {}
 }
 
 export async function writeLog(userId: string, action: string, detail: string) {

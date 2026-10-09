@@ -1,12 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Download, ExternalLink, Loader2, Shield, ShieldCheck, Sparkles, Terminal } from "lucide-react";
+import { Download, ExternalLink, Loader2, Shield, ShieldCheck, Sparkles, Terminal, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { PageHeaderSkeleton, RowsSkeleton } from "@/components/skeletons";
-import { exportBackupFn, listStaffFn, setStaffPerms } from "@/lib/fn";
+import { deleteStaffFn, exportBackupFn, listStaffFn, setStaffPerms } from "@/lib/fn";
 import { ROOT_DISCORD_ID, fearProfileUrl } from "@/lib/constants";
 import type { StaffListItem, StaffProfile } from "@/lib/types";
 
@@ -65,6 +65,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
           canMods: next.canMods,
           isOwner: next.isOwner,
           isBotOwner: next.isBotOwner,
+          isBanned: next.isBanned,
           setRoot: next.setRoot,
           tag: next.tag,
           steamid: next.steamid !== undefined ? next.steamid : next.mySteamId,
@@ -74,6 +75,20 @@ export function AdminView({ me }: { me: StaffProfile }) {
       toast.success("Данные успешно сохранены");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Ошибка при сохранении прав");
+    }
+  }
+
+  async function handleDelete(u: StaffListItem) {
+    const name = u.displayName || u.email || u.userId;
+    if (!window.confirm(`Вы действительно хотите безвозвратно удалить аккаунт ${name} с сайта?`)) {
+      return;
+    }
+    try {
+      await deleteStaffFn({ data: { userId: u.userId } });
+      setRows((prev) => prev.filter((r) => r.userId !== u.userId));
+      toast.success(`Аккаунт ${name} успешно удалён`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Не удалось удалить аккаунт");
     }
   }
 
@@ -173,7 +188,9 @@ export function AdminView({ me }: { me: StaffProfile }) {
                           <Badge tone="accent" className="font-bold">владелец сайта</Badge>
                         ) : null}
                         {u.tag ? <Badge className="font-bold font-mono text-[10px]">{u.tag}</Badge> : null}
-                        {u.isOwner || u.canStats ? (
+                        {u.isBanned ? (
+                          <Badge tone="danger" className="font-bold text-[10px]">ЗАБАНЕН В ПАНЕЛИ</Badge>
+                        ) : u.isOwner || u.canStats ? (
                           <Badge tone="success" className="font-bold text-[10px]">Вся статистика</Badge>
                         ) : u.mySteamId ? (
                           <Badge tone="accent" className="font-bold text-[10px]">Только своя стата</Badge>
@@ -210,26 +227,26 @@ export function AdminView({ me }: { me: StaffProfile }) {
                       label="Полная статистика (все)"
                       hint="Включено: доступ ко всей статистике и топам. Выключено: если указан SteamID — видит только свою личную статистику."
                       checked={u.isOwner || u.canStats}
-                      disabled={locked || u.isOwner}
+                      disabled={locked || u.isOwner || u.isBanned}
                       onChange={(v) => void patch(u.userId, { ...u, canStats: v })}
                     />
                     <Toggle
                       label="Подозрительные"
                       checked={u.isOwner || u.canSuspicious}
-                      disabled={locked || u.isOwner}
+                      disabled={locked || u.isOwner || u.isBanned}
                       onChange={(v) => void patch(u.userId, { ...u, canSuspicious: v })}
                     />
                     <Toggle
                       label="Модераторы"
                       checked={u.isOwner || u.canMods}
-                      disabled={locked || u.isOwner}
+                      disabled={locked || u.isOwner || u.isBanned}
                       onChange={(v) => void patch(u.userId, { ...u, canMods: v })}
                     />
                     {me.caps.canGrantBotOwner ? (
                       <Toggle
                         label="Владелец бота"
                         checked={u.isRoot || u.isBotOwner}
-                        disabled={locked || u.isRoot}
+                        disabled={locked || u.isRoot || u.isBanned}
                         onChange={(v) => void patch(u.userId, { ...u, isBotOwner: v })}
                       />
                     ) : null}
@@ -237,9 +254,29 @@ export function AdminView({ me }: { me: StaffProfile }) {
                       <Toggle
                         label="Владелец сайта"
                         checked={u.isOwner || u.isRoot}
-                        disabled={locked || u.isRoot}
+                        disabled={locked || u.isRoot || u.isBanned}
                         onChange={(v) => void patch(u.userId, { ...u, isOwner: v })}
                       />
+                    ) : null}
+                    {!isMainOwner(u) && !u.isRoot && u.userId !== me.userId ? (
+                      <Toggle
+                        label="Бан в панели"
+                        hint="Заблокировать доступ пользователя к панели управления"
+                        checked={Boolean(u.isBanned)}
+                        disabled={locked}
+                        onChange={(v) => void patch(u.userId, { ...u, isBanned: v })}
+                      />
+                    ) : null}
+                    {!isMainOwner(u) && !u.isRoot && u.userId !== me.userId ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 rounded-xl text-xs font-bold text-danger hover:bg-danger/10 hover:text-danger ml-auto"
+                        onClick={() => handleDelete(u)}
+                      >
+                        <Trash2 className="mr-1.5 size-3.5" />
+                        Удалить аккаунт
+                      </Button>
                     ) : null}
                   </div>
                 </li>
@@ -298,6 +335,11 @@ function SteamIdField({
     }
   }
 
+  function handleClear() {
+    setText("");
+    onSave(null);
+  }
+
   return (
     <label className="grid gap-1 text-[11px] font-bold text-muted">
       SteamID64
@@ -316,6 +358,16 @@ function SteamIdField({
             }
           }}
         />
+        {value && !disabled ? (
+          <button
+            type="button"
+            title="Отвязать SteamID"
+            onClick={handleClear}
+            className="grid size-8 place-items-center rounded-xl border border-border/80 bg-surface/90 text-subtle hover:text-danger hover:border-danger/50 transition-colors shadow-sm cursor-pointer"
+          >
+            <X className="size-3.5" />
+          </button>
+        ) : null}
         {value ? (
           <a
             href={fearProfileUrl(value)}

@@ -41,6 +41,16 @@ export async function verifyDiscordBotCode(code: string): Promise<BotLoginResult
   const { discordId, username, globalName, avatar, steamid } = botRes.user;
   const sql = await getSql();
   const userId = `discord_${discordId}`;
+
+  // Проверка блокировки в панели
+  await sql.query("alter table staff add column if not exists is_banned boolean not null default false");
+  const bannedCheck = await sql<{ is_banned: boolean }>`
+    select is_banned from staff where user_id = ${userId} or discord_id = ${discordId} limit 1
+  `;
+  if (bannedCheck.length && bannedCheck[0]?.is_banned) {
+    throw new Error("Ваш доступ к панели управления заблокирован администратором.");
+  }
+
   const displayName = globalName || username || discordId;
   const email = `${userId}@discord.bot`;
   const image = avatar ?? null;

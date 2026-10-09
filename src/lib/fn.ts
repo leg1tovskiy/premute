@@ -46,8 +46,20 @@ export const listStaffFn = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<StaffListItem[]> => {
     const { getStaff, listStaff } = await import("./server/staff");
     const me = await getStaff(context.userId);
-    if (!me?.caps.canAdmin) throw new Error("Недостаточно прав.");
+    if (!me?.caps.canAdmin || me.isBanned) throw new Error("Недостаточно прав.");
     return listStaff();
+  });
+
+export const deleteStaffFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { userId: string }) => d)
+  .handler(async ({ context, data }): Promise<{ success: boolean }> => {
+    const { getStaff, deleteStaffUser, writeLog } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.canAdmin || me.isBanned) throw new Error("Недостаточно прав.");
+    await deleteStaffUser(me, data.userId);
+    await writeLog(context.userId, "delete_user", data.userId);
+    return { success: true };
   });
 
 export const setStaffPerms = createServerFn({ method: "POST" })
@@ -60,6 +72,7 @@ export const setStaffPerms = createServerFn({ method: "POST" })
       canMods?: boolean;
       isOwner?: boolean;
       isBotOwner?: boolean;
+      isBanned?: boolean;
       setRoot?: boolean;
       tag?: string | null;
       steamid?: string | null;
@@ -69,12 +82,14 @@ export const setStaffPerms = createServerFn({ method: "POST" })
     const { getStaff, updateStaffPermissions, writeLog } = await import("./server/staff");
     const me = await getStaff(context.userId);
     if (!me) throw new Error("Профиль не найден.");
+    if (me.isBanned) throw new Error("Аккаунт заблокирован.");
     const updated = await updateStaffPermissions(me, data.userId, {
       canStats: data.canStats,
       canSuspicious: data.canSuspicious,
       canMods: data.canMods,
       isOwner: data.isOwner,
       isBotOwner: data.isBotOwner,
+      isBanned: data.isBanned,
       setRoot: data.setRoot,
       tag: data.tag,
       steamid: data.steamid,
@@ -89,7 +104,7 @@ export const getStatsFn = createServerFn({ method: "POST" })
   .handler(async ({ context, data }): Promise<StatsPayload> => {
     const { getStaff } = await import("./server/staff");
     const me = await getStaff(context.userId);
-    if (!me?.caps.canStats) throw new Error("Нет доступа к статистике.");
+    if (!me?.caps.canStats || me.isBanned) throw new Error("Нет доступа к статистике.");
     const { loadStats } = await import("./server/stats");
     const { attachLastMonthTop } = await import("./server/tops");
     const { withSlugs } = await import("./server/mod-slugs");
@@ -163,7 +178,7 @@ export const getModDetailsFn = createServerFn({ method: "POST" })
   .handler(async ({ context, data }): Promise<ModDetails | null> => {
     const { getStaff } = await import("./server/staff");
     const me = await getStaff(context.userId);
-    if (!me?.caps.canStats) throw new Error("Нет доступа к статистике.");
+    if (!me?.caps.canStats || me.isBanned) throw new Error("Нет доступа к статистике.");
     const slug = String(data.slug || "").slice(0, 64);
     if (!slug) return null;
     const { loadStats } = await import("./server/stats");
