@@ -51,7 +51,12 @@ export async function verifyDiscordBotCode(code: string): Promise<BotLoginResult
     throw new Error("Ваш доступ к панели управления заблокирован администратором.");
   }
 
-  const displayName = globalName || username || discordId;
+  const { readRoster } = await import("./roster");
+  const { findSteamIdInRoster } = await import("./staff");
+  const roster = await readRoster();
+  const matchedSid = steamid || findSteamIdInRoster(roster, discordId, username);
+  const rMod = matchedSid ? roster.find((m) => m.steamid === matchedSid) : null;
+  const displayName = rMod?.name || globalName || username || discordId;
   const email = `${userId}@discord.bot`;
   const image = avatar ?? null;
   const isRoot = discordId === ROOT_DISCORD_ID;
@@ -80,10 +85,10 @@ export async function verifyDiscordBotCode(code: string): Promise<BotLoginResult
   if (!existingStaff.length) {
     await sql`
       insert into staff (
-        user_id, display_name, email, image, discord_id,
+        user_id, display_name, email, image, discord_id, steamid,
         is_root, is_owner, can_stats, created_at, last_seen
       ) values (
-        ${userId}, ${displayName}, ${email}, ${image}, ${discordId},
+        ${userId}, ${displayName}, ${email}, ${image}, ${discordId}, ${matchedSid ?? null},
         ${isRoot}, ${isRoot}, ${isRoot}, now(), now()
       )
     `;
@@ -93,6 +98,7 @@ export async function verifyDiscordBotCode(code: string): Promise<BotLoginResult
         display_name = ${displayName},
         image = coalesce(${image}, image),
         discord_id = ${discordId},
+        steamid = coalesce(steamid, ${matchedSid ?? null}),
         is_root = case when ${isRoot} then true else is_root end,
         is_owner = case when ${isRoot} then true else is_owner end,
         can_stats = case when ${isRoot} then true else can_stats end,

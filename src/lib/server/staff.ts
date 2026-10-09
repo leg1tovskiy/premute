@@ -137,7 +137,7 @@ type StaffRow = {
   last_seen: unknown;
 };
 
-function toProfile(row: StaffRow, mySteamId?: string | null): StaffProfile {
+function toProfile(row: StaffRow, mySteamId?: string | null, fearName?: string | null): StaffProfile {
   let effectiveSteamId: string | null = null;
   const sid = row.steamid ? String(row.steamid).trim() : null;
   if (sid === "none" || sid === "null" || sid === "") {
@@ -149,9 +149,14 @@ function toProfile(row: StaffRow, mySteamId?: string | null): StaffProfile {
   }
   const isBanned = flag(row.is_banned);
   const caps = computeCaps(row, effectiveSteamId);
+
+  const displayName = fearName ||
+    (row.display_name && !/^\d{17,20}$/.test(row.display_name) ? row.display_name : null) ||
+    row.display_name;
+
   return {
     userId: row.user_id,
-    displayName: row.display_name,
+    displayName,
     email: row.email,
     image: row.image,
     discordId: row.discord_id,
@@ -174,8 +179,8 @@ function toProfile(row: StaffRow, mySteamId?: string | null): StaffProfile {
   };
 }
 
-function toListItem(row: StaffRow, mySteamId?: string | null): StaffListItem {
-  const { caps: _c, ...rest } = toProfile(row, mySteamId);
+function toListItem(row: StaffRow, mySteamId?: string | null, fearName?: string | null): StaffListItem {
+  const { caps: _c, ...rest } = toProfile(row, mySteamId, fearName);
   return rest;
 }
 
@@ -288,7 +293,8 @@ export async function upsertStaff(
   const { readRoster } = await import("./roster");
   const roster = await readRoster();
   const mySteamId = isExplicitlyCleared ? null : (rows[0].steamid || findSteamIdInRoster(roster, rows[0].discord_id, rows[0].display_name));
-  return toProfile(rows[0], mySteamId);
+  const rMod = mySteamId ? roster.find((m) => m.steamid === mySteamId) : null;
+  return toProfile(rows[0], mySteamId, rMod?.name);
 }
 
 export async function getStaff(userId: string): Promise<StaffProfile | null> {
@@ -303,7 +309,8 @@ export async function getStaff(userId: string): Promise<StaffProfile | null> {
   const { readRoster } = await import("./roster");
   const roster = await readRoster();
   const mySteamId = isExplicitlyCleared ? null : (rows[0].steamid || findSteamIdInRoster(roster, rows[0].discord_id, rows[0].display_name));
-  return toProfile(rows[0], mySteamId);
+  const rMod = mySteamId ? roster.find((m) => m.steamid === mySteamId) : null;
+  return toProfile(rows[0], mySteamId, rMod?.name);
 }
 
 export async function listStaff(): Promise<StaffListItem[]> {
@@ -316,7 +323,8 @@ export async function listStaff(): Promise<StaffListItem[]> {
   return rows.map((row) => {
     const isExplicitlyCleared = row.steamid === "none" || row.steamid === "null";
     const mySteamId = isExplicitlyCleared ? null : (row.steamid || findSteamIdInRoster(roster, row.discord_id, row.display_name));
-    return toListItem(row, mySteamId);
+    const rMod = mySteamId ? roster.find((m) => m.steamid === mySteamId) : null;
+    return toListItem(row, mySteamId, rMod?.name);
   });
 }
 

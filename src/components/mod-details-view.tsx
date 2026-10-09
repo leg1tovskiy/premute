@@ -332,7 +332,7 @@ export function ModDetailsView({
   }
 
   const m = data.moderator;
-  const handle = m.discord && m.discord !== m.name ? m.discord : m.name;
+  const handle = m.name && !/^\d{17,20}$/.test(m.name) ? m.name : (m.discord && !/^\d{17,20}$/.test(m.discord) ? m.discord : m.name);
   const initial = (handle.trim().charAt(0) || "?").toUpperCase();
   const monthTarget = m.norma?.month ?? null;
   const monthDone = monthTarget != null && monthTarget > 0 && m.total >= monthTarget;
@@ -390,6 +390,9 @@ export function ModDetailsView({
 
               <div className="mt-1 flex flex-wrap items-center gap-3 font-mono text-xs text-subtle">
                 <span className="truncate">{m.steamid}</span>
+                {m.discord && m.discord !== handle && (
+                  <span className="text-muted">Discord: {m.discord}</span>
+                )}
                 <a
                   href={fearProfileUrl(m.steamid)}
                   target="_blank"

@@ -129,44 +129,68 @@ export const getStatsFn = createServerFn({ method: "POST" })
         ...payload,
         moderators: payload.moderators.filter((m) => m.steamid === mySteamId),
       };
-      const mine = payload.moderators[0];
-      if (mine) {
-        payload.totals = {
-          bans: mine.bans ?? 0,
-          mutes: mine.mutes ?? 0,
-          total: mine.total,
-          removed: mine.removed,
-          excluded: mine.excluded,
-        };
-      } else {
-        const emptyMine = {
+      let mine = payload.moderators[0];
+      if (!mine) {
+        const { fetchWorkerPunishments } = await import("./server/discord");
+        const { readRoster, bundledRanks } = await import("./server/roster");
+        const roster = await readRoster();
+        const rMod = roster.find((m) => m.steamid === mySteamId);
+        const worker = await fetchWorkerPunishments(mySteamId);
+        const wMod = worker?.moderator as Partial<ModRow> | undefined;
+        const recs = worker?.records ?? [];
+        const computedBans = recs.filter((r) => r.kind === "ban" && r.counted !== false).length;
+        const computedMutes = recs.filter((r) => r.kind === "mute" && r.counted !== false).length;
+        const computedTotal = computedBans + computedMutes;
+        const computedRemoved = recs.filter((r) => r.unpunishAdmin || r.status === 2).length;
+
+        const fearName =
+          (wMod?.name && !/^\d{17,20}$/.test(wMod.name) ? wMod.name : null) ||
+          (rMod?.name && !/^\d{17,20}$/.test(rMod.name) ? rMod.name : null) ||
+          (wMod?.lastSeenName && !/^\d{17,20}$/.test(wMod.lastSeenName) ? wMod.lastSeenName : null) ||
+          me.displayName ||
+          mySteamId;
+
+        const finalRank = rMod?.rank ?? (wMod?.rank as number | null) ?? null;
+        let finalNorma = (wMod?.norma as { week: number; month: number } | null) ?? null;
+        if (!finalNorma && finalRank != null) {
+          const ranks = bundledRanks();
+          const rk = ranks.find((x) => x.rank === finalRank);
+          if (rk && (rk.week > 0 || rk.month > 0)) finalNorma = { week: rk.week, month: rk.month };
+        }
+
+        const bans = (wMod?.bans != null && Number(wMod.bans) > 0) ? Number(wMod.bans) : computedBans;
+        const mutes = (wMod?.mutes != null && Number(wMod.mutes) > 0) ? Number(wMod.mutes) : computedMutes;
+        const total = (wMod?.total != null && Number(wMod.total) > 0) ? Number(wMod.total) : computedTotal;
+        const removed = (wMod?.removed != null && Number(wMod.removed) > 0) ? Number(wMod.removed) : computedRemoved;
+
+        mine = {
           steamid: mySteamId,
-          name: me.displayName || me.email || mySteamId,
-          discord: me.discordId || null,
-          avatar: me.image || null,
-          rank: null,
-          norma: null,
-          bans: 0,
-          mutes: 0,
-          total: 0,
-          weekTotal: 0,
-          removed: 0,
-          excluded: 0,
-          lastSeenName: null,
-          lastOnline: null,
-          pct: null,
-          done: false,
+          name: fearName,
+          discord: me.discordId || (wMod?.discord as string) || null,
+          avatar: (wMod?.avatar as string) || me.image || null,
+          rank: finalRank,
+          norma: finalNorma,
+          bans,
+          mutes,
+          total,
+          weekTotal: Number(wMod?.weekTotal ?? 0),
+          removed,
+          excluded: Number(wMod?.excluded ?? 0),
+          lastSeenName: (wMod?.lastSeenName as string) || fearName,
+          lastOnline: (wMod?.lastOnline as any) ?? null,
+          pct: finalNorma?.month ? Math.round((total / finalNorma.month) * 100) : null,
+          done: finalNorma?.month ? total >= finalNorma.month : false,
           slug: mySteamId,
         };
-        payload.moderators = [emptyMine];
-        payload.totals = {
-          bans: 0,
-          mutes: 0,
-          total: 0,
-          removed: 0,
-          excluded: 0,
-        };
+        payload.moderators = [mine];
       }
+      payload.totals = {
+        bans: mine.bans ?? 0,
+        mutes: mine.mutes ?? 0,
+        total: mine.total,
+        removed: mine.removed,
+        excluded: mine.excluded,
+      };
       payload.prevTotals = undefined;
     }
     return payload;
@@ -187,11 +211,55 @@ export const getModDetailsFn = createServerFn({ method: "POST" })
     const stats = await loadStats({});
     const mods = await withSlugs(stats.moderators);
     const needle = normalizeSlug(slug);
-    let mod = mods.find((m) => m.slug === needle);
+
+    let mod = mods.find(
+      (m) =>
+        m.steamid === slug ||
+        m.steamid === needle ||
+        m.slug === needle ||
+        (m.slug && m.slug.toLowerCase() === needle.toLowerCase())
+    );
+
     if (!mod) {
       const steamid = await findBySlug(needle);
       if (steamid) mod = mods.find((m) => m.steamid === steamid);
     }
+
+    if (!mod) {
+      const { readRoster, bundledRanks } = await import("./server/roster");
+      const roster = await readRoster();
+      const r = roster.find(
+        (m) =>
+          m.steamid === slug ||
+          m.steamid === needle ||
+          (m.name && m.name.toLowerCase() === needle.toLowerCase())
+      );
+      if (r) {
+        const ranks = bundledRanks();
+        const rk = ranks.find((x) => x.rank === r.rank);
+        const norma = rk && (rk.week > 0 || rk.month > 0) ? { week: rk.week, month: rk.month } : null;
+        mod = {
+          steamid: r.steamid,
+          name: r.name,
+          discord: r.discord || null,
+          avatar: null,
+          rank: r.rank ?? null,
+          norma,
+          bans: 0,
+          mutes: 0,
+          total: 0,
+          weekTotal: 0,
+          removed: 0,
+          excluded: 0,
+          lastSeenName: r.name,
+          lastOnline: null,
+          pct: null,
+          done: false,
+          slug: r.steamid,
+        };
+      }
+    }
+
     if (!mod && !me.caps.canGeneralStats && (needle === me.mySteamId || slug === me.mySteamId)) {
       mod = {
         steamid: me.mySteamId!,
@@ -220,13 +288,83 @@ export const getModDetailsFn = createServerFn({ method: "POST" })
     }
 
     const worker = await fetchWorkerPunishments(mod.steamid);
+    const recs = worker?.records ?? [];
+    const computedBans = recs.filter((r) => r.kind === "ban" && r.counted !== false).length;
+    const computedMutes = recs.filter((r) => r.kind === "mute" && r.counted !== false).length;
+    const computedTotal = computedBans + computedMutes;
+    const computedRemoved = recs.filter((r) => r.unpunishAdmin || r.status === 2).length;
+
+    const wMod = worker?.moderator as Partial<ModRow> | undefined;
+
+    const fearName =
+      (wMod?.name && !/^\d{17,20}$/.test(wMod.name) ? wMod.name : null) ||
+      (mod.name && !/^\d{17,20}$/.test(mod.name) ? mod.name : null) ||
+      (wMod?.lastSeenName && !/^\d{17,20}$/.test(wMod.lastSeenName) ? wMod.lastSeenName : null) ||
+      mod.name ||
+      "Модератор";
+
+    const finalRank = mod.rank ?? (wMod?.rank as number | null) ?? null;
+    let finalNorma = mod.norma ?? (wMod?.norma as { week: number; month: number } | null) ?? null;
+    if (!finalNorma && finalRank != null) {
+      const { bundledRanks } = await import("./server/roster");
+      const ranks = bundledRanks();
+      const rk = ranks.find((x) => x.rank === finalRank);
+      if (rk && (rk.week > 0 || rk.month > 0)) {
+        finalNorma = { week: rk.week, month: rk.month };
+      }
+    }
+
+    const bans = (wMod?.bans != null && Number(wMod.bans) > 0) ? Number(wMod.bans) : computedBans;
+    const mutes = (wMod?.mutes != null && Number(wMod.mutes) > 0) ? Number(wMod.mutes) : computedMutes;
+    const total = (wMod?.total != null && Number(wMod.total) > 0) ? Number(wMod.total) : computedTotal;
+    const removed = (wMod?.removed != null && Number(wMod.removed) > 0) ? Number(wMod.removed) : computedRemoved;
+
+    let avatar = mod.avatar || (wMod?.avatar as string) || null;
+    if (!avatar && /^\d{17}$/.test(mod.steamid)) {
+      try {
+        const res = await fetch(`https://steamcommunity.com/profiles/${mod.steamid}/?xml=1`, {
+          headers: { "User-Agent": "premute/1.0 (stats avatars)", Accept: "application/xml" },
+          signal: AbortSignal.timeout(3000),
+        });
+        if (res.ok) {
+          const xml = await res.text();
+          const found =
+            xml.match(/<avatarFull><!\[CDATA\[([^\]]+)\]\]><\/avatarFull>/) ||
+            xml.match(/<avatarMedium><!\[CDATA\[([^\]]+)\]\]><\/avatarMedium>/);
+          if (found?.[1]) avatar = found[1].trim();
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    const finalMod: ModRow = {
+      steamid: mod.steamid,
+      name: fearName,
+      discord: mod.discord || (wMod?.discord as string) || null,
+      avatar,
+      rank: finalRank,
+      norma: finalNorma,
+      bans,
+      mutes,
+      total,
+      weekTotal: Number(wMod?.weekTotal ?? 0),
+      removed,
+      excluded: Number(wMod?.excluded ?? 0),
+      lastSeenName: (wMod?.lastSeenName as string) || fearName,
+      lastOnline: (wMod?.lastOnline as any) ?? null,
+      pct: finalNorma?.month ? Math.round((total / finalNorma.month) * 100) : null,
+      done: finalNorma?.month ? total >= finalNorma.month : false,
+      slug: mod.slug || slug,
+    };
+
     return {
-      month: stats.month,
-      updatedAt: stats.updatedAt,
+      month: worker?.month || stats.month,
+      updatedAt: worker?.updatedAt || stats.updatedAt,
       monthStart: worker?.monthStart ?? null,
       monthEnd: worker?.monthEnd ?? null,
-      moderator: mod,
-      records: worker?.records ?? [],
+      moderator: finalMod,
+      records: recs,
     };
   });
 

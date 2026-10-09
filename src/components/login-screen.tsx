@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { authClient, authEnabled } from "@/lib/auth/client";
 import { botLoginFn } from "@/lib/fn";
 import { Button } from "@/components/ui/button";
@@ -35,9 +35,8 @@ export function LoginScreen() {
     }
   }
 
-  async function handlePinLogin(e: React.FormEvent) {
-    e.preventDefault();
-    const clean = pin.trim();
+  async function submitPin(codeToUse: string) {
+    const clean = codeToUse.trim();
     if (!clean || clean.length < 4) {
       toast.error("Введите 6-значный код авторизации");
       return;
@@ -58,6 +57,21 @@ export function LoginScreen() {
       setPinLoading(false);
     }
   }
+
+  async function handlePinLogin(e: React.FormEvent) {
+    e.preventDefault();
+    await submitPin(pin);
+  }
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const codeParam = params.get("code")?.trim();
+    if (codeParam && /^\d{4,8}$/.test(codeParam)) {
+      setPin(codeParam);
+      void submitPin(codeParam);
+    }
+  }, []);
 
   return (
     <main className="relative grid min-h-dvh place-items-center bg-bg px-4 py-10 text-fg">
