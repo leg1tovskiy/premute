@@ -582,6 +582,95 @@ export async function deleteStaffUser(actor: StaffProfile, targetUserId: string)
   } catch {}
 }
 
+export async function lookupSteamId(rawSteamId: string): Promise<{
+  found: boolean;
+  name?: string;
+  rank?: number;
+  rankTitle?: string;
+}> {
+  const sid = String(rawSteamId || "").trim().replace(/\D/g, "");
+  if (sid.length !== 17) return { found: false };
+  const { readRoster, bundledRanks } = await import("./roster");
+  const roster = await readRoster();
+  const rMod = roster.find((m) => m.steamid === sid);
+  if (!rMod) return { found: false };
+  const ranks = bundledRanks();
+  const rk = ranks.find((x) => x.rank === rMod.rank);
+  return {
+    found: true,
+    name: rMod.name,
+    rank: rMod.rank,
+    rankTitle: rk?.title,
+  };
+}
+
+export async function selfBindSteamId(userId: string, rawSteamId: string): Promise<StaffProfile> {
+  const sql = await getSql();
+  await sql.query("alter table staff add column if not exists steamid text");
+
+  const sid = String(rawSteamId || "").trim().replace(/\D/g, "");
+  if (!/^\d{17}$/.test(sid)) {
+    throw new Error("SteamID64 должен содержать ровно 17 цифр (начинается с 7656119...)");
+  }
+
+  const userRows = await sql<StaffRow>`select * from staff where user_id = ${userId} limit 1`;
+  if (!userRows[0]) {
+    throw new Error("Пользователь не найден.");
+  }
+  if (flag(userRows[0].is_banned)) {
+    throw new Error("Доступ к панели заблокирован администратором.");
+  }
+
+  const existing = await sql<{ user_id: string; display_name: string | null }>`
+    select user_id, display_name from staff where steamid = ${sid} and user_id <> ${userId} limit 1
+  `;
+  if (existing.length) {
+    throw new Error(`Этот SteamID уже привязан к другому аккаунту.`);
+  }
+
+  const { readRoster } = await import("./roster");
+  const roster = await readRoster();
+  const rMod = roster.find((m) => m.steamid === sid);
+  const fearName = rMod?.name || null;
+
+  if (fearName) {
+    await sql`
+      update staff set
+        steamid = ${sid},
+        display_name = case
+          when display_name is null or display_name ~ '^[0-9]{17,20}$' then ${fearName}
+          else display_name
+        end,
+        last_seen = now()
+      where user_id = ${userId}
+    `;
+  } else {
+    await sql`
+      update staff set
+        steamid = ${sid},
+        last_seen = now()
+      where user_id = ${userId}
+    `;
+  }
+
+  const disc = userRows[0].discord_id ? String(userRows[0].discord_id).trim() : null;
+  if (disc) {
+    try {
+      await sql`
+        insert into mod_roster (steamid, name, rank, discord)
+        values (${sid}, ${fearName || userRows[0].display_name || userRows[0].email || sid}, 1, ${disc})
+        on conflict (steamid) do update set discord = excluded.discord
+      `;
+    } catch {}
+  }
+
+  await writeLog(userId, "self_bind_steamid", sid);
+
+  const updated = await getStaff(userId);
+  if (!updated) throw new Error("Не удалось обновить профиль.");
+  return updated;
+}
+
 export async function writeLog(userId: string, action: string, detail: string) {
   const sql = await getSql();
   await sql`

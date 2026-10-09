@@ -23,6 +23,22 @@ export const getMe = createServerFn({ method: "POST" })
     return upsertStaff(context.userId, data ?? {});
   });
 
+export const bindSteamFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { steamid: string }) => d)
+  .handler(async ({ context, data }): Promise<StaffProfile> => {
+    const { selfBindSteamId } = await import("./server/staff");
+    return selfBindSteamId(context.userId, data.steamid);
+  });
+
+export const lookupSteamFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { steamid: string }) => d)
+  .handler(async ({ data }): Promise<{ found: boolean; name?: string; rank?: number; rankTitle?: string }> => {
+    const { lookupSteamId } = await import("./server/staff");
+    return lookupSteamId(data.steamid);
+  });
+
 export const bindDiscord = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((d: { discordId: string }) => d)
