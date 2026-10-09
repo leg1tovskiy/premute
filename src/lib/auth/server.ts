@@ -81,9 +81,17 @@ const grokIssuer = env("GROK_AUTH_ISSUER") ?? GROK_ISSUER_DEFAULT;
 const grokClientId = env("GROK_AUTH_CLIENT_ID") ?? PREVIEW_CLIENT_ID;
 const grokClientSecret = env("GROK_AUTH_CLIENT_SECRET") ?? PREVIEW_CLIENT_SECRET;
 
+const databaseUrl = env("DATABASE_URL");
+
 /** True when federated sign-in is active (real auth is enforced). */
 export const authConfigured =
-  !authDisabled && Boolean(grokClientId && grokClientSecret);
+  !authDisabled &&
+  Boolean(
+    (grokClientId && grokClientSecret) ||
+      env("DISCORD_CLIENT_ID") ||
+      env("GOOGLE_CLIENT_ID") ||
+      databaseUrl,
+  );
 
 // This app's own Better Auth origin. When deployed the deployer injects the
 // public URL. In the sandbox live preview there's no fixed URL (each preview gets
@@ -102,30 +110,27 @@ const LOCAL_DEV_ORIGINS: string[] = [
   "http://localhost:8080",
   "http://127.0.0.1:8080",
   "http://[::1]:8080",
+  "https://premute.vercel.app",
 ];
 const baseURL = explicitBaseURL ?? {
   // Include loopback hosts so dynamic baseURL resolves for local email/password
   // (not only the preview wildcard).
-  allowedHosts: [...previewAllowedHosts, "localhost", "127.0.0.1", "[::1]"],
+  allowedHosts: [...previewAllowedHosts, "localhost", "127.0.0.1", "[::1]", "premute.vercel.app"],
   // `auto` → trust both http:// and https:// expansions of allowedHosts
   // (preview is https; local dev is http).
   protocol: "auto" as const,
-  fallback: "http://localhost:8080",
+  fallback: "https://premute.vercel.app",
 };
 
 // Origins Better Auth accepts on credentialed POSTs (sign-up/sign-in, etc.).
 // Missing entries here surface as FORBIDDEN "Invalid origin".
-const trustedOrigins: string[] = explicitBaseURL
-  ? [explicitBaseURL, ...LOCAL_DEV_ORIGINS]
-  : [
-      // Host wildcards (matched against Origin's host)
-      ...previewAllowedHosts,
-      // Full-origin wildcards (matched against Origin)
-      ...previewAllowedHosts.flatMap((host) => [`https://${host}`, `http://${host}`]),
-      ...LOCAL_DEV_ORIGINS,
-    ];
-
-const databaseUrl = env("DATABASE_URL");
+const trustedOrigins: string[] = [
+  "https://premute.vercel.app",
+  ...(explicitBaseURL ? [explicitBaseURL] : []),
+  ...LOCAL_DEV_ORIGINS,
+  ...previewAllowedHosts,
+  ...previewAllowedHosts.flatMap((host) => [`https://${host}`, `http://${host}`]),
+];
 
 // Static broker OAuth endpoints (skip OIDC discovery on every sign-in / callback).
 // Discovery would cost an extra network hop to the broker before the popup can
@@ -197,6 +202,7 @@ export const auth = betterAuth({
       trustedProviders: [
         ...GROK_PROVIDERS.map((p) => p.providerId),
         "google",
+        "discord",
         GATE_PROVIDER_ID,
       ],
       // X's synthetic email is never "verified", so don't gate linking on the
@@ -211,9 +217,13 @@ export const auth = betterAuth({
   // flicker-prevention guidance (gate on `isPending`; SSR the session).
   session: { cookieCache: { enabled: true, maxAge: 300 } },
 
-  // Native Google on Vercel. The Grok broker only allows *.grok-sandbox.com,
-  // so premute.vercel.app must talk to Google directly.
+  // Native Google and Discord OAuth providers.
   socialProviders: {
+    discord: {
+      clientId: (env("DISCORD_CLIENT_ID") || "1533772666312458422") as string,
+      clientSecret: (env("DISCORD_CLIENT_SECRET") || "") as string,
+      scope: ["identify", "email"],
+    },
     ...(env("GOOGLE_CLIENT_ID") && env("GOOGLE_CLIENT_SECRET")
       ? {
           google: {

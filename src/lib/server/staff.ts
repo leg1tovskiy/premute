@@ -18,22 +18,27 @@ function iso(v: unknown): string {
   return v == null ? "" : String(v);
 }
 
-export function computeCaps(row: {
-  is_root: unknown;
-  is_owner: unknown;
-  is_bot_owner: unknown;
-  can_stats: unknown;
-  can_suspicious: unknown;
-  can_moderation: unknown;
-  can_voice: unknown;
-  can_mods: unknown;
-  can_logs: unknown;
-  can_power: unknown;
-}): Caps {
+export function computeCaps(
+  row: {
+    is_root: unknown;
+    is_owner: unknown;
+    is_bot_owner: unknown;
+    can_stats: unknown;
+    can_suspicious: unknown;
+    can_moderation: unknown;
+    can_voice: unknown;
+    can_mods: unknown;
+    can_logs: unknown;
+    can_power: unknown;
+  },
+  mySteamId?: string | null,
+): Caps {
   const isRoot = flag(row.is_root);
   // «Владелец сайта» — полный доступ к сайту. «Владелец бота» (красный) — команды Discord.
   const isOwner = isRoot || flag(row.is_owner);
-  const canStats = isOwner || flag(row.can_stats);
+  const canGeneralStats = isOwner || flag(row.can_stats);
+  const canOwnStats = Boolean(mySteamId);
+  const canStats = canGeneralStats || canOwnStats;
   const canSuspicious = isOwner || flag(row.can_suspicious);
   const canModeration = isOwner || flag(row.can_moderation);
   const canVoice = isOwner || flag(row.can_voice);
@@ -47,6 +52,8 @@ export function computeCaps(row: {
     isRoot,
     isOwner,
     canStats,
+    canGeneralStats,
+    canOwnStats,
     canSuspicious,
     canModeration,
     canVoice,
@@ -61,6 +68,26 @@ export function computeCaps(row: {
     canGrantBotOwner: isRoot,
     waiting: !(canStats || canSuspicious || canModeration || canVoice || canMods || canLogs || canPower || canConsole || canAdmin),
   };
+}
+
+export function findSteamIdInRoster(
+  roster: import("@/lib/types").RosterMod[],
+  discordId?: string | null,
+  displayName?: string | null,
+): string | null {
+  const cleanId = String(discordId || "").trim();
+  const cleanName = String(displayName || "").toLowerCase().trim();
+  for (const m of roster) {
+    if (!m.discord) continue;
+    const d = String(m.discord).trim();
+    if (cleanId && (d === cleanId || d.replace(/\D/g, "") === cleanId)) {
+      return m.steamid;
+    }
+    if (cleanName && (d.toLowerCase() === cleanName || d.toLowerCase() === `@${cleanName}`)) {
+      return m.steamid;
+    }
+  }
+  return null;
 }
 
 type StaffRow = {
@@ -84,19 +111,20 @@ type StaffRow = {
   last_seen: unknown;
 };
 
-function toProfile(row: StaffRow): StaffProfile {
-  const caps = computeCaps(row);
+function toProfile(row: StaffRow, mySteamId?: string | null): StaffProfile {
+  const caps = computeCaps(row, mySteamId);
   return {
     userId: row.user_id,
     displayName: row.display_name,
     email: row.email,
     image: row.image,
     discordId: row.discord_id,
+    mySteamId: mySteamId ?? null,
     tag: row.tag ? String(row.tag) : null,
     isRoot: caps.isRoot,
     isOwner: caps.isOwner,
     isBotOwner: flag(row.is_bot_owner) && !caps.isRoot,
-    canStats: flag(row.can_stats),
+    canStats: caps.canGeneralStats,
     canSuspicious: flag(row.can_suspicious),
     canModeration: flag(row.can_moderation),
     canVoice: flag(row.can_voice),
@@ -109,8 +137,8 @@ function toProfile(row: StaffRow): StaffProfile {
   };
 }
 
-function toListItem(row: StaffRow): StaffListItem {
-  const { caps: _c, ...rest } = toProfile(row);
+function toListItem(row: StaffRow, mySteamId?: string | null): StaffListItem {
+  const { caps: _c, ...rest } = toProfile(row, mySteamId);
   return rest;
 }
 
@@ -121,6 +149,7 @@ function devStaffProfile(): StaffProfile {
     email: "admin@fearproject.ru",
     image: null,
     discordId: "1234567890",
+    mySteamId: "76561198805786012",
     tag: "FearAdmin",
     isRoot: true,
     isOwner: true,
@@ -134,18 +163,21 @@ function devStaffProfile(): StaffProfile {
     canPower: true,
     createdAt: new Date().toISOString(),
     lastSeen: new Date().toISOString(),
-    caps: computeCaps({
-      is_root: true,
-      is_owner: true,
-      is_bot_owner: true,
-      can_stats: true,
-      can_suspicious: true,
-      can_moderation: true,
-      can_voice: true,
-      can_mods: true,
-      can_logs: true,
-      can_power: true,
-    }),
+    caps: computeCaps(
+      {
+        is_root: true,
+        is_owner: true,
+        is_bot_owner: true,
+        can_stats: true,
+        can_suspicious: true,
+        can_moderation: true,
+        can_voice: true,
+        can_mods: true,
+        can_logs: true,
+        can_power: true,
+      },
+      "76561198805786012",
+    ),
   };
 }
 
@@ -157,15 +189,43 @@ export async function upsertStaff(
     return devStaffProfile();
   }
   const sql = await getSql();
+
+  // If user signed in via Discord OAuth, link discord_id from account table
+  let oauthDiscordId: string | null = null;
+  try {
+    const acc = await sql<{ accountId: string }>`
+      select "accountId" from "account"
+      where "userId" = ${userId} and "providerId" = 'discord'
+      limit 1
+    `;
+    if (acc.length && acc[0]?.accountId) {
+      oauthDiscordId = acc[0].accountId;
+    }
+  } catch {
+    // account table may not exist yet
+  }
+  if (!oauthDiscordId && userId.startsWith("discord_")) {
+    oauthDiscordId = userId.replace("discord_", "");
+  }
+
+  const isRoot = oauthDiscordId === ROOT_DISCORD_ID;
   const existing = await sql<StaffRow>`select * from staff where user_id = ${userId} limit 1`;
   if (!existing.length) {
     await sql`
-      insert into staff (user_id, display_name, email, image)
-      values (
+      insert into staff (
+        user_id, display_name, email, image, discord_id,
+        is_root, is_owner, can_stats, created_at, last_seen
+      ) values (
         ${userId},
         ${profile.displayName ?? null},
         ${profile.email ?? null},
-        ${profile.image ?? null}
+        ${profile.image ?? null},
+        ${oauthDiscordId},
+        ${isRoot},
+        ${isRoot},
+        ${isRoot},
+        now(),
+        now()
       )
     `;
   } else {
@@ -174,12 +234,21 @@ export async function upsertStaff(
         display_name = coalesce(${profile.displayName ?? null}, display_name),
         email = coalesce(${profile.email ?? null}, email),
         image = coalesce(${profile.image ?? null}, image),
+        discord_id = coalesce(discord_id, ${oauthDiscordId}),
+        is_root = case when ${isRoot} then true else is_root end,
+        is_owner = case when ${isRoot} then true else is_owner end,
+        can_stats = case when ${isRoot} then true else can_stats end,
         last_seen = now()
       where user_id = ${userId}
     `;
   }
   const rows = await sql<StaffRow>`select * from staff where user_id = ${userId} limit 1`;
-  return rows[0] ? toProfile(rows[0]) : devStaffProfile();
+  if (!rows[0]) return devStaffProfile();
+
+  const { readRoster } = await import("./roster");
+  const roster = await readRoster();
+  const mySteamId = findSteamIdInRoster(roster, rows[0].discord_id, rows[0].display_name);
+  return toProfile(rows[0], mySteamId);
 }
 
 export async function getStaff(userId: string): Promise<StaffProfile | null> {
@@ -188,13 +257,23 @@ export async function getStaff(userId: string): Promise<StaffProfile | null> {
   }
   const sql = await getSql();
   const rows = await sql<StaffRow>`select * from staff where user_id = ${userId} limit 1`;
-  return rows[0] ? toProfile(rows[0]) : null;
+  if (!rows[0]) return null;
+
+  const { readRoster } = await import("./roster");
+  const roster = await readRoster();
+  const mySteamId = findSteamIdInRoster(roster, rows[0].discord_id, rows[0].display_name);
+  return toProfile(rows[0], mySteamId);
 }
 
 export async function listStaff(): Promise<StaffListItem[]> {
   const sql = await getSql();
   const rows = await sql<StaffRow>`select * from staff order by is_root desc, is_owner desc, last_seen desc`;
-  return rows.map(toListItem);
+  const { readRoster } = await import("./roster");
+  const roster = await readRoster();
+  return rows.map((row) => {
+    const mySteamId = findSteamIdInRoster(roster, row.discord_id, row.display_name);
+    return toListItem(row, mySteamId);
+  });
 }
 
 export async function claimDiscordId(userId: string, discordId: string): Promise<StaffProfile> {
@@ -234,7 +313,10 @@ export async function claimDiscordId(userId: string, discordId: string): Promise
   }
 
   const rows = await sql<StaffRow>`select * from staff where user_id = ${userId} limit 1`;
-  return toProfile(rows[0]);
+  const { readRoster } = await import("./roster");
+  const roster = await readRoster();
+  const mySteamId = findSteamIdInRoster(roster, rows[0]?.discord_id, rows[0]?.display_name);
+  return toProfile(rows[0], mySteamId);
 }
 
 export async function updateStaffPermissions(
@@ -339,7 +421,10 @@ export async function updateStaffPermissions(
       console.error("[staff] sync owners:", e instanceof Error ? e.message : e);
     }
   }
-  return toListItem(rows[0]);
+  const { readRoster } = await import("./roster");
+  const roster = await readRoster();
+  const mySteamId = findSteamIdInRoster(roster, rows[0]?.discord_id, rows[0]?.display_name);
+  return toListItem(rows[0], mySteamId);
 }
 
 export async function writeLog(userId: string, action: string, detail: string) {

@@ -95,13 +95,35 @@ export const getStatsFn = createServerFn({ method: "POST" })
     stats.moderators = await withSlugs(stats.moderators);
     const withTop = await attachLastMonthTop(stats);
     const { snapshotStats, applyComparison } = await import("./server/archive");
+    let payload = withTop;
     try {
       await snapshotStats(withTop);
-      return await applyComparison(withTop);
+      payload = await applyComparison(withTop);
     } catch {
-      // архив ещё не создан (миграция не применена) — отдаём как есть
-      return withTop;
+      payload = withTop;
     }
+
+    if (!me.caps.canGeneralStats) {
+      const mySteamId = me.mySteamId;
+      if (!mySteamId) {
+        throw new Error("Ваш аккаунт не привязан ни к одному модератору в списке. Обратитесь к администратору.");
+      }
+      payload = {
+        ...payload,
+        moderators: payload.moderators.filter((m) => m.steamid === mySteamId),
+      };
+      const mine = payload.moderators[0];
+      if (mine) {
+        payload.totals = {
+          bans: mine.bans ?? 0,
+          mutes: mine.mutes ?? 0,
+          total: mine.total,
+          removed: mine.removed,
+          excluded: mine.excluded,
+        };
+      }
+    }
+    return payload;
   });
 
 export const getModDetailsFn = createServerFn({ method: "POST" })
@@ -125,6 +147,11 @@ export const getModDetailsFn = createServerFn({ method: "POST" })
       if (steamid) mod = mods.find((m) => m.steamid === steamid);
     }
     if (!mod) return null;
+
+    if (!me.caps.canGeneralStats && me.mySteamId !== mod.steamid) {
+      throw new Error("У вас нет прав на просмотр статистики других модераторов.");
+    }
+
     const worker = await fetchWorkerPunishments(mod.steamid);
     return {
       month: stats.month,
@@ -504,3 +531,38 @@ export const getRecentPunishmentsFn = createServerFn({ method: "GET" })
       return [];
     }
   });
+
+export const botLoginFn = createServerFn({ method: "POST" })
+  .validator((d: { code: string }) => d)
+  .handler(async ({ data }) => {
+    const { verifyDiscordBotCode } = await import("./server/bot-auth");
+    const result = await verifyDiscordBotCode(data.code);
+    const { setCookie } = await import("@tanstack/react-start/server");
+    const { SESSION_TOKEN_COOKIE } = await import("./auth/server");
+
+    // Set cookie on response
+    setCookie(SESSION_TOKEN_COOKIE, result.sessionToken, {
+      path: "/",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 30 * 24 * 60 * 60,
+    });
+    setCookie("better-auth.session_token", result.sessionToken, {
+      path: "/",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 30 * 24 * 60 * 60,
+    });
+
+    return result;
+  });
+
+export const requestBotCodeFn = createServerFn({ method: "POST" })
+  .validator((d: { discordIdOrTag: string }) => d)
+  .handler(async ({ data }) => {
+    const { requestDiscordBotCode } = await import("./server/bot-auth");
+    return requestDiscordBotCode(data.discordIdOrTag);
+  });
+

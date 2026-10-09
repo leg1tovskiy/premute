@@ -174,6 +174,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
                       <p className="mt-0.5 text-xs text-subtle font-mono">
                         {u.email || "—"}
                         {u.discordId ? ` · Discord: ${u.discordId}` : " · Discord не привязан"}
+                        {u.mySteamId ? ` · SteamID: ${u.mySteamId}` : " · SteamID не привязан"}
                       </p>
                     </div>
 
@@ -188,7 +189,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
 
                   <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-border/60 bg-elevated/60 p-3.5">
                     <Toggle
-                      label="Статистика"
+                      label="Общая статистика"
                       checked={u.isOwner || u.canStats}
                       disabled={locked || u.isOwner}
                       onChange={(v) => void patch(u.userId, { ...u, canStats: v })}

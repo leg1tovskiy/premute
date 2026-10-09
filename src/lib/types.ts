@@ -2,6 +2,8 @@ export type Caps = {
   isRoot: boolean;
   isOwner: boolean;
   canStats: boolean;
+  canGeneralStats: boolean;
+  canOwnStats: boolean;
   canSuspicious: boolean;
   canModeration: boolean;
   canVoice: boolean;
@@ -21,6 +23,7 @@ export type StaffProfile = {
   email: string | null;
   image: string | null;
   discordId: string | null;
+  mySteamId: string | null;
   tag: string | null;
   isRoot: boolean;
   isOwner: boolean;

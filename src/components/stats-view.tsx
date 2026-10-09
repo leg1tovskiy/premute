@@ -11,6 +11,7 @@ import {
   Loader2,
   RefreshCw,
   Search,
+  Shield,
   Sparkles,
   TrendingDown,
   TrendingUp,
@@ -26,6 +27,7 @@ import { downloadCsv } from "@/lib/csv";
 import { CardsSkeleton, PageHeaderSkeleton, Skeleton } from "@/components/skeletons";
 import { getStatsFn, moderatorOnlineFn } from "@/lib/fn";
 import { RANK_SHORT, fearProfileUrl } from "@/lib/constants";
+import { usePanel } from "@/lib/panel";
 import type { StatsPayload } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -100,9 +102,11 @@ function getRankBadgeProps(rank: number | null) {
 function ModeratorCard({
   m,
   info,
+  isMe,
 }: {
   m: StatsPayload["moderators"][number];
   info?: OnlineInfo;
+  isMe?: boolean;
 }) {
   const handle = m.discord && m.discord !== m.name ? m.discord : m.name;
   const initial = (handle.trim().charAt(0) || "?").toUpperCase();
@@ -152,6 +156,11 @@ function ModeratorCard({
             >
               {handle}
             </a>
+            {isMe ? (
+              <span className="rounded-md bg-accent/25 border border-accent/50 px-2 py-0.5 text-[10px] font-black uppercase text-accent shadow-sm">
+                Вы
+              </span>
+            ) : null}
             {rankProps ? (
               <span className={cn("rounded-md px-2 py-0.5 text-[10px] font-black uppercase border", rankProps.className)}>
                 {rankProps.label}
@@ -262,6 +271,8 @@ function ModeratorCard({
 }
 
 export function StatsView() {
+  const { profile: me } = usePanel();
+  const isOwnStatsOnly = !me?.caps?.canGeneralStats && Boolean(me?.mySteamId);
   const [data, setData] = useState<StatsPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -472,7 +483,7 @@ export function StatsView() {
             </span>
           </div>
           <h1 className="mt-2 text-2xl font-black tracking-tight text-fg sm:text-3xl">
-            Статистика наказаний
+            {isOwnStatsOnly ? "Личная статистика модератора" : "Статистика наказаний"}
           </h1>
           <p className="mt-1 text-xs text-muted">
             Данные синхронизированы {fmtMsk(data.updatedAt)} МСК · Статистика за {fmtDay(data.updatedAt)}
@@ -500,6 +511,17 @@ export function StatsView() {
           </Button>
         </div>
       </div>
+
+      {/* ── Personal Stats Mode Notice ───────────────────────────────── */}
+      {isOwnStatsOnly ? (
+        <div className="flex items-center gap-3 rounded-2xl border border-sky-500/40 bg-sky-500/10 px-4 py-3.5 text-sky-200">
+          <Shield className="size-5 shrink-0 text-sky-400" />
+          <div className="text-xs leading-relaxed">
+            <span className="font-bold text-sky-300">Личный профиль модератора (SteamID: {me?.mySteamId})</span>
+            <p className="text-sky-300/80">Отображаются исключительно ваши показатели модерации. Общая статистика и топы скрыты (доступ выдаётся в панели админом).</p>
+          </div>
+        </div>
+      ) : null}
 
       {/* ── 4 High-Tech KPI Cards ────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
@@ -552,10 +574,10 @@ export function StatsView() {
       </div>
 
       {/* ── Daily Punishment Chart ──────────────────────────────────── */}
-      <DailyChart />
+      {!isOwnStatsOnly ? <DailyChart /> : null}
 
       {/* ── Top-10 Moderators Chart ─────────────────────────────────── */}
-      <ModeratorsChart mods={data.moderators} />
+      {!isOwnStatsOnly ? <ModeratorsChart mods={data.moderators} /> : null}
 
       {/* ── Moderators Section Toolbar & Grid ────────────────────────── */}
       <section className="space-y-4 pt-2">
@@ -687,6 +709,7 @@ export function StatsView() {
                 key={m.steamid}
                 m={m}
                 info={online[m.steamid]}
+                isMe={m.steamid === me?.mySteamId}
               />
             ))}
           </div>
