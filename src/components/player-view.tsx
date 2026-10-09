@@ -153,7 +153,7 @@ export function PlayerView() {
   const muteCount = (records ?? []).filter((r) => r.kind === "mute").length;
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8 space-y-6 animate-in fade-in duration-300">
+    <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8 space-y-6">
       <AnimatedBlock delay={0}>
         <div>
           <Link

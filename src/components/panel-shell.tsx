@@ -113,9 +113,12 @@ export function PanelShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [navigate, pathname, tabs]);
 
-  // Close mobile drawer on navigation
+  // Close mobile drawer and reset scroll on navigation
   useEffect(() => {
     setMobileOpen(false);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+    }
   }, [pathname]);
 
   const currentTab = tabs.find((t) => t.to === pathname);
@@ -168,7 +171,6 @@ export function PanelShell({ children }: { children: ReactNode }) {
           </div>
           <Link
             to="/"
-            viewTransition
             className={cn(
               "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200",
               pathname === "/"
@@ -190,7 +192,6 @@ export function PanelShell({ children }: { children: ReactNode }) {
               <Link
                 key={t.id}
                 to={t.to}
-                viewTransition
                 className={cn(
                   "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200",
                   isActive
@@ -344,7 +345,6 @@ export function PanelShell({ children }: { children: ReactNode }) {
             <nav className="mt-4 flex-1 space-y-1.5">
               <Link
                 to="/"
-                viewTransition
                 onClick={() => setMobileOpen(false)}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
@@ -360,7 +360,6 @@ export function PanelShell({ children }: { children: ReactNode }) {
                   <Link
                     key={t.id}
                     to={t.to}
-                    viewTransition
                     onClick={() => setMobileOpen(false)}
                     className={cn(
                       "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200",

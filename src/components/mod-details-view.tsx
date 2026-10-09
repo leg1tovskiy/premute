@@ -701,7 +701,7 @@ export function ModDetailsView({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 sm:py-8 space-y-6 animate-in fade-in duration-300">
+    <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 sm:py-8 space-y-6">
       {/* ── Top Back Link ──────────────────────────────────────────── */}
       {!hideBackLink && (
         <AnimatedBlock delay={0}>

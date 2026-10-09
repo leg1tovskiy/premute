@@ -112,7 +112,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 space-y-6 animate-in fade-in duration-300">
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 space-y-6">
       {/* ── Admin Header Banner ────────────────────────────────────── */}
       <AnimatedBlock delay={0}>
         <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-r from-surface via-surface/95 to-elevated/70 p-6 sm:p-7 shadow-2xl glass-panel cyber-border-glow">

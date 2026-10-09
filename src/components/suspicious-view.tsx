@@ -98,7 +98,7 @@ export function SuspiciousView() {
   const ticketsWarning = tickets && (!tickets.configured || tickets.error) ? tickets : null;
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8 space-y-6 animate-in fade-in duration-300">
+    <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8 space-y-6">
       {/* ── Top Header Banner ──────────────────────────────────────── */}
       <AnimatedBlock delay={0}>
         <div className="relative overflow-hidden rounded-3xl border border-danger/30 bg-gradient-to-r from-danger/10 via-surface/95 to-elevated/80 p-6 sm:p-7 shadow-xl glass-panel cyber-border-glow">

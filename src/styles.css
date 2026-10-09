@@ -270,6 +270,8 @@
     -moz-osx-font-smoothing: grayscale;
     background: var(--color-bg);
     color: var(--color-fg);
+    scrollbar-gutter: stable;
+    overflow-y: scroll;
   }
 
   body {
@@ -355,35 +357,29 @@
     pointer-events: none;
   }
 
-  /* Smooth Page Transitions */
+  /* Smooth Page Transitions: Clean opacity reveal, zero scale or blur twitch */
   @keyframes pageEnter {
     0% {
       opacity: 0;
-      transform: translateY(8px) scale(0.997);
-      filter: blur(3px);
     }
     100% {
       opacity: 1;
-      transform: translateY(0) scale(1);
-      filter: blur(0px);
     }
   }
 
   .animate-page-enter {
-    animation: pageEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
-    will-change: opacity, transform, filter;
+    animation: pageEnter 0.18s ease-out both;
   }
 
   .animate-tab-enter {
-    animation: pageEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
-    will-change: opacity, transform, filter;
+    animation: pageEnter 0.18s ease-out both;
   }
 
-  /* Cascading Block & Card Animations */
+  /* Cascading Block & Card Animations: Subtle 6px rise with zero blur/scale distortion */
   @keyframes fadeUp {
     0% {
       opacity: 0;
-      transform: translateY(12px);
+      transform: translateY(6px);
     }
     100% {
       opacity: 1;
@@ -392,32 +388,37 @@
   }
 
   .animate-fade-up {
-    animation: fadeUp 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
-    will-change: opacity, transform;
+    animation: fadeUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
-  .stagger-1 { animation-delay: 40ms; }
-  .stagger-2 { animation-delay: 80ms; }
-  .stagger-3 { animation-delay: 120ms; }
-  .stagger-4 { animation-delay: 160ms; }
-  .stagger-5 { animation-delay: 200ms; }
-  .stagger-6 { animation-delay: 240ms; }
-  .stagger-7 { animation-delay: 280ms; }
-  .stagger-8 { animation-delay: 320ms; }
+  .stagger-1 { animation-delay: 30ms; }
+  .stagger-2 { animation-delay: 60ms; }
+  .stagger-3 { animation-delay: 90ms; }
+  .stagger-4 { animation-delay: 120ms; }
+  .stagger-5 { animation-delay: 150ms; }
+  .stagger-6 { animation-delay: 180ms; }
+  .stagger-7 { animation-delay: 210ms; }
+  .stagger-8 { animation-delay: 240ms; }
 }
 
-/* Smooth View Transitions */
+/* Smooth View Transitions: pure cross-fade without root shifts */
 ::view-transition-old(root) {
-  animation: 0.22s cubic-bezier(0.16, 1, 0.3, 1) both fadeOut;
+  animation: 0.15s ease-out both vtFadeOut;
 }
 ::view-transition-new(root) {
-  animation: 0.28s cubic-bezier(0.16, 1, 0.3, 1) both pageEnter;
+  animation: 0.18s ease-out both vtFadeIn;
 }
-@keyframes fadeOut {
+@keyframes vtFadeOut {
   to {
     opacity: 0;
-    transform: translateY(-4px);
-    filter: blur(2px);
+  }
+}
+@keyframes vtFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

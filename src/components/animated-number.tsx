@@ -20,7 +20,7 @@ function formatNumberRu(n: number, decimals: number = 0, formatThousands: boolea
 
 export function AnimatedNumber({
   value,
-  duration = 750,
+  duration = 500,
   decimals,
   prefix = "",
   suffix = "",
@@ -137,10 +137,10 @@ export function AnimatedNumber({
     );
   }
 
-  const initialText = `${effectivePrefix}${formatNumberRu(0, autoDecimals, formatThousands)}${effectiveSuffix}`;
+  const initialText = `${effectivePrefix}${formatNumberRu(numericVal, autoDecimals, formatThousands)}${effectiveSuffix}`;
 
   return (
-    <span ref={spanRef} className={cn("inline-block tabular-nums", className)}>
+    <span ref={spanRef} className={cn("tabular-nums", className)}>
       {initialText}
     </span>
   );
@@ -158,7 +158,7 @@ export function AnimatedBlock({
   return (
     <div
       style={delay > 0 ? { animationDelay: `${delay}ms` } : undefined}
-      className={cn("animate-fade-up will-change-[transform,opacity]", className)}
+      className={cn("animate-fade-up", className)}
     >
       {children}
     </div>

@@ -400,7 +400,7 @@ export function TopsView() {
   const third = rows[2] ?? null;
 
   return (
-    <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 sm:py-8 space-y-8 animate-in fade-in duration-300">
+    <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 sm:py-8 space-y-8">
       {/* ── Top Hero Banner ────────────────────────────────────────── */}
       <AnimatedBlock delay={0}>
         <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-r from-surface via-surface/95 to-elevated/70 p-6 sm:p-8 shadow-2xl cyber-border-glow">
