@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Loader2, LogOut, ShieldAlert, TriangleAlert } from "lucide-react";
+import { LogOut, ShieldAlert } from "lucide-react";
 import { Toaster } from "sonner";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getMe } from "@/lib/fn";
@@ -46,26 +46,7 @@ function BannedView() {
   );
 }
 
-function BootScreen({ error }: { error?: string | null }) {
-  return (
-    <div className="grid min-h-dvh place-items-center bg-bg px-4 text-fg">
-      <div className="flex max-w-md flex-col items-center gap-3 text-center">
-        <img src="/logo.png" alt="" className="size-12 rounded-sm border border-border object-cover" />
-        {error ? (
-          <p className="flex items-start gap-2 text-sm text-danger">
-            <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-            <span>{error}</span>
-          </p>
-        ) : (
-          <p className="flex items-center gap-2 text-sm text-muted">
-            <Loader2 className="size-4 animate-spin" />
-            Открываю панель
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
+
 
 const LOCAL_DEV_PROFILE: StaffProfile = {
   userId: "dev-user",
@@ -107,13 +88,58 @@ const LOCAL_DEV_PROFILE: StaffProfile = {
   },
 };
 
+function makeDefaultProfile(u: { id: string; displayName?: string | null; primaryEmail?: string | null; profileImageUrl?: string | null }): StaffProfile {
+  return {
+    userId: u.id,
+    displayName: u.displayName || u.primaryEmail || "Пользователь",
+    email: u.primaryEmail ?? null,
+    image: u.profileImageUrl ?? null,
+    discordId: null,
+    mySteamId: null,
+    tag: null,
+    isRoot: false,
+    isOwner: false,
+    isBotOwner: false,
+    isBanned: false,
+    canStats: true,
+    canSuspicious: false,
+    canModeration: false,
+    canVoice: false,
+    canMods: false,
+    canLogs: false,
+    canPower: false,
+    createdAt: new Date().toISOString(),
+    lastSeen: new Date().toISOString(),
+    caps: {
+      isRoot: false,
+      isOwner: false,
+      canStats: true,
+      canGeneralStats: false,
+      canOwnStats: false,
+      isSundayAccess: false,
+      hasPermanentGeneralStats: false,
+      canSuspicious: false,
+      canModeration: false,
+      canVoice: false,
+      canMods: false,
+      canLogs: false,
+      canPower: false,
+      canConsole: false,
+      canAdmin: false,
+      canGrantOwner: false,
+      canGrantBotOwner: false,
+      waiting: false,
+      isBanned: false,
+    },
+  };
+}
+
 function PanelLayout() {
-  const { user: authUser, isPending } = useCurrentUserState();
+  const { user: authUser } = useCurrentUserState();
   const { isDark } = useTheme();
   const [profile, setProfile] = useState<StaffProfile | null>(
     import.meta.env.DEV ? LOCAL_DEV_PROFILE : null,
   );
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authUser) {
@@ -125,7 +151,6 @@ function PanelLayout() {
       return;
     }
     let cancelled = false;
-    setError(null);
     void getMe({
       data: {
         displayName: authUser.displayName,
@@ -137,25 +162,23 @@ function PanelLayout() {
         if (!cancelled) setProfile(p);
       })
       .catch((e) => {
-        if (!cancelled) {
-          if (import.meta.env.DEV) {
-            setProfile(LOCAL_DEV_PROFILE);
-          } else {
-            setError(e instanceof Error ? e.message : "Ошибка профиля");
-          }
-        }
+        console.error("[panel] getMe failed:", e);
       });
     return () => {
       cancelled = true;
     };
   }, [authUser]);
 
-  if (!import.meta.env.DEV) {
-    if (isPending) return <BootScreen />;
-    if (!authUser) return <LoginScreen />;
+  if (!import.meta.env.DEV && !authUser) {
+    return <LoginScreen />;
   }
-  if (!profile) return <BootScreen error={error} />;
-  if (profile.caps.isBanned || profile.isBanned) {
+
+  const currentProfile = profile || (import.meta.env.DEV ? LOCAL_DEV_PROFILE : (authUser ? makeDefaultProfile(authUser) : null));
+  if (!currentProfile) {
+    return <LoginScreen />;
+  }
+
+  if (currentProfile.caps.isBanned || currentProfile.isBanned) {
     return (
       <>
         <BannedView />
@@ -167,10 +190,11 @@ function PanelLayout() {
       </>
     );
   }
-  if (profile.caps.waiting) {
+
+  if (currentProfile.caps.waiting) {
     return (
       <>
-        <WaitingView profile={profile} onUpdate={setProfile} />
+        <WaitingView profile={currentProfile} onUpdate={setProfile} />
         <Toaster
           theme={isDark ? "dark" : "light"}
           position="bottom-center"
@@ -181,7 +205,7 @@ function PanelLayout() {
   }
 
   return (
-    <PanelProvider profile={profile} setProfile={setProfile}>
+    <PanelProvider profile={currentProfile} setProfile={setProfile}>
       <PanelShell>
         <Outlet />
       </PanelShell>
