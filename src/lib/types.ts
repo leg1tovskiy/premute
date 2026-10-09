@@ -16,6 +16,8 @@ export type Caps = {
   canGrantBotOwner: boolean;
   waiting: boolean;
   isBanned?: boolean;
+  isSundayAccess?: boolean;
+  hasPermanentGeneralStats?: boolean;
 };
 
 export type StaffProfile = {

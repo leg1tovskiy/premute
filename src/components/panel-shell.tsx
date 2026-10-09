@@ -595,14 +595,39 @@ export function HomeTiles() {
     loadPunishments();
   }, [loadPunishments]);
 
+  const searchSuggestions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q || q.length < 2) return [];
+    const digits = q.replace(/\D/g, "");
+    return punishments
+      .filter((p) => {
+        if (digits.length >= 3 && p.playerSteamid.includes(digits)) return true;
+        if (p.player.toLowerCase().includes(q)) return true;
+        if (p.reason && p.reason.toLowerCase().includes(q)) return true;
+        return false;
+      })
+      .slice(0, 5);
+  }, [searchQuery, punishments]);
+
   function handleSearch(e?: React.FormEvent) {
     if (e) e.preventDefault();
     const raw = searchQuery.trim();
+    if (!raw) return;
     const digits = raw.replace(/\D/g, "");
     if (digits.length === 17) {
       void navigate({ to: "/player/$steamid", params: { steamid: digits } });
-    } else if (raw.length > 0) {
+      return;
+    }
+    if (searchSuggestions.length > 0) {
+      const best = searchSuggestions[0];
+      toast.info(`Открыто досье игрока ${best.player}`);
+      void navigate({ to: "/player/$steamid", params: { steamid: best.playerSteamid } });
+      return;
+    }
+    if (digits.length > 0 && digits.length !== 17) {
       toast.error("SteamID64 должен содержать 17 цифр (например, 76561198...)");
+    } else {
+      toast.error(`Игрок «${raw}» не найден в последних наказаниях. Укажите точный SteamID64.`);
     }
   }
 
@@ -717,29 +742,84 @@ export function HomeTiles() {
             </div>
           </div>
 
-          {/* Quick Player Lookup by SteamID64 */}
-          <form
-            onSubmit={handleSearch}
-            className="flex flex-col sm:flex-row items-stretch gap-2.5 rounded-2xl border border-border/80 bg-elevated/50 p-2 shadow-inner"
-          >
-            <div className="relative flex flex-1 items-center">
-              <Search className="absolute left-3.5 size-4.5 text-subtle" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Быстрый поиск нарушителя по SteamID64 (например, 76561198...)..."
-                className="h-11 w-full rounded-xl bg-transparent pl-10 pr-4 text-xs sm:text-sm text-fg placeholder:text-muted/70 outline-none focus:bg-surface/50 transition-colors font-mono"
-              />
-            </div>
-            <button
-              type="submit"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-accent px-6 text-xs sm:text-sm font-bold text-accent-fg shadow-lg shadow-accent/20 transition-all hover:brightness-110 active:scale-98 shrink-0"
+          {/* Quick Player Lookup by SteamID64 or Nickname */}
+          <div className="relative">
+            <form
+              onSubmit={handleSearch}
+              className="flex flex-col sm:flex-row items-stretch gap-2.5 rounded-2xl border border-border/80 bg-elevated/50 p-2 shadow-inner"
             >
-              <Search className="size-4" />
-              Найти досье
-            </button>
-          </form>
+              <div className="relative flex flex-1 items-center">
+                <Search className="absolute left-3.5 size-4.5 text-subtle" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Поиск по нику или SteamID64 (например, Rolt или 76561198...)..."
+                  className="h-11 w-full rounded-xl bg-transparent pl-10 pr-9 text-xs sm:text-sm text-fg placeholder:text-muted/70 outline-none focus:bg-surface/50 transition-colors"
+                />
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 grid size-5 place-items-center rounded-full bg-elevated text-subtle hover:text-fg text-xs"
+                    title="Очистить"
+                  >
+                    ✕
+                  </button>
+                ) : null}
+              </div>
+              <button
+                type="submit"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-accent px-6 text-xs sm:text-sm font-bold text-accent-fg shadow-lg shadow-accent/20 transition-all hover:brightness-110 active:scale-98 shrink-0 cursor-pointer"
+              >
+                <Search className="size-4" />
+                Найти досье
+              </button>
+            </form>
+
+            {/* Live Autocomplete Dropdown */}
+            {searchSuggestions.length > 0 && searchQuery.trim().length >= 2 ? (
+              <div className="absolute top-full left-0 right-0 z-30 mt-2 rounded-2xl border border-border/80 bg-surface/95 backdrop-blur-md p-2 shadow-2xl space-y-1">
+                <p className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-muted">
+                  Найдено среди последних наказаний:
+                </p>
+                {searchSuggestions.map((item) => (
+                  <button
+                    key={`${item.id}-${item.playerSteamid}`}
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      void navigate({ to: "/player/$steamid", params: { steamid: item.playerSteamid } });
+                    }}
+                    className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left hover:bg-elevated transition-colors text-xs cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="grid size-7 place-items-center rounded-lg bg-elevated font-black text-fg text-xs shrink-0">
+                        {(item.player.charAt(0) || "?").toUpperCase()}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-bold text-fg truncate">{item.player}</p>
+                        <p className="text-[10px] font-mono text-muted truncate">{item.playerSteamid}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className={cn(
+                          "rounded px-1.5 py-0.5 text-[9px] font-bold uppercase",
+                          item.kind === "ban"
+                            ? "bg-danger/20 text-danger border border-danger/30"
+                            : "bg-warn/20 text-warn border border-warn/30",
+                        )}
+                      >
+                        {item.kind === "ban" ? "Бан" : "Мут"}
+                      </span>
+                      <ChevronRight className="size-3.5 text-muted" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
 
           {/* Quick Demo Chips */}
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
@@ -1183,6 +1263,17 @@ export function HomeTiles() {
                         >
                           {item.player}
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void navigator.clipboard.writeText(item.playerSteamid);
+                            toast.success(`SteamID ${item.playerSteamid} скопирован!`);
+                          }}
+                          className="text-subtle hover:text-accent transition-colors cursor-pointer"
+                          title="Скопировать SteamID"
+                        >
+                          <Copy className="size-3" />
+                        </button>
                         <span
                           className={cn(
                             "rounded border px-1.5 py-0.2 text-[10px] font-black uppercase tracking-wider",

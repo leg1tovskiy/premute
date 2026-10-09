@@ -18,6 +18,20 @@ function iso(v: unknown): string {
   return v == null ? "" : String(v);
 }
 
+export function isSundayMSK(): boolean {
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Europe/Moscow",
+      weekday: "short",
+    });
+    return formatter.format(new Date()) === "Sun";
+  } catch {
+    const now = new Date();
+    const msk = new Date(now.getTime() + 3 * 3600 * 1000);
+    return msk.getUTCDay() === 0;
+  }
+}
+
 export function computeCaps(
   row: {
     is_root: unknown;
@@ -54,13 +68,19 @@ export function computeCaps(
       canGrantBotOwner: false,
       waiting: false,
       isBanned: true,
+      isSundayAccess: false,
+      hasPermanentGeneralStats: false,
     };
   }
   const isRoot = flag(row.is_root);
   // «Владелец сайта» — полный доступ к сайту. «Владелец бота» (красный) — команды Discord.
   const isOwner = isRoot || flag(row.is_owner);
-  const canGeneralStats = isOwner || flag(row.can_stats);
+  const permanentGeneralStats = isOwner || flag(row.can_stats);
   const canOwnStats = Boolean(mySteamId);
+  const isSunday = isSundayMSK();
+  // Модераторы без постоянного доступа к общей стате видят общую только по воскресеньям с 00:00 до 23:59 МСК
+  const isSundayAccess = !permanentGeneralStats && canOwnStats && isSunday;
+  const canGeneralStats = permanentGeneralStats || isSundayAccess;
   const canStats = canGeneralStats || canOwnStats;
   const canSuspicious = isOwner || flag(row.can_suspicious);
   const canModeration = isOwner || flag(row.can_moderation);
@@ -77,6 +97,8 @@ export function computeCaps(
     canStats,
     canGeneralStats,
     canOwnStats,
+    isSundayAccess,
+    hasPermanentGeneralStats: permanentGeneralStats,
     canSuspicious,
     canModeration,
     canVoice,

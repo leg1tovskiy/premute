@@ -3,19 +3,28 @@ import { Link, useParams } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Calendar,
+  CalendarDays,
+  Check,
   CheckCircle2,
   ChevronLeft,
   Clock,
+  Copy,
   Download,
   ExternalLink,
   Flame,
   Hammer,
   RefreshCw,
   Search,
+  Share2,
   Shield,
+  Target,
+  TrendingUp,
   Unlock,
   VolumeX,
+  X,
+  Zap,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -224,6 +233,329 @@ function ModDailyCharts({
   );
 }
 
+function NormaRadialGauge({
+  current,
+  target,
+  size = 110,
+}: {
+  current: number;
+  target: number | null;
+  size?: number;
+}) {
+  const pct = target && target > 0 ? Math.round((current / target) * 100) : 0;
+  const cappedPct = Math.min(pct, 100);
+  const strokeWidth = 9;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (cappedPct / 100) * circumference;
+  const isDone = target != null && target > 0 && current >= target;
+
+  return (
+    <div className="relative flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
+      <svg className="size-full -rotate-90 transform" viewBox={`0 0 ${size} ${size}`}>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          className="stroke-elevated/70"
+          strokeWidth={strokeWidth}
+          fill="transparent"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          className={cn(
+            "transition-all duration-1000 ease-out",
+            isDone
+              ? "stroke-success drop-shadow-[0_0_8px_var(--color-success)]"
+              : "stroke-accent drop-shadow-[0_0_8px_var(--color-accent)]",
+          )}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          fill="transparent"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <span className={cn("text-xl font-black tracking-tight font-mono leading-none", isDone ? "text-success" : "text-fg")}>
+          {target ? `${pct}%` : `${current}`}
+        </span>
+        <span className="mt-1 text-[9px] font-bold text-muted uppercase tracking-wider">
+          {isDone ? "Закрыта" : "Норма"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function PaceForecastCard({
+  total,
+  target,
+}: {
+  total: number;
+  target: number | null;
+}) {
+  const now = new Date();
+  const mskDayStr = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Moscow", day: "numeric" }).format(now);
+  const mskMonthStr = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Moscow", month: "numeric" }).format(now);
+  const mskYearStr = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Moscow", year: "numeric" }).format(now);
+  const currentDay = Math.max(1, parseInt(mskDayStr, 10));
+  const currentMonth = parseInt(mskMonthStr, 10);
+  const currentYear = parseInt(mskYearStr, 10);
+  const totalDays = new Date(currentYear, currentMonth, 0).getDate();
+  const daysRemaining = Math.max(0, totalDays - currentDay);
+
+  const pace = total / currentDay;
+  const projected = Math.round(pace * totalDays);
+  const isDone = target != null && target > 0 && total >= target;
+  const remainingActions = target ? Math.max(0, target - total) : 0;
+  const neededPace = daysRemaining > 0 && target && !isDone ? (remainingActions / daysRemaining).toFixed(1) : "0";
+
+  return (
+    <div className="rounded-2xl border border-border/80 bg-surface/80 p-4 space-y-3 glass-panel">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-fg flex items-center gap-1.5">
+          <Zap className="size-3.5 text-accent" />
+          Умный темп и прогноз
+        </span>
+        <span
+          className={cn(
+            "rounded-md px-2 py-0.5 text-[10px] font-black uppercase border",
+            isDone
+              ? "bg-success/15 text-success border-success/30"
+              : projected >= (target || 0)
+                ? "bg-accent/15 text-accent border-accent/30"
+                : "bg-warn/15 text-warn border-warn/30",
+          )}
+        >
+          {isDone ? "Норма закрыта 🎉" : projected >= (target || 0) ? "Опережает график" : "Нужно ускориться"}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="rounded-xl bg-elevated/60 p-2 border border-border/50">
+          <p className="text-xs font-mono font-bold text-fg">{pace.toFixed(1)}</p>
+          <p className="text-[10px] text-muted leading-tight">действ. / день</p>
+        </div>
+        <div className="rounded-xl bg-elevated/60 p-2 border border-border/50">
+          <p className="text-xs font-mono font-bold text-accent">~{projected}</p>
+          <p className="text-[10px] text-muted leading-tight">прогноз на месяц</p>
+        </div>
+        <div className="rounded-xl bg-elevated/60 p-2 border border-border/50">
+          <p className="text-xs font-mono font-bold text-fg">{daysRemaining} дн.</p>
+          <p className="text-[10px] text-muted leading-tight">до итогов</p>
+        </div>
+      </div>
+
+      <p className="text-[11px] text-muted leading-relaxed">
+        {isDone
+          ? `Отличная работа! Норма перевыполнена на ${total - (target || 0)} действий. Каждое следующее наказание закрепляет лидерство в топе сезона.`
+          : daysRemaining > 0 && target
+            ? `Для закрытия нормы (${target} действий) необходимо делать от ${neededPace} наказаний в день.`
+            : `Месяц завершается. Текущий результат зафиксирован.`}
+      </p>
+    </div>
+  );
+}
+
+function MonthActivityHeatmap({ records }: { records: PunishmentRecord[] }) {
+  const now = new Date();
+  const mskMonthStr = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Moscow", month: "numeric" }).format(now);
+  const mskYearStr = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Moscow", year: "numeric" }).format(now);
+  const currentMonth = parseInt(mskMonthStr, 10);
+  const currentYear = parseInt(mskYearStr, 10);
+  const totalDays = new Date(currentYear, currentMonth, 0).getDate();
+
+  const dayCounts: Record<number, { bans: number; mutes: number; total: number }> = {};
+  for (let i = 1; i <= totalDays; i++) {
+    dayCounts[i] = { bans: 0, mutes: 0, total: 0 };
+  }
+
+  for (const r of records) {
+    if (r.counted === false) continue;
+    const d = new Date(r.created * 1000);
+    const dDayStr = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Moscow", day: "numeric" }).format(d);
+    const dMonthStr = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Moscow", month: "numeric" }).format(d);
+    if (parseInt(dMonthStr, 10) === currentMonth) {
+      const dayNum = parseInt(dDayStr, 10);
+      if (dayCounts[dayNum]) {
+        dayCounts[dayNum].total++;
+        if (r.kind === "ban") dayCounts[dayNum].bans++;
+        else if (r.kind === "mute") dayCounts[dayNum].mutes++;
+      }
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-border/80 bg-surface/80 p-4 glass-panel space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-fg flex items-center gap-1.5">
+          <CalendarDays className="size-3.5 text-accent" />
+          Активность по дням месяца (МСК)
+        </span>
+        <span className="text-[10px] text-muted">
+          {records.length} действий за месяц
+        </span>
+      </div>
+
+      <div className="grid grid-cols-7 sm:grid-cols-11 md:grid-cols-16 gap-1.5">
+        {Array.from({ length: totalDays }).map((_, idx) => {
+          const day = idx + 1;
+          const stat = dayCounts[day] || { total: 0, bans: 0, mutes: 0 };
+          const cnt = stat.total;
+
+          let bgClass = "bg-elevated/40 border-border/40 text-subtle hover:border-border";
+          if (cnt >= 6) {
+            bgClass = "bg-accent border-accent text-accent-fg font-black shadow-sm";
+          } else if (cnt >= 3) {
+            bgClass = "bg-accent/40 border-accent/60 text-fg font-bold";
+          } else if (cnt >= 1) {
+            bgClass = "bg-accent/20 border-accent/30 text-accent font-medium";
+          }
+
+          return (
+            <div
+              key={day}
+              title={`День ${day}: ${cnt} действий (${stat.bans} бан., ${stat.mutes} мут.)`}
+              className={cn(
+                "group relative flex flex-col items-center justify-center rounded-lg border p-1 text-[11px] font-mono transition-all duration-150 cursor-default select-none aspect-square",
+                bgClass,
+              )}
+            >
+              <span>{day}</span>
+              {cnt > 0 && <span className="text-[9px] opacity-85 leading-none font-bold">{cnt}</span>}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center justify-end gap-2 text-[10px] text-muted pt-1">
+        <span>Меньше</span>
+        <span className="size-2.5 rounded bg-elevated/40 border border-border/40" />
+        <span className="size-2.5 rounded bg-accent/20 border border-accent/30" />
+        <span className="size-2.5 rounded bg-accent/40 border border-accent/60" />
+        <span className="size-2.5 rounded bg-accent border border-accent" />
+        <span>Больше</span>
+      </div>
+    </div>
+  );
+}
+
+function DiscordShareModal({
+  open,
+  onClose,
+  handle,
+  steamid,
+  rank,
+  m,
+  monthName,
+}: {
+  open: boolean;
+  onClose: () => void;
+  handle: string;
+  steamid: string;
+  rank: number | null;
+  m: ModDetails["moderator"];
+  monthName: string;
+}) {
+  if (!open) return null;
+
+  const rankText = (rank && RANK_SHORT[rank]) || "МОДЕРАТОР";
+  const target = m.norma?.month ?? 150;
+  const pct = target ? Math.round((m.total / target) * 100) : 100;
+
+  const discordMarkdown = `📊 **Отчёт модератора ${handle} | FearProject CS2**
+📅 Период: ${monthName}
+🛡 Ранг: ${rankText}
+───────────────────────
+🔨 Банов выдано: ${m.bans ?? 0}
+🔇 Мутов выдано: ${m.mutes ?? 0}
+⚡ Всего действий: ${m.total}
+🎯 Норма месяца: ${m.total} / ${target} (${pct}%)
+🔓 Снято решений: ${m.removed ?? 0}
+───────────────────────
+🔗 Профиль: https://premute.vercel.app/player/${steamid}`;
+
+  function copyText() {
+    try {
+      void navigator.clipboard.writeText(discordMarkdown);
+      toast.success("Отчёт для Discord скопирован в буфер!");
+    } catch {
+      toast.error("Не удалось скопировать текст");
+    }
+  }
+
+  function copyLink() {
+    try {
+      void navigator.clipboard.writeText(`https://premute.vercel.app/player/${steamid}`);
+      toast.success("Ссылка на профиль скопирована!");
+    } catch {
+      toast.error("Не удалось скопировать ссылку");
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="relative w-full max-w-lg rounded-3xl border border-border/80 bg-surface p-6 shadow-2xl glass-panel space-y-5">
+        <div className="flex items-center justify-between border-b border-border/60 pb-4">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-accent text-accent-fg">
+              <Share2 className="size-4.5" />
+            </span>
+            <div>
+              <h3 className="text-base font-extrabold text-fg">Поделиться статистикой</h3>
+              <p className="text-xs text-muted">Форматированный отчёт для Discord и соцсетей</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex size-8 items-center justify-center rounded-xl bg-elevated/70 text-muted hover:text-fg hover:bg-elevated transition-colors"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        {/* Preview Card */}
+        <div className="rounded-2xl border border-border/80 bg-elevated/60 p-4 font-mono text-xs text-fg space-y-2 select-all">
+          <p className="font-sans font-bold text-accent">📊 Отчёт модератора {handle} | FearProject CS2</p>
+          <p className="text-muted text-[11px]">📅 {monthName} &middot; 🛡 {rankText}</p>
+          <div className="border-t border-border/40 pt-2 grid grid-cols-2 gap-2 text-[11px]">
+            <div>🔨 Банов: <span className="font-bold text-danger">{m.bans ?? 0}</span></div>
+            <div>🔇 Мутов: <span className="font-bold text-warn">{m.mutes ?? 0}</span></div>
+            <div>⚡ Всего: <span className="font-bold text-fg">{m.total}</span></div>
+            <div>🎯 Норма: <span className="font-bold text-success">{pct}%</span></div>
+          </div>
+          <p className="border-t border-border/40 pt-2 text-[10px] text-subtle truncate">
+            SteamID: {steamid}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            onClick={copyText}
+            className="flex-1 rounded-xl bg-accent text-accent-fg font-bold text-xs h-10 shadow-lg shadow-accent/20"
+          >
+            <Copy className="size-4" />
+            Скопировать для Discord
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={copyLink}
+            className="rounded-xl border-border/80 bg-elevated text-fg text-xs font-bold h-10"
+          >
+            Ссылка
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ModDetailsView({
   explicitSlug,
   hideBackLink,
@@ -239,6 +571,9 @@ export function ModDetailsView({
   const [kind, setKind] = useState<"all" | "ban" | "mute">("all");
   const [status, setStatus] = useState<"all" | "active" | "expired" | "removed">("all");
   const [search, setSearch] = useState("");
+
+  const [datePreset, setDatePreset] = useState<"all" | "today" | "3days" | "week">("all");
+  const [shareOpen, setShareOpen] = useState(false);
 
   async function load() {
     if (!slug) {
@@ -266,6 +601,12 @@ export function ModDetailsView({
     if (!data) return [];
     const q = search.trim().toLowerCase();
     const now = Math.floor(Date.now() / 1000);
+    const nowMs = Date.now();
+    const mskOffset = 3 * 3600 * 1000;
+    const mskNow = new Date(nowMs + mskOffset);
+    const mskTodayStartUtc = Date.UTC(mskNow.getUTCFullYear(), mskNow.getUTCMonth(), mskNow.getUTCDate()) - mskOffset;
+    const todayStartSec = Math.floor(mskTodayStartUtc / 1000);
+
     return [...data.records]
       .sort((a, b) => b.created - a.created)
       .filter((r) => {
@@ -277,6 +618,11 @@ export function ModDetailsView({
               ? "expired"
               : "active";
         if (status !== "all" && st !== status) return false;
+
+        if (datePreset === "today" && r.created < todayStartSec) return false;
+        if (datePreset === "3days" && r.created < now - 3 * 86400) return false;
+        if (datePreset === "week" && r.created < now - 7 * 86400) return false;
+
         if (!q) return true;
         return (
           r.player.toLowerCase().includes(q) ||
@@ -284,7 +630,7 @@ export function ModDetailsView({
           r.playerSteamid.includes(q)
         );
       });
-  }, [data, kind, status, search]);
+  }, [data, kind, status, datePreset, search]);
 
   if (loading) {
     return (
@@ -336,14 +682,22 @@ export function ModDetailsView({
   const initial = (handle.trim().charAt(0) || "?").toUpperCase();
   const monthTarget = m.norma?.month ?? null;
   const monthDone = monthTarget != null && monthTarget > 0 && m.total >= monthTarget;
-  const progressPct = monthTarget ? Math.min(Math.round((m.total / monthTarget) * 100), 100) : 0;
   const actualRatio = monthTarget ? Math.round((m.total / monthTarget) * 100) : null;
+
+  function copySteamId(id: string) {
+    try {
+      void navigator.clipboard.writeText(id);
+      toast.success(`SteamID ${id} скопирован!`);
+    } catch {
+      toast.error("Не удалось скопировать");
+    }
+  }
 
   return (
     <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 sm:py-8 space-y-6 animate-in fade-in duration-300">
       {/* ── Top Back Link ──────────────────────────────────────────── */}
       {!hideBackLink && (
-        <div>
+        <div className="flex items-center justify-between">
           <Link
             to="/stats"
             className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-elevated/70 px-3 py-1.5 text-xs font-bold text-muted hover:border-accent hover:text-fg transition-all shadow-sm"
@@ -351,10 +705,18 @@ export function ModDetailsView({
             <ArrowLeft className="size-3.5" />
             Назад к общей статистике
           </Link>
+          <Button
+            size="sm"
+            onClick={() => setShareOpen(true)}
+            className="rounded-xl border border-accent/40 bg-accent/15 px-3 py-1.5 text-xs font-bold text-accent hover:bg-accent hover:text-accent-fg transition-all shadow-sm"
+          >
+            <Share2 className="size-3.5" />
+            Поделиться отчётом
+          </Button>
         </div>
       )}
 
-      {/* ── Moderator Hero Profile Card ────────────────────────────── */}
+      {/* ── Moderator Hero Profile Card (Bento Style) ──────────────── */}
       <article className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-r from-surface via-surface/95 to-elevated/70 p-6 sm:p-8 shadow-2xl glass-panel cyber-border-glow">
         <div className="absolute right-0 top-0 size-80 bg-accent/10 blur-3xl pointer-events-none" />
 
@@ -382,14 +744,22 @@ export function ModDetailsView({
                   {handle}
                 </Link>
                 {m.rank ? (
-                  <span className="rounded-lg bg-accent/15 px-2.5 py-0.5 text-xs font-black uppercase text-accent border border-accent/25">
+                  <span className="rounded-lg bg-accent/15 px-2.5 py-0.5 text-xs font-black uppercase text-accent border border-accent/25 shadow-sm">
                     {RANK_SHORT[m.rank] ?? "мод"}
                   </span>
                 ) : null}
               </div>
 
               <div className="mt-1 flex flex-wrap items-center gap-3 font-mono text-xs text-subtle">
-                <span className="truncate">{m.steamid}</span>
+                <button
+                  type="button"
+                  onClick={() => copySteamId(m.steamid)}
+                  title="Нажмите, чтобы скопировать SteamID"
+                  className="inline-flex items-center gap-1 text-muted hover:text-accent transition-colors"
+                >
+                  <span>{m.steamid}</span>
+                  <Copy className="size-3" />
+                </button>
                 {m.discord && m.discord !== handle && (
                   <span className="text-muted">Discord: {m.discord}</span>
                 )}
@@ -408,37 +778,39 @@ export function ModDetailsView({
             </div>
           </div>
 
-          {/* Norma Widget on Hero */}
-          <div className="rounded-2xl border border-border/70 bg-surface/80 p-4 shadow-sm min-w-[220px]">
-            <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-muted uppercase tracking-wider text-[10px]">Норма месяца</span>
-              <span className={cn("font-mono", monthDone ? "text-success" : "text-fg")}>
-                {m.total}/{monthTarget ?? "—"}{" "}
-                {actualRatio != null ? `(${actualRatio}%)` : ""}
-              </span>
-            </div>
-            <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-elevated border border-border/50">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all duration-500",
-                  monthDone ? "bg-success shadow-[0_0_8px_var(--color-success)]" : "bg-accent/70",
-                )}
-                style={{ width: `${progressPct}%` }}
-              />
+          {/* Norma Radial Gauge Widget */}
+          <div className="flex items-center gap-5 rounded-2xl border border-border/70 bg-surface/80 p-4 shadow-sm">
+            <NormaRadialGauge current={m.total} target={monthTarget} size={96} />
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Норма месяца</p>
+              <p className={cn("text-lg font-black font-mono", monthDone ? "text-success" : "text-fg")}>
+                {m.total} <span className="text-xs text-muted font-normal">/ {monthTarget ?? "—"}</span>
+              </p>
+              <p className="text-[11px] text-muted font-mono">
+                {actualRatio != null ? `${actualRatio}% от плана` : "цель не задана"}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShareOpen(true)}
+                className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-accent hover:underline cursor-pointer"
+              >
+                <Share2 className="size-3" />
+                Поделиться
+              </button>
             </div>
           </div>
         </div>
 
         {/* 4 Cyber Metric Chips */}
         <div className="relative z-10 mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-2xl border border-danger/25 bg-danger/10 p-3.5 text-center transition-all hover:bg-danger/15">
+          <div className="rounded-2xl border border-danger/25 bg-danger/10 p-3.5 text-center transition-all hover:bg-danger/15 shadow-sm">
             <p className="text-3xl font-black tabular-nums text-danger">{m.bans ?? 0}</p>
             <p className="mt-1 text-xs font-bold text-danger/80 flex items-center justify-center gap-1">
               <Hammer className="size-3.5" /> Банов выдано
             </p>
           </div>
 
-          <div className="rounded-2xl border border-warn/25 bg-warn/10 p-3.5 text-center transition-all hover:bg-warn/15">
+          <div className="rounded-2xl border border-warn/25 bg-warn/10 p-3.5 text-center transition-all hover:bg-warn/15 shadow-sm">
             <p className="text-3xl font-black tabular-nums text-warn">{m.mutes ?? 0}</p>
             <p className="mt-1 text-xs font-bold text-warn/80 flex items-center justify-center gap-1">
               <VolumeX className="size-3.5" /> Мутов выдано
@@ -450,7 +822,7 @@ export function ModDetailsView({
             <p className="mt-1 text-xs font-bold text-accent">Выдано за период</p>
           </div>
 
-          <div className="rounded-2xl border border-success/25 bg-success/10 p-3.5 text-center transition-all hover:bg-success/15">
+          <div className="rounded-2xl border border-success/25 bg-success/10 p-3.5 text-center transition-all hover:bg-success/15 shadow-sm">
             <p className="text-3xl font-black tabular-nums text-success">{m.removed ?? 0}</p>
             <p className="mt-1 text-xs font-bold text-success/80 flex items-center justify-center gap-1">
               <Unlock className="size-3.5" /> Снято решений
@@ -458,6 +830,12 @@ export function ModDetailsView({
           </div>
         </div>
       </article>
+
+      {/* ── Bento Grid: Smart Pace & Month Heatmap ───────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <PaceForecastCard total={m.total} target={monthTarget} />
+        <MonthActivityHeatmap records={data.records} />
+      </div>
 
       {/* ── Daily Chart Section ────────────────────────────────────── */}
       <ModDailyCharts
@@ -522,6 +900,7 @@ export function ModDetailsView({
           {/* Filter Chips & Search Bar */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/40">
             <div className="flex flex-wrap items-center gap-1.5">
+              {/* Type Filter */}
               {(
                 [
                   { id: "all", label: "Все типы" },
@@ -546,6 +925,7 @@ export function ModDetailsView({
 
               <span className="mx-1 h-4 w-px bg-border/80" />
 
+              {/* Status Filter */}
               {(
                 [
                   { id: "all", label: "Любой статус" },
@@ -561,6 +941,32 @@ export function ModDetailsView({
                   className={cn(
                     "h-7.5 rounded-xl border px-3 text-xs font-bold transition-all",
                     status === f.id
+                      ? "border-accent bg-accent text-accent-fg shadow-sm"
+                      : "border-border/60 bg-elevated/60 text-muted hover:text-fg",
+                  )}
+                >
+                  {f.label}
+                </button>
+              ))}
+
+              <span className="mx-1 h-4 w-px bg-border/80" />
+
+              {/* Date Preset Filter */}
+              {(
+                [
+                  { id: "all", label: "Все дни" },
+                  { id: "today", label: "Сегодня" },
+                  { id: "3days", label: "3 дня" },
+                  { id: "week", label: "Неделя" },
+                ] as const
+              ).map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setDatePreset(f.id)}
+                  className={cn(
+                    "h-7.5 rounded-xl border px-2.5 text-xs font-bold transition-all",
+                    datePreset === f.id
                       ? "border-accent bg-accent text-accent-fg shadow-sm"
                       : "border-border/60 bg-elevated/60 text-muted hover:text-fg",
                   )}
@@ -619,7 +1025,24 @@ export function ModDetailsView({
                         <Shield className="size-2.5" />
                         Досье
                       </Link>
-                      <span className="font-mono text-[10px] text-subtle">{r.playerSteamid}</span>
+                      <button
+                        type="button"
+                        onClick={() => copySteamId(r.playerSteamid)}
+                        className="inline-flex items-center gap-1 font-mono text-[10px] text-subtle hover:text-accent transition-colors cursor-pointer"
+                        title="Копировать SteamID"
+                      >
+                        <span>{r.playerSteamid}</span>
+                        <Copy className="size-2.5" />
+                      </button>
+                      <a
+                        href={`https://steamcommunity.com/profiles/${r.playerSteamid}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] text-subtle hover:text-accent transition-colors"
+                        title="Профиль в Steam Community"
+                      >
+                        <ExternalLink className="size-2.5" />
+                      </a>
                     </div>
 
                     {r.reason ? (
@@ -649,6 +1072,17 @@ export function ModDetailsView({
           </ul>
         )}
       </section>
+
+      {/* ── Discord Share Modal ────────────────────────────────────── */}
+      <DiscordShareModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        handle={handle}
+        steamid={m.steamid}
+        rank={m.rank}
+        m={m}
+        monthName={data.month}
+      />
     </div>
   );
 }

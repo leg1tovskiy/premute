@@ -4,6 +4,7 @@ import {
   ArrowUpDown,
   ChevronRight,
   Clock3,
+  Copy,
   Download,
   Filter,
   Gamepad2,
@@ -20,6 +21,7 @@ import {
   VolumeX,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ModeratorsChart } from "@/components/stats-chart";
 import { DailyChart } from "@/components/daily-chart";
@@ -108,13 +110,22 @@ function ModeratorCard({
   info?: OnlineInfo;
   isMe?: boolean;
 }) {
-  const handle = m.discord && m.discord !== m.name ? m.discord : m.name;
+  const handle = m.name && !/^\d{17,20}$/.test(m.name) ? m.name : (m.discord && !/^\d{17,20}$/.test(m.discord) ? m.discord : m.name);
   const initial = (handle.trim().charAt(0) || "?").toUpperCase();
   const monthTarget = m.norma?.month ?? null;
   const monthDone = monthTarget != null && monthTarget > 0 && m.total >= monthTarget;
   const progressPercent = monthTarget ? Math.min(Math.round((m.total / monthTarget) * 100), 100) : 0;
   const actualRatio = monthTarget ? Math.round((m.total / monthTarget) * 100) : null;
   const rankProps = m.rank ? getRankBadgeProps(m.rank) : null;
+
+  function copySteamId(id: string) {
+    try {
+      void navigator.clipboard.writeText(id);
+      toast.success(`SteamID ${id} скопирован!`);
+    } catch {
+      toast.error("Не удалось скопировать SteamID");
+    }
+  }
 
   return (
     <article className="group relative flex min-w-0 flex-col overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel p-5 shadow-lg transition-all hover:scale-[1.015] hover:border-accent/50 hover:shadow-2xl hover:shadow-accent/10">
@@ -169,6 +180,14 @@ function ModeratorCard({
           </div>
           <p className="mt-0.5 font-mono text-[11px] text-subtle flex items-center gap-1.5">
             <span className="truncate">{m.steamid}</span>
+            <button
+              type="button"
+              onClick={() => copySteamId(m.steamid)}
+              className="text-subtle hover:text-accent transition-colors cursor-pointer"
+              title="Скопировать SteamID"
+            >
+              <Copy className="size-3" />
+            </button>
           </p>
           {info ? (
             <div className="mt-1 flex items-center gap-1 rounded-md border border-success/20 bg-success/10 px-2 py-0.5 text-[10px] font-mono text-success truncate max-w-[200px]">
