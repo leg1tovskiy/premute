@@ -96,6 +96,7 @@ type StaffRow = {
   email: string | null;
   image: string | null;
   discord_id: string | null;
+  steamid?: string | null;
   is_root: unknown;
   is_owner: unknown;
   is_bot_owner: unknown;
@@ -112,14 +113,15 @@ type StaffRow = {
 };
 
 function toProfile(row: StaffRow, mySteamId?: string | null): StaffProfile {
-  const caps = computeCaps(row, mySteamId);
+  const effectiveSteamId = (row.steamid ? String(row.steamid).trim() : null) || mySteamId || null;
+  const caps = computeCaps(row, effectiveSteamId);
   return {
     userId: row.user_id,
     displayName: row.display_name,
     email: row.email,
     image: row.image,
     discordId: row.discord_id,
-    mySteamId: mySteamId ?? null,
+    mySteamId: effectiveSteamId,
     tag: row.tag ? String(row.tag) : null,
     isRoot: caps.isRoot,
     isOwner: caps.isOwner,
@@ -330,6 +332,7 @@ export async function updateStaffPermissions(
     isBotOwner?: boolean;
     setRoot?: boolean;
     tag?: string | null;
+    steamid?: string | null;
   },
 ): Promise<StaffListItem> {
   if (!actor.caps.canAdmin) throw new Error("Недостаточно прав.");
@@ -390,6 +393,13 @@ export async function updateStaffPermissions(
   }
   const tag = patch.tag !== undefined ? sanitizeTag(patch.tag) : target.tag;
 
+  await sql.query("alter table staff add column if not exists steamid text");
+  let steamidUpdate = targetRows[0]?.steamid ?? null;
+  if (patch.steamid !== undefined) {
+    const rawSid = patch.steamid ? String(patch.steamid).trim().replace(/\D/g, "") : null;
+    steamidUpdate = rawSid && rawSid.length >= 16 ? rawSid : null;
+  }
+
   await sql.query("alter table staff add column if not exists tag text");
   await sql.query("alter table staff add column if not exists is_bot_owner boolean not null default false");
   await sql.query("alter table staff add column if not exists can_logs boolean not null default false");
@@ -403,10 +413,20 @@ export async function updateStaffPermissions(
       is_root = ${isRoot},
       is_owner = ${isOwner},
       is_bot_owner = ${isBotOwner},
-      tag = ${tag}
+      tag = ${tag},
+      steamid = ${steamidUpdate}
     where user_id = ${targetUserId}
   `;
   const rows = await sql<StaffRow>`select * from staff where user_id = ${targetUserId} limit 1`;
+  if (steamidUpdate && (target.discordId || targetRows[0]?.discord_id)) {
+    const disc = target.discordId || targetRows[0]?.discord_id;
+    try {
+      await sql`update mod_roster set discord = ${disc} where steamid = ${steamidUpdate}`;
+    } catch {
+      /* игнорируем */
+    }
+  }
+
   if (patch.isBotOwner !== undefined || patch.setRoot !== undefined) {
     const owners = await sql<{ discord_id: string | null }>`
       select discord_id from staff
@@ -423,7 +443,7 @@ export async function updateStaffPermissions(
   }
   const { readRoster } = await import("./roster");
   const roster = await readRoster();
-  const mySteamId = findSteamIdInRoster(roster, rows[0]?.discord_id, rows[0]?.display_name);
+  const mySteamId = rows[0]?.steamid || findSteamIdInRoster(roster, rows[0]?.discord_id, rows[0]?.display_name);
   return toListItem(rows[0], mySteamId);
 }
 

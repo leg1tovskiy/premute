@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Download, Loader2, Shield, ShieldCheck, Sparkles, Terminal } from "lucide-react";
+import { Download, ExternalLink, Loader2, Shield, ShieldCheck, Sparkles, Terminal } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { PageHeaderSkeleton, RowsSkeleton } from "@/components/skeletons";
 import { exportBackupFn, listStaffFn, setStaffPerms } from "@/lib/fn";
-import { ROOT_DISCORD_ID } from "@/lib/constants";
+import { ROOT_DISCORD_ID, fearProfileUrl } from "@/lib/constants";
 import type { StaffListItem, StaffProfile } from "@/lib/types";
 
 export function AdminView({ me }: { me: StaffProfile }) {
@@ -52,7 +52,10 @@ export function AdminView({ me }: { me: StaffProfile }) {
     void load();
   }, []);
 
-  async function patch(userId: string, next: Partial<StaffListItem> & { setRoot?: boolean }) {
+  async function patch(
+    userId: string,
+    next: Partial<StaffListItem> & { setRoot?: boolean; steamid?: string | null },
+  ) {
     try {
       const updated = await setStaffPerms({
         data: {
@@ -64,10 +67,11 @@ export function AdminView({ me }: { me: StaffProfile }) {
           isBotOwner: next.isBotOwner,
           setRoot: next.setRoot,
           tag: next.tag,
+          steamid: next.steamid !== undefined ? next.steamid : next.mySteamId,
         },
       });
       setRows((prev) => prev.map((r) => (r.userId === userId ? updated : r)));
-      toast.success("Права доступа обновлены");
+      toast.success("Данные успешно сохранены");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Ошибка при сохранении прав");
     }
@@ -179,11 +183,18 @@ export function AdminView({ me }: { me: StaffProfile }) {
                     </div>
 
                     {me.caps.isOwner ? (
-                      <TagField
-                        value={u.tag}
-                        disabled={locked}
-                        onSave={(tag) => void patch(u.userId, { ...u, tag })}
-                      />
+                      <div className="flex flex-wrap items-center gap-3">
+                        <SteamIdField
+                          value={u.mySteamId}
+                          disabled={locked}
+                          onSave={(sid) => void patch(u.userId, { ...u, steamid: sid, mySteamId: sid })}
+                        />
+                        <TagField
+                          value={u.tag}
+                          disabled={locked}
+                          onSave={(tag) => void patch(u.userId, { ...u, tag })}
+                        />
+                      </div>
                     ) : null}
                   </div>
 
@@ -251,6 +262,65 @@ export function AdminView({ me }: { me: StaffProfile }) {
         </Button>
       </section>
     </div>
+  );
+}
+
+function SteamIdField({
+  value,
+  disabled,
+  onSave,
+}: {
+  value: string | null;
+  disabled?: boolean;
+  onSave: (steamid: string | null) => void;
+}) {
+  const [text, setText] = useState(value ?? "");
+
+  useEffect(() => {
+    setText(value ?? "");
+  }, [value]);
+
+  function commit() {
+    const clean = text.trim().replace(/\D/g, "");
+    const next = clean.length >= 16 ? clean : null;
+    if (next !== (value || null)) {
+      onSave(next);
+    } else {
+      setText(value ?? "");
+    }
+  }
+
+  return (
+    <label className="grid gap-1 text-[11px] font-bold text-muted">
+      SteamID64
+      <div className="flex items-center gap-1.5">
+        <Input
+          className="h-8 w-44 rounded-xl text-xs font-mono"
+          maxLength={17}
+          disabled={disabled}
+          placeholder="76561198..."
+          value={text}
+          onChange={(e) => setText(e.target.value.replace(/\D/g, "").slice(0, 17))}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
+        />
+        {value ? (
+          <a
+            href={fearProfileUrl(value)}
+            target="_blank"
+            rel="noreferrer"
+            title="Открыть профиль на FearProject"
+            className="grid size-8 place-items-center rounded-xl border border-border/80 bg-surface/90 text-subtle hover:text-accent hover:border-accent/50 transition-colors shadow-sm"
+          >
+            <ExternalLink className="size-3.5" />
+          </a>
+        ) : null}
+      </div>
+    </label>
   );
 }
 
