@@ -355,29 +355,70 @@
     pointer-events: none;
   }
 
-  /* Smooth Tab Transitions */
-  @keyframes tabEnter {
-    from {
+  /* Smooth Page Transitions */
+  @keyframes pageEnter {
+    0% {
       opacity: 0;
-      transform: translateY(6px);
+      transform: translateY(8px) scale(0.997);
+      filter: blur(3px);
     }
-    to {
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0px);
+    }
+  }
+
+  .animate-page-enter {
+    animation: pageEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+    will-change: opacity, transform, filter;
+  }
+
+  .animate-tab-enter {
+    animation: pageEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+    will-change: opacity, transform, filter;
+  }
+
+  /* Cascading Block & Card Animations */
+  @keyframes fadeUp {
+    0% {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    100% {
       opacity: 1;
       transform: translateY(0);
     }
   }
 
-  .animate-tab-enter {
-    animation: tabEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+  .animate-fade-up {
+    animation: fadeUp 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
     will-change: opacity, transform;
   }
+
+  .stagger-1 { animation-delay: 40ms; }
+  .stagger-2 { animation-delay: 80ms; }
+  .stagger-3 { animation-delay: 120ms; }
+  .stagger-4 { animation-delay: 160ms; }
+  .stagger-5 { animation-delay: 200ms; }
+  .stagger-6 { animation-delay: 240ms; }
+  .stagger-7 { animation-delay: 280ms; }
+  .stagger-8 { animation-delay: 320ms; }
 }
 
 /* Smooth View Transitions */
-::view-transition-old(root),
+::view-transition-old(root) {
+  animation: 0.22s cubic-bezier(0.16, 1, 0.3, 1) both fadeOut;
+}
 ::view-transition-new(root) {
-  animation-duration: 0.18s;
-  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation: 0.28s cubic-bezier(0.16, 1, 0.3, 1) both pageEnter;
+}
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+    filter: blur(2px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

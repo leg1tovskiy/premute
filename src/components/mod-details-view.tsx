@@ -33,6 +33,7 @@ import { getModDetailsFn } from "@/lib/fn";
 import { downloadCsv } from "@/lib/csv";
 import { RANK_SHORT, fearProfileUrl } from "@/lib/constants";
 import type { ModDetails, PunishmentRecord } from "@/lib/types";
+import { AnimatedBlock, AnimatedNumber } from "@/components/animated-number";
 import { cn } from "@/lib/utils";
 import {
   Bar,
@@ -703,28 +704,31 @@ export function ModDetailsView({
     <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 sm:py-8 space-y-6 animate-in fade-in duration-300">
       {/* ── Top Back Link ──────────────────────────────────────────── */}
       {!hideBackLink && (
-        <div className="flex items-center justify-between">
-          <Link
-            to="/stats"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-elevated/70 px-3 py-1.5 text-xs font-bold text-muted hover:border-accent hover:text-fg transition-all shadow-sm"
-          >
-            <ArrowLeft className="size-3.5" />
-            Назад к общей статистике
-          </Link>
-          <Button
-            size="sm"
-            onClick={() => setShareOpen(true)}
-            className="rounded-xl border border-accent/40 bg-accent/15 px-3 py-1.5 text-xs font-bold text-accent hover:bg-accent hover:text-accent-fg transition-all shadow-sm"
-          >
-            <Share2 className="size-3.5" />
-            Поделиться отчётом
-          </Button>
-        </div>
+        <AnimatedBlock delay={0}>
+          <div className="flex items-center justify-between">
+            <Link
+              to="/stats"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-elevated/70 px-3 py-1.5 text-xs font-bold text-muted hover:border-accent hover:text-fg transition-all shadow-sm"
+            >
+              <ArrowLeft className="size-3.5" />
+              Назад к общей статистике
+            </Link>
+            <Button
+              size="sm"
+              onClick={() => setShareOpen(true)}
+              className="rounded-xl border border-accent/40 bg-accent/15 px-3 py-1.5 text-xs font-bold text-accent hover:bg-accent hover:text-accent-fg transition-all shadow-sm"
+            >
+              <Share2 className="size-3.5" />
+              Поделиться отчётом
+            </Button>
+          </div>
+        </AnimatedBlock>
       )}
 
       {/* ── Moderator Hero Profile Card (Bento Style) ──────────────── */}
-      <article className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-r from-surface via-surface/95 to-elevated/70 p-6 sm:p-8 shadow-2xl glass-panel cyber-border-glow">
-        <div className="absolute right-0 top-0 size-80 bg-accent/10 blur-3xl pointer-events-none" />
+      <AnimatedBlock delay={hideBackLink ? 0 : 40}>
+        <article className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-r from-surface via-surface/95 to-elevated/70 p-6 sm:p-8 shadow-2xl glass-panel cyber-border-glow">
+          <div className="absolute right-0 top-0 size-80 bg-accent/10 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4 sm:gap-5">
@@ -790,10 +794,16 @@ export function ModDetailsView({
             <div className="space-y-1">
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Норма месяца</p>
               <p className={cn("text-lg font-black font-mono", monthDone ? "text-success" : "text-fg")}>
-                {m.total} <span className="text-xs text-muted font-normal">/ {monthTarget ?? "—"}</span>
+                <AnimatedNumber value={m.total} /> <span className="text-xs text-muted font-normal">/ {monthTarget ?? "—"}</span>
               </p>
               <p className="text-[11px] text-muted font-mono">
-                {actualRatio != null ? `${actualRatio}% от плана` : "цель не задана"}
+                {actualRatio != null ? (
+                  <>
+                    <AnimatedNumber value={actualRatio} suffix="%" /> от плана
+                  </>
+                ) : (
+                  "цель не задана"
+                )}
               </p>
               <button
                 type="button"
@@ -810,50 +820,56 @@ export function ModDetailsView({
         {/* 4 Cyber Metric Chips */}
         <div className="relative z-10 mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-2xl border border-danger/25 bg-danger/10 p-3.5 text-center transition-all hover:bg-danger/15 shadow-sm">
-            <p className="text-3xl font-black tabular-nums text-danger">{m.bans ?? 0}</p>
+            <p className="text-3xl font-black tabular-nums text-danger"><AnimatedNumber value={m.bans ?? 0} /></p>
             <p className="mt-1 text-xs font-bold text-danger/80 flex items-center justify-center gap-1">
               <Hammer className="size-3.5" /> Банов выдано
             </p>
           </div>
 
           <div className="rounded-2xl border border-warn/25 bg-warn/10 p-3.5 text-center transition-all hover:bg-warn/15 shadow-sm">
-            <p className="text-3xl font-black tabular-nums text-warn">{m.mutes ?? 0}</p>
+            <p className="text-3xl font-black tabular-nums text-warn"><AnimatedNumber value={m.mutes ?? 0} /></p>
             <p className="mt-1 text-xs font-bold text-warn/80 flex items-center justify-center gap-1">
               <VolumeX className="size-3.5" /> Мутов выдано
             </p>
           </div>
 
           <div className="rounded-2xl border border-accent/30 bg-accent/15 p-3.5 text-center shadow-inner transition-all hover:bg-accent/20">
-            <p className="text-3xl font-black tabular-nums text-accent">{m.total}</p>
+            <p className="text-3xl font-black tabular-nums text-accent"><AnimatedNumber value={m.total} /></p>
             <p className="mt-1 text-xs font-bold text-accent">Выдано за период</p>
           </div>
 
           <div className="rounded-2xl border border-success/25 bg-success/10 p-3.5 text-center transition-all hover:bg-success/15 shadow-sm">
-            <p className="text-3xl font-black tabular-nums text-success">{m.removed ?? 0}</p>
+            <p className="text-3xl font-black tabular-nums text-success"><AnimatedNumber value={m.removed ?? 0} /></p>
             <p className="mt-1 text-xs font-bold text-success/80 flex items-center justify-center gap-1">
               <Unlock className="size-3.5" /> Снято решений
             </p>
           </div>
         </div>
       </article>
+      </AnimatedBlock>
 
       {/* ── Bento Grid: Smart Pace & Month Heatmap ───────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <PaceForecastCard total={m.total} target={monthTarget} />
-        <MonthActivityHeatmap records={data.records} />
-      </div>
+      <AnimatedBlock delay={100}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <PaceForecastCard total={m.total} target={monthTarget} />
+          <MonthActivityHeatmap records={data.records} />
+        </div>
+      </AnimatedBlock>
 
       {/* ── Daily Chart Section ────────────────────────────────────── */}
-      <ModDailyCharts
-        records={data.records}
-        month={data.month}
-        monthStart={data.monthStart}
-        monthEnd={data.monthEnd}
-        handle={handle}
-      />
+      <AnimatedBlock delay={160}>
+        <ModDailyCharts
+          records={data.records}
+          month={data.month}
+          monthStart={data.monthStart}
+          monthEnd={data.monthEnd}
+          handle={handle}
+        />
+      </AnimatedBlock>
 
       {/* ── All Punishments Table with Filters ─────────────────────── */}
-      <section className="rounded-3xl border border-border/80 bg-surface/90 glass-panel overflow-hidden shadow-sm">
+      <AnimatedBlock delay={220}>
+        <section className="rounded-3xl border border-border/80 bg-surface/90 glass-panel overflow-hidden shadow-sm">
         {/* Table Header & Filters */}
         <div className="p-5 border-b border-border/60 space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1078,6 +1094,7 @@ export function ModDetailsView({
           </ul>
         )}
       </section>
+      </AnimatedBlock>
 
       {/* ── Discord Share Modal ────────────────────────────────────── */}
       <DiscordShareModal

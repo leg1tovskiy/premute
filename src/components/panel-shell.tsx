@@ -53,6 +53,7 @@ import { getServersFn, getStatsFn, getRecentPunishmentsFn, type LivePunishmentIt
 import type { StatsPayload } from "@/lib/types";
 import { RANK_SHORT, RANK_TITLE } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
+import { AnimatedBlock, AnimatedNumber } from "@/components/animated-number";
 import { cn } from "@/lib/utils";
 
 function useMskClock() {
@@ -310,9 +311,9 @@ export function PanelShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        {/* Page Content with smooth tab transition */}
+        {/* Page Content with smooth page transition */}
         <main className="flex-1 pb-16 md:pb-6">
-          <div key={pathname} className="animate-tab-enter min-h-full">
+          <div key={pathname} className="animate-page-enter min-h-full">
             {children}
           </div>
         </main>
@@ -708,47 +709,48 @@ export function HomeTiles() {
   return (
     <section className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 sm:py-8 space-y-7">
       {/* ── CS2 Portal Hero Banner with SteamID Search ──────────────── */}
-      <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-br from-surface via-surface/90 to-elevated/70 p-6 sm:p-8 shadow-xl cyber-border-glow">
-        <div className="absolute -right-24 -top-24 size-88 rounded-full bg-accent/15 blur-3xl pointer-events-none" />
-        <div className="absolute right-48 -bottom-20 size-72 rounded-full bg-embed/15 blur-3xl pointer-events-none" />
+      <AnimatedBlock delay={0}>
+        <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-br from-surface via-surface/90 to-elevated/70 p-6 sm:p-8 shadow-xl cyber-border-glow">
+          <div className="absolute -right-24 -top-24 size-88 rounded-full bg-accent/15 blur-3xl pointer-events-none" />
+          <div className="absolute right-48 -bottom-20 size-72 rounded-full bg-embed/15 blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col gap-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <img
-                  src="/logo.png"
-                  alt="FearProject"
-                  className="size-14 sm:size-16 rounded-2xl border border-accent/40 object-cover shadow-lg"
-                />
-                <span className="absolute -bottom-1 -right-1 size-4 rounded-full border-2 border-surface bg-success shadow-[0_0_8px_var(--color-success)]" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl sm:text-2xl font-black tracking-tight text-fg">
-                    FEAR Project · CS2 Мониторинг
-                  </h1>
-                  <span className="rounded-md bg-accent/15 border border-accent/30 px-2 py-0.5 text-[10px] font-bold text-accent">
-                    LIVE
-                  </span>
+          <div className="relative z-10 flex flex-col gap-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <img
+                    src="/logo.png"
+                    alt="FearProject"
+                    className="size-14 sm:size-16 rounded-2xl border border-accent/40 object-cover shadow-lg"
+                  />
+                  <span className="absolute -bottom-1 -right-1 size-4 rounded-full border-2 border-surface bg-success shadow-[0_0_8px_var(--color-success)]" />
                 </div>
-                <p className="mt-1 text-xs text-muted">
-                  Единый центр управления серверами, составом модерации и защитой игроков
-                </p>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-xl sm:text-2xl font-black tracking-tight text-fg">
+                      FEAR Project · CS2 Мониторинг
+                    </h1>
+                    <span className="rounded-md bg-accent/15 border border-accent/30 px-2 py-0.5 text-[10px] font-bold text-accent">
+                      LIVE
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted">
+                    Единый центр управления серверами, составом модерации и защитой игроков
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-elevated/70 px-3 py-1.5 text-xs text-muted font-mono">
+                  <span className="size-2 rounded-full bg-success animate-ping" />
+                  <span>{serversFeed.total > 0 ? <><AnimatedNumber value={serversFeed.total} /> серверов CS2</> : "Серверы CS2"}</span>
+                  <span className="text-subtle">&middot;</span>
+                  <span className="text-fg font-semibold">
+                    {serversLive ? <><AnimatedNumber value={serversFeed.online} /> игроков онлайн</> : "онлайн уточняется"}
+                  </span>
+                </span>
               </div>
             </div>
-
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-elevated/70 px-3 py-1.5 text-xs text-muted font-mono">
-                <span className="size-2 rounded-full bg-success animate-ping" />
-                <span>{serversFeed.total > 0 ? `${serversFeed.total} серверов CS2` : "Серверы CS2"}</span>
-                <span className="text-subtle">&middot;</span>
-                <span className="text-fg font-semibold">
-                  {serversLive ? `${serversFeed.online} игроков онлайн` : "онлайн уточняется"}
-                </span>
-              </span>
-            </div>
-          </div>
 
           {/* Quick Player Lookup by SteamID64 or Nickname */}
           <div className="relative">
@@ -855,106 +857,114 @@ export function HomeTiles() {
           </div>
         </div>
       </div>
+    </AnimatedBlock>
 
       {/* ── 5 Quick Navigation Cards in ONE Row on Desktop ──────────── */}
-      <div>
-        <div className="flex items-center justify-between px-1 mb-3">
-          <div className="flex items-center gap-2">
-            <Gamepad2 className="size-4 text-accent" />
-            <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-subtle">
-              Разделы панели управления
-            </h2>
+      <AnimatedBlock delay={60}>
+        <div>
+          <div className="flex items-center justify-between px-1 mb-3">
+            <div className="flex items-center gap-2">
+              <Gamepad2 className="size-4 text-accent" />
+              <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-subtle">
+                Разделы панели управления
+              </h2>
+            </div>
+            <span className="text-[11px] text-muted font-mono">5 разделов</span>
           </div>
-          <span className="text-[11px] text-muted font-mono">5 разделов</span>
-        </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {tiles.map((i) => {
-            const Icon = i.icon;
-            return (
-              <Link
-                key={i.id}
-                to={i.to}
-                className="group relative flex flex-col justify-between rounded-2xl border border-border/80 bg-surface/90 glass-panel p-4 text-left transition-all hover:border-accent/50 hover:bg-elevated/80 hover:shadow-lg hover:-translate-y-0.5"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-accent/25 bg-accent/10 text-accent transition-transform group-hover:scale-110 shadow-sm">
-                    <Icon className="size-4.5" />
-                  </span>
-                  <ChevronRight className="size-4 text-subtle transition-transform group-hover:translate-x-1 group-hover:text-accent" />
-                </div>
-                <div className="mt-3.5">
-                  <span className="block truncate text-sm font-bold text-fg group-hover:text-accent transition-colors">
-                    {i.label}
-                  </span>
-                  <span className="block truncate text-[11px] text-muted mt-0.5">{i.desc}</span>
-                </div>
-              </Link>
-            );
-          })}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {tiles.map((i) => {
+              const Icon = i.icon;
+              return (
+                <Link
+                  key={i.id}
+                  to={i.to}
+                  className="group relative flex flex-col justify-between rounded-2xl border border-border/80 bg-surface/90 glass-panel p-4 text-left transition-all hover:border-accent/50 hover:bg-elevated/80 hover:shadow-lg hover:-translate-y-0.5"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-accent/25 bg-accent/10 text-accent transition-transform group-hover:scale-110 shadow-sm">
+                      <Icon className="size-4.5" />
+                    </span>
+                    <ChevronRight className="size-4 text-subtle transition-transform group-hover:translate-x-1 group-hover:text-accent" />
+                  </div>
+                  <div className="mt-3.5">
+                    <span className="block truncate text-sm font-bold text-fg group-hover:text-accent transition-colors">
+                      {i.label}
+                    </span>
+                    <span className="block truncate text-[11px] text-muted mt-0.5">{i.desc}</span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      </AnimatedBlock>
 
       {/* ── CS2 Servers Live Monitoring Matrix ──────────────────────── */}
-      <div className="rounded-3xl border border-border/80 bg-surface/90 glass-panel p-5 sm:p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border/60 gap-4">
-          <div className="flex items-center gap-3">
-            <div className="relative grid size-10 place-items-center rounded-2xl border border-success/40 bg-success/15 text-success shadow-[0_0_12px_rgba(34,197,94,0.2)]">
-              <Server className="size-5" />
-              <span className="absolute -top-1 -right-1 size-3 rounded-full border-2 border-surface bg-success animate-ping" />
+      <AnimatedBlock delay={120}>
+        <div className="rounded-3xl border border-border/80 bg-surface/90 glass-panel p-5 sm:p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border/60 gap-4">
+            <div className="flex items-center gap-3">
+              <div className="relative grid size-10 place-items-center rounded-2xl border border-success/40 bg-success/15 text-success shadow-[0_0_12px_rgba(34,197,94,0.2)]">
+                <Server className="size-5" />
+                <span className="absolute -top-1 -right-1 size-3 rounded-full border-2 border-surface bg-success animate-ping" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-black text-fg tracking-tight">
+                    Мониторинг серверов FEAR Project CS2
+                  </h3>
+                  <span className="hidden sm:inline-flex rounded-full bg-accent/15 border border-accent/30 px-2 py-0.5 text-[10px] font-bold text-accent">
+                    ТОП ПО ЗАПОЛНЕННОСТИ
+                  </span>
+                </div>
+                <p className="text-xs text-muted">
+                  Серверы ранжированы от самых заполненных к менее заполненным · {servers.length} нод в сети
+                </p>
+              </div>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-black text-fg tracking-tight">
-                  Мониторинг серверов FEAR Project CS2
-                </h3>
-                <span className="hidden sm:inline-flex rounded-full bg-accent/15 border border-accent/30 px-2 py-0.5 text-[10px] font-bold text-accent">
-                  ТОП ПО ЗАПОЛНЕННОСТИ
+
+            <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+              <div className="flex items-center gap-1.5 rounded-xl border border-border/70 bg-elevated/60 px-3 py-1.5 text-muted">
+                <Users className="size-3.5 text-accent" />
+                <span>
+                  <strong className="text-fg"><AnimatedNumber value={fillLabel} /></strong> в игре
+                </span>
+                <span className="rounded bg-accent/20 px-1.5 py-0.5 text-[10px] font-bold text-accent">
+                  <AnimatedNumber value={pctLabel} />
                 </span>
               </div>
-              <p className="text-xs text-muted">
-                Серверы ранжированы от самых заполненных к менее заполненным · {servers.length} нод в сети
-              </p>
-            </div>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-            <div className="flex items-center gap-1.5 rounded-xl border border-border/70 bg-elevated/60 px-3 py-1.5 text-muted">
-              <Users className="size-3.5 text-accent" />
-              <span>
-                <strong className="text-fg">{fillLabel}</strong> в игре
-              </span>
-              <span className="rounded bg-accent/20 px-1.5 py-0.5 text-[10px] font-bold text-accent">
-                {pctLabel}
-              </span>
-            </div>
-
-            <div
-              className={cn(
-                "flex items-center gap-1.5 rounded-xl border px-3 py-1.5 font-semibold",
-                serversLive
-                  ? "border-success/30 bg-success/10 text-success"
-                  : serversLoading
-                    ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
-                    : "border-danger/30 bg-danger/10 text-danger",
-              )}
-            >
-              <span
+              <div
                 className={cn(
-                  "size-2 rounded-full",
-                  serversLive ? "bg-success animate-pulse" : serversLoading ? "bg-amber-500" : "bg-danger",
+                  "flex items-center gap-1.5 rounded-xl border px-3 py-1.5 font-semibold",
+                  serversLive
+                    ? "border-success/30 bg-success/10 text-success"
+                    : serversLoading
+                      ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+                      : "border-danger/30 bg-danger/10 text-danger",
                 )}
-              />
-              <span>
-                {serversLive
-                  ? `${onlineServers}/${servers.length} онлайн`
-                  : serversLoading
-                    ? "загрузка…"
-                    : "нет связи с FEAR"}
-              </span>
+              >
+                <span
+                  className={cn(
+                    "size-2 rounded-full",
+                    serversLive ? "bg-success animate-pulse" : serversLoading ? "bg-amber-500" : "bg-danger",
+                  )}
+                />
+                <span>
+                  {serversLive ? (
+                    <>
+                      <AnimatedNumber value={onlineServers} />/<AnimatedNumber value={servers.length} /> онлайн
+                    </>
+                  ) : serversLoading ? (
+                    "загрузка…"
+                  ) : (
+                    "нет связи с FEAR"
+                  )}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
         <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {/* Загрузка: ровно SERVERS_GRID_SIZE слотов-скелетонов, без выдуманных серверов */}
@@ -1166,66 +1176,68 @@ export function HomeTiles() {
               </div>
             );
           })}        </div>
-      </div>
+        </div>
+      </AnimatedBlock>
 
       {/* ── Live Punishments Feed (Recent Bans & Mutes) ─────────────── */}
-      <div className="rounded-3xl border border-border/80 bg-surface/90 glass-panel p-5 sm:p-6 shadow-sm">
+      <AnimatedBlock delay={180}>
+        <div className="rounded-3xl border border-border/80 bg-surface/90 glass-panel p-5 sm:p-6 shadow-sm">
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border/60 gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="grid size-9 place-items-center rounded-xl border border-danger/30 bg-danger/15 text-danger shadow-sm">
-              <History className="size-4.5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm sm:text-base font-black text-fg tracking-tight">
-                  Живая лента последних наказаний
-                </h3>
-                <span className="relative flex size-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-danger opacity-75" />
-                  <span className="relative inline-flex size-2 rounded-full bg-danger" />
-                </span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border/60 gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="grid size-9 place-items-center rounded-xl border border-danger/30 bg-danger/15 text-danger shadow-sm">
+                <History className="size-4.5" />
               </div>
-              <p className="text-xs text-muted">
-                Свежие баны и муты от модерации FEAR в реальном времени
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-black text-fg tracking-tight">
+                    Живая лента последних наказаний
+                  </h3>
+                  <span className="relative flex size-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-danger opacity-75" />
+                    <span className="relative inline-flex size-2 rounded-full bg-danger" />
+                  </span>
+                </div>
+                <p className="text-xs text-muted">
+                  Свежие баны и муты от модерации FEAR в реальном времени
+                </p>
+              </div>
             </div>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Filters */}
-            <div className="flex items-center rounded-xl border border-border/80 bg-elevated/70 p-1 text-xs">
-              <button
-                type="button"
-                onClick={() => setFilterKind("all")}
-                className={cn(
-                  "rounded-lg px-2.5 py-1 font-semibold transition-colors",
-                  filterKind === "all" ? "bg-surface text-fg shadow-sm" : "text-muted hover:text-fg",
-                )}
-              >
-                Все ({punishments.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterKind("ban")}
-                className={cn(
-                  "rounded-lg px-2.5 py-1 font-semibold transition-colors",
-                  filterKind === "ban" ? "bg-danger/20 text-danger shadow-sm font-bold" : "text-muted hover:text-fg",
-                )}
-              >
-                Баны ({banCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterKind("mute")}
-                className={cn(
-                  "rounded-lg px-2.5 py-1 font-semibold transition-colors",
-                  filterKind === "mute" ? "bg-warn/20 text-warn shadow-sm font-bold" : "text-muted hover:text-fg",
-                )}
-              >
-                Муты ({muteCount})
-              </button>
-            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Filters */}
+              <div className="flex items-center rounded-xl border border-border/80 bg-elevated/70 p-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setFilterKind("all")}
+                  className={cn(
+                    "rounded-lg px-2.5 py-1 font-semibold transition-colors",
+                    filterKind === "all" ? "bg-surface text-fg shadow-sm" : "text-muted hover:text-fg",
+                  )}
+                >
+                  Все (<AnimatedNumber value={punishments.length} />)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterKind("ban")}
+                  className={cn(
+                    "rounded-lg px-2.5 py-1 font-semibold transition-colors",
+                    filterKind === "ban" ? "bg-danger/20 text-danger shadow-sm font-bold" : "text-muted hover:text-fg",
+                  )}
+                >
+                  Баны (<AnimatedNumber value={banCount} />)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterKind("mute")}
+                  className={cn(
+                    "rounded-lg px-2.5 py-1 font-semibold transition-colors",
+                    filterKind === "mute" ? "bg-warn/20 text-warn shadow-sm font-bold" : "text-muted hover:text-fg",
+                  )}
+                >
+                  Муты (<AnimatedNumber value={muteCount} />)
+                </button>
+              </div>
 
             <button
               type="button"
@@ -1344,42 +1356,45 @@ export function HomeTiles() {
             </div>
           )}
         </div>
-      </div>
+        </div>
+      </AnimatedBlock>
 
       {/* ── Operational Tactical Bar ────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 pt-1">
-        <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-surface/60 p-4 text-xs">
-          <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent">
-            <Command className="size-4" />
+      <AnimatedBlock delay={240}>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 pt-1">
+          <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-surface/60 p-4 text-xs">
+            <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent">
+              <Command className="size-4" />
+            </div>
+            <div>
+              <p className="font-bold text-fg">Палитра команд</p>
+              <p className="text-[11px] text-muted">
+                Нажмите <kbd className="rounded bg-elevated px-1 py-0.2 border border-border/60 font-mono text-[10px]">⌘K</kbd> для быстрого поиска
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="font-bold text-fg">Палитра команд</p>
-            <p className="text-[11px] text-muted">
-              Нажмите <kbd className="rounded bg-elevated px-1 py-0.2 border border-border/60 font-mono text-[10px]">⌘K</kbd> для быстрого поиска
-            </p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-surface/60 p-4 text-xs">
-          <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-success/10 text-success">
-            <Server className="size-4" />
+          <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-surface/60 p-4 text-xs">
+            <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-success/10 text-success">
+              <Server className="size-4" />
+            </div>
+            <div>
+              <p className="font-bold text-fg">CS2 Live Sync</p>
+              <p className="text-[11px] text-muted">Моментальное применение на всех серверах</p>
+            </div>
           </div>
-          <div>
-            <p className="font-bold text-fg">CS2 Live Sync</p>
-            <p className="text-[11px] text-muted">Моментальное применение на всех серверах</p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-surface/60 p-4 text-xs">
-          <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-gold/10 text-gold">
-            <Clock className="size-4" />
-          </div>
-          <div>
-            <p className="font-bold text-fg">Сброс нормы</p>
-            <p className="text-[11px] text-muted">Каждое воскресенье ровно в 23:59 МСК</p>
+          <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-surface/60 p-4 text-xs">
+            <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-gold/10 text-gold">
+              <Clock className="size-4" />
+            </div>
+            <div>
+              <p className="font-bold text-fg">Сброс нормы</p>
+              <p className="text-[11px] text-muted">Каждое воскресенье ровно в 23:59 МСК</p>
+            </div>
           </div>
         </div>
-      </div>
+      </AnimatedBlock>
     </section>
   );
 }

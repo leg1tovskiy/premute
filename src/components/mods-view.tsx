@@ -18,6 +18,7 @@ import { PageHeaderSkeleton, RowsSkeleton } from "@/components/skeletons";
 import { deleteModFn, getBackupsFn, listModsFn, setBackupFn, unsetBackupFn, upsertModFn } from "@/lib/fn";
 import { RANK_TITLE } from "@/lib/constants";
 import type { BackupsPayload, BackupEntry, RosterMod, RosterRank } from "@/lib/types";
+import { AnimatedBlock, AnimatedNumber } from "@/components/animated-number";
 
 const STEAMID_RE = /^\d{17}$/;
 
@@ -166,90 +167,97 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
 
   return (
     <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 sm:py-8 space-y-6">
-      <header className="border-b border-border/60 pb-6">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent">FearProject CS2</p>
-        <h1 className="mt-2 text-2xl font-black tracking-tight text-fg sm:text-3xl">Состав команды модерации</h1>
-        <p className="mt-1 max-w-2xl text-xs text-muted">
-          Добавление или изменение модератора автоматически синхронизируется с ботом и серверами.
-        </p>
-        {recounting ? (
-          <p className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-accent">
-            <Loader2 className="size-4 animate-spin" />
-            Идёт пересчёт статистики команды...
+      <AnimatedBlock delay={0}>
+        <header className="border-b border-border/60 pb-6">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent">FearProject CS2</p>
+          <h1 className="mt-2 text-2xl font-black tracking-tight text-fg sm:text-3xl">Состав команды модерации</h1>
+          <p className="mt-1 max-w-2xl text-xs text-muted">
+            Добавление или изменение модератора автоматически синхронизируется с ботом и серверами.
           </p>
-        ) : null}
-      </header>
+          {recounting ? (
+            <p className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-accent">
+              <Loader2 className="size-4 animate-spin" />
+              Идёт пересчёт статистики команды...
+            </p>
+          ) : null}
+        </header>
+      </AnimatedBlock>
 
-      <form
-        onSubmit={(e) => void add(e)}
-        className="grid gap-3 rounded-3xl border border-border/80 bg-surface/90 glass-panel p-6 shadow-sm sm:grid-cols-[1fr_1fr_8rem_1fr_auto] sm:items-end"
-      >
-        <div>
-          <Label htmlFor="mod-steamid">SteamID64</Label>
+      <AnimatedBlock delay={60}>
+        <form
+          onSubmit={(e) => void add(e)}
+          className="grid gap-3 rounded-3xl border border-border/80 bg-surface/90 glass-panel p-6 shadow-sm sm:grid-cols-[1fr_1fr_8rem_1fr_auto] sm:items-end"
+        >
+          <div>
+            <Label htmlFor="mod-steamid">SteamID64</Label>
+            <Input
+              id="mod-steamid"
+              value={form.steamid}
+              onChange={(e) => setForm((f) => ({ ...f, steamid: e.target.value.replace(/\D/g, "").slice(0, 17) }))}
+              placeholder="7656119…"
+              inputMode="numeric"
+              className="mt-1.5 font-mono rounded-xl"
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="mod-name">Ник</Label>
+            <Input
+              id="mod-name"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="Как на fearproject.ru"
+              className="mt-1.5 rounded-xl"
+            />
+          </div>
+          <div>
+            <Label htmlFor="mod-rank">Ранг</Label>
+            <select
+              id="mod-rank"
+              value={form.rank}
+              onChange={(e) => setForm((f) => ({ ...f, rank: Number(e.target.value) }))}
+              className="mt-1.5 flex h-11 w-full rounded-xl border border-border/80 bg-elevated/70 px-3 text-sm text-fg"
+            >
+              {(ranks.length ? ranks : Object.keys(RANK_TITLE).map((n) => ({ rank: Number(n), title: RANK_TITLE[Number(n)] }))).map(
+                (r) => (
+                  <option key={r.rank} value={r.rank}>
+                    {r.rank}. {r.title}
+                  </option>
+                ),
+              )}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="mod-discord">Discord</Label>
+            <Input
+              id="mod-discord"
+              value={form.discord}
+              onChange={(e) => setForm((f) => ({ ...f, discord: e.target.value }))}
+              placeholder="необязательно"
+              className="mt-1.5 rounded-xl"
+            />
+          </div>
+          <Button type="submit" disabled={saving} className="h-11 rounded-xl bg-accent text-accent-fg font-bold shadow-md shadow-accent/20">
+            {saving ? <Loader2 className="animate-spin" /> : <Plus />}
+            Добавить
+          </Button>
+        </form>
+      </AnimatedBlock>
+
+      <AnimatedBlock delay={120}>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-subtle" />
           <Input
-            id="mod-steamid"
-            value={form.steamid}
-            onChange={(e) => setForm((f) => ({ ...f, steamid: e.target.value.replace(/\D/g, "").slice(0, 17) }))}
-            placeholder="7656119…"
-            inputMode="numeric"
-            className="mt-1.5 font-mono rounded-xl"
-            required
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Быстрый поиск: никнейм, SteamID64 или Discord тег..."
+            className="pl-10 h-10 rounded-2xl border-border/80 bg-surface/90 glass-panel"
           />
         </div>
-        <div>
-          <Label htmlFor="mod-name">Ник</Label>
-          <Input
-            id="mod-name"
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            placeholder="Как на fearproject.ru"
-            className="mt-1.5 rounded-xl"
-          />
-        </div>
-        <div>
-          <Label htmlFor="mod-rank">Ранг</Label>
-          <select
-            id="mod-rank"
-            value={form.rank}
-            onChange={(e) => setForm((f) => ({ ...f, rank: Number(e.target.value) }))}
-            className="mt-1.5 flex h-11 w-full rounded-xl border border-border/80 bg-elevated/70 px-3 text-sm text-fg"
-          >
-            {(ranks.length ? ranks : Object.keys(RANK_TITLE).map((n) => ({ rank: Number(n), title: RANK_TITLE[Number(n)] }))).map(
-              (r) => (
-                <option key={r.rank} value={r.rank}>
-                  {r.rank}. {r.title}
-                </option>
-              ),
-            )}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="mod-discord">Discord</Label>
-          <Input
-            id="mod-discord"
-            value={form.discord}
-            onChange={(e) => setForm((f) => ({ ...f, discord: e.target.value }))}
-            placeholder="необязательно"
-            className="mt-1.5 rounded-xl"
-          />
-        </div>
-        <Button type="submit" disabled={saving} className="h-11 rounded-xl bg-accent text-accent-fg font-bold shadow-md shadow-accent/20">
-          {saving ? <Loader2 className="animate-spin" /> : <Plus />}
-          Добавить
-        </Button>
-      </form>
+      </AnimatedBlock>
 
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-subtle" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Быстрый поиск: никнейм, SteamID64 или Discord тег..."
-          className="pl-10 h-10 rounded-2xl border-border/80 bg-surface/90 glass-panel"
-        />
-      </div>
-
-      <div className="overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel shadow-sm">
+      <AnimatedBlock delay={180}>
+        <div className="overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel shadow-sm">
         {visible.length === 0 ? (
           <p className="px-5 py-10 text-center text-sm text-muted">
             {query ? "Никого не найдено" : "Список пуст."}
@@ -364,10 +372,22 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
           </ul>
         )}
       </div>
-      <p className="mt-4 flex items-center gap-2 text-xs text-subtle">
-        <Users className="size-3.5" />
-        {query ? `${visible.length} из ${sorted.length} в списке` : `${sorted.length} в списке`} · состав синхронизируется с ботом
-      </p>
+      </AnimatedBlock>
+
+      <AnimatedBlock delay={240}>
+        <p className="mt-4 flex items-center gap-2 text-xs text-subtle">
+          <Users className="size-3.5" />
+          {query ? (
+            <>
+              <AnimatedNumber value={visible.length} /> из <AnimatedNumber value={sorted.length} /> в списке
+            </>
+          ) : (
+            <>
+              <AnimatedNumber value={sorted.length} /> в списке
+            </>
+          )} · состав синхронизируется с ботом
+        </p>
+      </AnimatedBlock>
 
       <AlertDialog open={pendingRemove !== null} onOpenChange={(open) => !open && setPendingRemove(null)}>
         <AlertDialogContent>

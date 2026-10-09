@@ -9,6 +9,7 @@ import { PageHeaderSkeleton, RowsSkeleton } from "@/components/skeletons";
 import { deleteStaffFn, exportBackupFn, listStaffFn, setStaffPerms } from "@/lib/fn";
 import { ROOT_DISCORD_ID, fearProfileUrl } from "@/lib/constants";
 import type { StaffListItem, StaffProfile } from "@/lib/types";
+import { AnimatedBlock } from "@/components/animated-number";
 
 export function AdminView({ me }: { me: StaffProfile }) {
   const [rows, setRows] = useState<StaffListItem[]>([]);
@@ -113,26 +114,29 @@ export function AdminView({ me }: { me: StaffProfile }) {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 space-y-6 animate-in fade-in duration-300">
       {/* ── Admin Header Banner ────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-r from-surface via-surface/95 to-elevated/70 p-6 sm:p-7 shadow-2xl glass-panel cyber-border-glow">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-accent/20 border border-accent/40 px-3 py-0.5 text-xs font-black uppercase tracking-wider text-accent">
-              СИСТЕМА БЕЗОПАСНОСТИ &middot; ACL
-            </span>
+      <AnimatedBlock delay={0}>
+        <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-r from-surface via-surface/95 to-elevated/70 p-6 sm:p-7 shadow-2xl glass-panel cyber-border-glow">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-accent/20 border border-accent/40 px-3 py-0.5 text-xs font-black uppercase tracking-wider text-accent">
+                СИСТЕМА БЕЗОПАСНОСТИ &middot; ACL
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-fg flex items-center gap-2.5">
+              Управление правами доступа
+              <Shield className="size-6 text-accent" />
+            </h1>
+            <p className="max-w-3xl text-xs sm:text-sm text-muted leading-relaxed">
+              Гибкая настройка прав администраторов и модераторов. Управление доступом к статистике,
+              радару подозрительных аккаунтов, составу и ролям владельцев.
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-fg flex items-center gap-2.5">
-            Управление правами доступа
-            <Shield className="size-6 text-accent" />
-          </h1>
-          <p className="max-w-3xl text-xs sm:text-sm text-muted leading-relaxed">
-            Гибкая настройка прав администраторов и модераторов. Управление доступом к статистике,
-            радару подозрительных аккаунтов, составу и ролям владельцев.
-          </p>
         </div>
-      </div>
+      </AnimatedBlock>
 
       {/* ── Users Access Matrix ────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel shadow-sm">
+      <AnimatedBlock delay={60}>
+        <div className="overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel shadow-sm">
         {rows.length === 0 ? (
           <p className="px-5 py-12 text-center text-xs text-muted">
             Пользователей с активным доступом пока нет.
@@ -285,27 +289,30 @@ export function AdminView({ me }: { me: StaffProfile }) {
           </ul>
         )}
       </div>
+      </AnimatedBlock>
 
       {/* ── Database Backup ────────────────────────────────────────── */}
-      <section className="rounded-3xl border border-border/80 bg-surface/90 glass-panel p-6 shadow-sm">
-        <h2 className="text-sm font-extrabold text-fg uppercase tracking-wider flex items-center gap-2">
-          <Terminal className="size-4 text-accent" />
-          Резервная копия базы данных
-        </h2>
-        <p className="mt-1 max-w-2xl text-xs text-muted leading-relaxed">
-          Экспорт полного снимка конфигурации в формате JSON: staff, слаги модераторов, архив
-          статистики, кэш, журнал действий и пользователи.
-        </p>
-        <Button
-          className="mt-4 rounded-xl border border-border bg-elevated px-4 text-xs font-bold text-fg hover:border-accent shadow-sm"
-          variant="secondary"
-          disabled={backingUp}
-          onClick={() => void downloadBackup()}
-        >
-          {backingUp ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-          Скачать JSON-дамп
-        </Button>
-      </section>
+      <AnimatedBlock delay={120}>
+        <section className="rounded-3xl border border-border/80 bg-surface/90 glass-panel p-6 shadow-sm">
+          <h2 className="text-sm font-extrabold text-fg uppercase tracking-wider flex items-center gap-2">
+            <Terminal className="size-4 text-accent" />
+            Резервная копия базы данных
+          </h2>
+          <p className="mt-1 max-w-2xl text-xs text-muted leading-relaxed">
+            Экспорт полного снимка конфигурации в формате JSON: staff, слаги модераторов, архив
+            статистики, кэш, журнал действий и пользователи.
+          </p>
+          <Button
+            className="mt-4 rounded-xl border border-border bg-elevated px-4 text-xs font-bold text-fg hover:border-accent shadow-sm"
+            variant="secondary"
+            disabled={backingUp}
+            onClick={() => void downloadBackup()}
+          >
+            {backingUp ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+            Скачать JSON-дамп
+          </Button>
+        </section>
+      </AnimatedBlock>
     </div>
   );
 }

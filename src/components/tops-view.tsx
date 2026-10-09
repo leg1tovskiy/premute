@@ -36,6 +36,7 @@ import { PageHeaderSkeleton, RowsSkeleton, Skeleton } from "@/components/skeleto
 import { getStatsFn, moderatorOnlineFn } from "@/lib/fn";
 import { RANK_SHORT, fearProfileUrl } from "@/lib/constants";
 import type { ModRow, StatsPayload } from "@/lib/types";
+import { AnimatedBlock, AnimatedNumber } from "@/components/animated-number";
 import { cn } from "@/lib/utils";
 import {
   Bar,
@@ -401,462 +402,479 @@ export function TopsView() {
   return (
     <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 sm:py-8 space-y-8 animate-in fade-in duration-300">
       {/* ── Top Hero Banner ────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-r from-surface via-surface/95 to-elevated/70 p-6 sm:p-8 shadow-2xl cyber-border-glow">
-        <div className="absolute right-0 top-0 size-96 bg-gold/15 blur-3xl pointer-events-none" />
-        <div className="absolute left-1/3 bottom-0 size-64 bg-accent/10 blur-3xl pointer-events-none" />
+      <AnimatedBlock delay={0}>
+        <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-r from-surface via-surface/95 to-elevated/70 p-6 sm:p-8 shadow-2xl cyber-border-glow">
+          <div className="absolute right-0 top-0 size-96 bg-gold/15 blur-3xl pointer-events-none" />
+          <div className="absolute left-1/3 bottom-0 size-64 bg-accent/10 blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-gold/20 border border-gold/40 px-3.5 py-1 text-xs font-black uppercase tracking-wider text-gold shadow-[0_0_15px_rgba(212,176,106,0.35)]">
-                <Trophy className="size-3.5 text-gold animate-pulse" />
-                ЗАЛ СЛАВЫ &middot; ТОП МЕСЯЦА
-              </span>
-              <span className="rounded-full bg-elevated/90 border border-border px-3 py-1 font-mono text-xs text-muted">
-                {data.month}
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-fg flex items-center gap-3">
-              Рейтинг модераторов FEAR
-            </h1>
-            <p className="text-xs sm:text-sm text-muted max-w-2xl leading-relaxed">
-              Официальный лидерборд состава модерации CS2 проекта FearProject. Соревнование за звание Чемпиона
-              Месяца и признание игроков.
-            </p>
-          </div>
-
-          {/* Season Progress & Refresh Controls */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-            <div className="rounded-2xl border border-border/70 bg-surface/80 p-4 shadow-sm min-w-[270px] sm:min-w-[290px]">
-              <div className="flex items-center justify-between gap-4 text-xs font-semibold">
-                <span className="text-muted flex items-center gap-1.5 shrink-0 whitespace-nowrap">
-                  <Calendar className="size-3.5 text-accent" />
-                  Сезонный цикл
+          <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-gold/20 border border-gold/40 px-3.5 py-1 text-xs font-black uppercase tracking-wider text-gold shadow-[0_0_15px_rgba(212,176,106,0.35)]">
+                  <Trophy className="size-3.5 text-gold animate-pulse" />
+                  ЗАЛ СЛАВЫ &middot; ТОП МЕСЯЦА
                 </span>
-                <span className="text-accent font-mono font-bold shrink-0 whitespace-nowrap">
-                  {monthProgress.remainingDays} дн. осталось
+                <span className="rounded-full bg-elevated/90 border border-border px-3 py-1 font-mono text-xs text-muted">
+                  {data.month}
                 </span>
               </div>
-              <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-elevated border border-border/50">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-accent to-gold transition-all duration-500 shadow-[0_0_8px_rgba(212,176,106,0.4)]"
-                  style={{ width: `${monthProgress.percent}%` }}
-                />
-              </div>
-              <p className="mt-1.5 text-[10px] text-subtle text-right font-mono">
-                День {monthProgress.currentDay} из {monthProgress.totalDays} ({monthProgress.percent}%)
+              <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-fg flex items-center gap-3">
+                Рейтинг модераторов FEAR
+              </h1>
+              <p className="text-xs sm:text-sm text-muted max-w-2xl leading-relaxed">
+                Официальный лидерборд состава модерации CS2 проекта FearProject. Соревнование за звание Чемпиона
+                Месяца и признание игроков.
               </p>
             </div>
 
-            <Button
-              variant="secondary"
-              className="h-12 rounded-2xl border-border/80 bg-elevated/80 px-5 text-xs font-bold text-fg shadow-md transition-all hover:bg-elevated hover:border-gold/50 hover:shadow-gold/10"
-              onClick={() => void load(true)}
-              disabled={refreshing}
-            >
-              {refreshing ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4 text-gold" />}
-              Обновить
-            </Button>
+            {/* Season Progress & Refresh Controls */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+              <div className="rounded-2xl border border-border/70 bg-surface/80 p-4 shadow-sm min-w-[270px] sm:min-w-[290px]">
+                <div className="flex items-center justify-between gap-4 text-xs font-semibold">
+                  <span className="text-muted flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                    <Calendar className="size-3.5 text-accent" />
+                    Сезонный цикл
+                  </span>
+                  <span className="text-accent font-mono font-bold shrink-0 whitespace-nowrap">
+                    <AnimatedNumber value={monthProgress.remainingDays} /> дн. осталось
+                  </span>
+                </div>
+                <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-elevated border border-border/50">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-accent to-gold transition-all duration-500 shadow-[0_0_8px_rgba(212,176,106,0.4)]"
+                    style={{ width: `${monthProgress.percent}%` }}
+                  />
+                </div>
+                <p className="mt-1.5 text-[10px] text-subtle text-right font-mono">
+                  День {monthProgress.currentDay} из {monthProgress.totalDays} ({monthProgress.percent}%)
+                </p>
+              </div>
+
+              <Button
+                variant="secondary"
+                className="h-12 rounded-2xl border-border/80 bg-elevated/80 px-5 text-xs font-bold text-fg shadow-md transition-all hover:bg-elevated hover:border-gold/50 hover:shadow-gold/10"
+                onClick={() => void load(true)}
+                disabled={refreshing}
+              >
+                {refreshing ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4 text-gold" />}
+                Обновить
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      </AnimatedBlock>
 
       {/* ── Key Metrics Ribbon (4 Cards) ───────────────────────────── */}
       {kpiStats ? (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          {/* Card 1: Leader Lead */}
-          <div className="rounded-3xl border border-gold/30 bg-gradient-to-br from-gold/15 to-surface/90 glass-panel p-4.5 sm:p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-gold">Лидер гонки</span>
-              <Crown className="size-4 text-gold" />
+        <AnimatedBlock delay={60}>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            {/* Card 1: Leader Lead */}
+            <div className="rounded-3xl border border-gold/30 bg-gradient-to-br from-gold/15 to-surface/90 glass-panel p-4.5 sm:p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-gold">Лидер гонки</span>
+                <Crown className="size-4 text-gold" />
+              </div>
+              <p className="mt-2 text-2xl sm:text-3xl font-black text-fg truncate">
+                {first ? first.name : "—"}
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                {kpiStats.leaderLead > 0 ? (
+                  <span className="font-bold text-gold"><AnimatedNumber value={kpiStats.leaderLead} prefix="+" /></span>
+                ) : (
+                  "0"
+                )}{" "}
+                отрыв от 2 места
+              </p>
             </div>
-            <p className="mt-2 text-2xl sm:text-3xl font-black text-fg truncate">
-              {first ? first.name : "—"}
-            </p>
-            <p className="mt-1 text-xs text-muted">
-              {kpiStats.leaderLead > 0 ? (
-                <span className="font-bold text-gold">+{kpiStats.leaderLead}</span>
-              ) : (
-                "0"
-              )}{" "}
-              отрыв от 2 места
-            </p>
-          </div>
 
-          {/* Card 2: Total Actions */}
-          <div className="rounded-3xl border border-accent/30 bg-gradient-to-br from-accent/10 to-surface/90 glass-panel p-4.5 sm:p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-accent">Импакт состава</span>
-              <Zap className="size-4 text-accent" />
+            {/* Card 2: Total Actions */}
+            <div className="rounded-3xl border border-accent/30 bg-gradient-to-br from-accent/10 to-surface/90 glass-panel p-4.5 sm:p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-accent">Импакт состава</span>
+                <Zap className="size-4 text-accent" />
+              </div>
+              <p className="mt-2 text-2xl sm:text-3xl font-black text-accent tabular-nums">
+                <AnimatedNumber value={kpiStats.totalActions} />
+              </p>
+              <p className="mt-1 text-xs text-muted flex items-center gap-1.5">
+                <span><AnimatedNumber value={kpiStats.totalBans} /> банов</span> &middot; <span><AnimatedNumber value={kpiStats.totalMutes} /> мутов</span>
+              </p>
             </div>
-            <p className="mt-2 text-2xl sm:text-3xl font-black text-accent tabular-nums">
-              {kpiStats.totalActions}
-            </p>
-            <p className="mt-1 text-xs text-muted flex items-center gap-1.5">
-              <span>{kpiStats.totalBans} банов</span> &middot; <span>{kpiStats.totalMutes} мутов</span>
-            </p>
-          </div>
 
-          {/* Card 3: Average Activity */}
-          <div className="rounded-3xl border border-border/80 bg-surface/90 glass-panel p-4.5 sm:p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Средний темп</span>
-              <Target className="size-4 text-muted" />
+            {/* Card 3: Average Activity */}
+            <div className="rounded-3xl border border-border/80 bg-surface/90 glass-panel p-4.5 sm:p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Средний темп</span>
+                <Target className="size-4 text-muted" />
+              </div>
+              <p className="mt-2 text-2xl sm:text-3xl font-black text-fg tabular-nums">
+                <AnimatedNumber value={kpiStats.avgActions} />
+              </p>
+              <p className="mt-1 text-xs text-muted">наказаний на модератора</p>
             </div>
-            <p className="mt-2 text-2xl sm:text-3xl font-black text-fg tabular-nums">
-              {kpiStats.avgActions}
-            </p>
-            <p className="mt-1 text-xs text-muted">наказаний на модератора</p>
-          </div>
 
-          {/* Card 4: Quality & Accuracy */}
-          <div className="rounded-3xl border border-success/30 bg-gradient-to-br from-success/10 to-surface/90 glass-panel p-4.5 sm:p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-success">Точность решений</span>
-              <ShieldCheck className="size-4 text-success" />
+            {/* Card 4: Quality & Accuracy */}
+            <div className="rounded-3xl border border-success/30 bg-gradient-to-br from-success/10 to-surface/90 glass-panel p-4.5 sm:p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-success">Точность решений</span>
+                <ShieldCheck className="size-4 text-success" />
+              </div>
+              <p className="mt-2 text-2xl sm:text-3xl font-black text-success tabular-nums">
+                <AnimatedNumber value={kpiStats.accuracy} suffix="%" />
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                <AnimatedNumber value={kpiStats.totalRemoved} /> снятых из <AnimatedNumber value={kpiStats.totalActions} />
+              </p>
             </div>
-            <p className="mt-2 text-2xl sm:text-3xl font-black text-success tabular-nums">
-              {kpiStats.accuracy}%
-            </p>
-            <p className="mt-1 text-xs text-muted">
-              {kpiStats.totalRemoved} снятых из {kpiStats.totalActions}
-            </p>
           </div>
-        </div>
+        </AnimatedBlock>
       ) : null}
 
       {/* ── All-Time Monthly Record Banner (Always displayed above last month top) ── */}
       {recordHolder ? (
-        <div className="relative overflow-hidden rounded-3xl border border-accent/60 bg-gradient-to-r from-accent/20 via-surface/95 to-gold/15 p-5 sm:p-6 shadow-xl cyber-border-glow">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="relative shrink-0">
-                <div className="grid size-14 place-items-center rounded-2xl bg-accent/20 border border-accent/40 text-accent shadow-lg shadow-accent/20 overflow-hidden">
-                  {recordAvatar ? (
-                    <img src={recordAvatar} alt={recordHolder.name} className="size-full object-cover" />
-                  ) : (
-                    <Flame className="size-7 text-accent animate-pulse" />
-                  )}
-                </div>
-                <div className="absolute -bottom-1 -right-1 grid size-5.5 place-items-center rounded-full bg-accent text-accent-fg text-[11px] shadow border border-surface">
-                  🔥
-                </div>
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-xs font-black uppercase tracking-[0.16em] text-accent flex items-center gap-1.5">
-                    <Flame className="size-3.5 fill-accent/30 text-accent animate-pulse" />
-                    Рекорд по общим наказаниям за месяц
-                  </p>
-                  {recordHolder.month ? (
-                    <span className="rounded-md bg-accent/15 px-2 py-0.5 text-[10px] font-bold text-accent border border-accent/25 font-mono">
-                      {recordHolder.month}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <p className="text-lg font-black text-fg sm:text-xl truncate">
-                    {recordHolder.steamid ? (
-                      <a
-                        href={fearProfileUrl(recordHolder.steamid)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="hover:underline hover:text-accent transition-colors"
-                      >
-                        {recordHolder.name}
-                      </a>
+        <AnimatedBlock delay={120}>
+          <div className="relative overflow-hidden rounded-3xl border border-accent/60 bg-gradient-to-r from-accent/20 via-surface/95 to-gold/15 p-5 sm:p-6 shadow-xl cyber-border-glow">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="relative shrink-0">
+                  <div className="grid size-14 place-items-center rounded-2xl bg-accent/20 border border-accent/40 text-accent shadow-lg shadow-accent/20 overflow-hidden">
+                    {recordAvatar ? (
+                      <img src={recordAvatar} alt={recordHolder.name} className="size-full object-cover" />
                     ) : (
-                      recordHolder.name
+                      <Flame className="size-7 text-accent animate-pulse" />
+                    )}
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 grid size-5.5 place-items-center rounded-full bg-accent text-accent-fg text-[11px] shadow border border-surface">
+                    🔥
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-accent flex items-center gap-1.5">
+                      <Flame className="size-3.5 fill-accent/30 text-accent animate-pulse" />
+                      Рекорд по общим наказаниям за месяц
+                    </p>
+                    {recordHolder.month ? (
+                      <span className="rounded-md bg-accent/15 px-2 py-0.5 text-[10px] font-bold text-accent border border-accent/25 font-mono">
+                        {recordHolder.month}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <p className="text-lg font-black text-fg sm:text-xl truncate">
+                      {recordHolder.steamid ? (
+                        <a
+                          href={fearProfileUrl(recordHolder.steamid)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="hover:underline hover:text-accent transition-colors"
+                        >
+                          {recordHolder.name}
+                        </a>
+                      ) : (
+                        recordHolder.name
+                      )}
+                    </p>
+                    <span className="text-xs font-semibold text-muted">
+                      ({RANK_SHORT[Number(recordHolder.rank ?? 0)] ?? "мод"})
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-muted">
+                    Рекордное количество наказаний:{" "}
+                    <span className="font-extrabold text-accent tabular-nums text-sm">
+                      <AnimatedNumber value={recordHolder.total} />
+                    </span>{" "}
+                    {recordHolder.name.toLowerCase() === "minilyyy" && recordHolder.total === 846 ? (
+                      <span className="text-subtle font-mono text-[11px]">(абсолютный максимум)</span>
+                    ) : (
+                      <span className="text-success font-mono text-[11px] font-bold">(новый рекорд!)</span>
                     )}
                   </p>
-                  <span className="text-xs font-semibold text-muted">
-                    ({RANK_SHORT[Number(recordHolder.rank ?? 0)] ?? "мод"})
-                  </span>
                 </div>
-                <p className="mt-0.5 text-xs text-muted">
-                  Рекордное количество наказаний:{" "}
-                  <span className="font-extrabold text-accent tabular-nums text-sm">
-                    {recordHolder.total}
-                  </span>{" "}
-                  {recordHolder.name.toLowerCase() === "minilyyy" && recordHolder.total === 846 ? (
-                    <span className="text-subtle font-mono text-[11px]">(абсолютный максимум)</span>
-                  ) : (
-                    <span className="text-success font-mono text-[11px] font-bold">(новый рекорд!)</span>
-                  )}
-                </p>
               </div>
             </div>
           </div>
-        </div>
+        </AnimatedBlock>
       ) : null}
 
       {/* ── Last Month Champion Banner ─────────────────────────────── */}
       {data.lastMonthTop ? (
-        <div className="relative overflow-hidden rounded-3xl border border-gold/60 bg-gradient-to-r from-gold/20 via-surface/95 to-gold/10 p-5 sm:p-6 shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="relative shrink-0">
-              <div className="grid size-14 place-items-center rounded-2xl bg-gold/20 border border-gold/40 text-gold shadow-lg shadow-gold/20 overflow-hidden">
-                {lastMonthAvatar ? (
-                  <img src={lastMonthAvatar} alt={data.lastMonthTop.name} className="size-full object-cover" />
-                ) : (
-                  <Crown className="size-7 animate-bounce" />
-                )}
+        <AnimatedBlock delay={160}>
+          <div className="relative overflow-hidden rounded-3xl border border-gold/60 bg-gradient-to-r from-gold/20 via-surface/95 to-gold/10 p-5 sm:p-6 shadow-xl">
+            <div className="flex items-center gap-4">
+              <div className="relative shrink-0">
+                <div className="grid size-14 place-items-center rounded-2xl bg-gold/20 border border-gold/40 text-gold shadow-lg shadow-gold/20 overflow-hidden">
+                  {lastMonthAvatar ? (
+                    <img src={lastMonthAvatar} alt={data.lastMonthTop.name} className="size-full object-cover" />
+                  ) : (
+                    <Crown className="size-7 animate-bounce" />
+                  )}
+                </div>
+                <div className="absolute -bottom-1 -right-1 grid size-5.5 place-items-center rounded-full bg-gold text-surface text-[11px] shadow border border-surface font-bold">
+                  👑
+                </div>
               </div>
-              <div className="absolute -bottom-1 -right-1 grid size-5.5 place-items-center rounded-full bg-gold text-surface text-[11px] shadow border border-surface font-bold">
-                👑
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-gold">
+                  🏆 Победитель прошлого месяца
+                </p>
+                <p className="mt-1 text-lg font-black text-fg sm:text-xl">
+                  {data.lastMonthTop.steamid ? (
+                    <a
+                      href={fearProfileUrl(data.lastMonthTop.steamid)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hover:underline hover:text-gold transition-colors"
+                    >
+                      {data.lastMonthTop.name}
+                    </a>
+                  ) : (
+                    data.lastMonthTop.name
+                  )}
+                  <span className="ml-2 text-xs font-semibold text-muted">
+                    ({RANK_SHORT[Number(data.lastMonthTop.rank ?? 0)] ?? "мод"})
+                  </span>
+                </p>
+                <p className="mt-0.5 text-xs text-muted">
+                  Итоговое количество наказаний: <span className="font-bold text-fg"><AnimatedNumber value={data.lastMonthTop.total} /></span>
+                </p>
               </div>
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-gold">
-                🏆 Победитель прошлого месяца
-              </p>
-              <p className="mt-1 text-lg font-black text-fg sm:text-xl">
-                {data.lastMonthTop.steamid ? (
-                  <a
-                    href={fearProfileUrl(data.lastMonthTop.steamid)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:underline hover:text-gold transition-colors"
-                  >
-                    {data.lastMonthTop.name}
-                  </a>
-                ) : (
-                  data.lastMonthTop.name
-                )}
-                <span className="ml-2 text-xs font-semibold text-muted">
-                  ({RANK_SHORT[Number(data.lastMonthTop.rank ?? 0)] ?? "мод"})
-                </span>
-              </p>
-              <p className="mt-0.5 text-xs text-muted">
-                Итоговое количество наказаний: <span className="font-bold text-fg">{data.lastMonthTop.total}</span>
-              </p>
             </div>
           </div>
-        </div>
+        </AnimatedBlock>
       ) : null}
 
       {/* ── 3D Esports Podium with Real Avatars ─────────────────────── */}
       {rows.length > 0 ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:items-end pt-4">
-          {/* ── 2nd Place (Silver) ── */}
-          {second ? (
-            <div className="order-2 md:order-1 relative overflow-hidden rounded-3xl border border-silver/50 bg-gradient-to-b from-silver/15 via-surface/90 to-elevated/70 glass-panel p-6 text-center shadow-xl transition-all hover:scale-[1.02] hover:border-silver">
-              <div className="relative mx-auto mb-4 inline-block">
-                <ModAvatar
-                  avatar={second.avatar}
-                  name={second.name}
-                  size="xl"
-                  info={online[second.steamid]}
-                  avatarClassName="border-3 border-silver ring-4 ring-silver/30 shadow-lg shadow-silver/15"
-                />
-                <span className="absolute -bottom-2 -right-2 grid size-8.5 place-items-center rounded-2xl bg-silver text-surface text-xs font-black shadow-lg shadow-silver/30 border border-white/40 z-10">
-                  2
-                </span>
-              </div>
-
-              <div className="inline-block rounded-full bg-silver/20 border border-silver/40 px-3 py-0.5 text-[11px] font-black text-silver">
-                2 МЕСТО &middot; СЕРЕБРО
-              </div>
-
-              <h3 className="mt-3 text-xl font-bold text-fg truncate">
-                <a
-                  href={fearProfileUrl(second.steamid)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hover:underline hover:text-silver transition-colors"
-                >
-                  {second.name}
-                </a>
-              </h3>
-              <p className="text-xs text-muted font-mono mt-0.5">
-                {second.steamid} &middot; {RANK_SHORT[rankOf(second)] ?? "мод"}
-              </p>
-
-              <div className="mt-4 rounded-2xl border border-border/60 bg-elevated/60 py-3.5 shadow-inner">
-                <p className="text-3xl font-black tabular-nums text-silver">{second.total}</p>
-                <p className="text-xs text-muted">наказаний за месяц</p>
-              </div>
-
-              <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-bold border-t border-border/60 pt-3">
-                <div className="text-center">
-                  <p className="text-danger">{second.bans ?? 0}</p>
-                  <p className="text-[10px] text-muted">Банов</p>
+        <AnimatedBlock delay={200}>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:items-end pt-4">
+            {/* ── 2nd Place (Silver) ── */}
+            {second ? (
+              <div className="order-2 md:order-1 relative overflow-hidden rounded-3xl border border-silver/50 bg-gradient-to-b from-silver/15 via-surface/90 to-elevated/70 glass-panel p-6 text-center shadow-xl transition-all hover:scale-[1.02] hover:border-silver">
+                <div className="relative mx-auto mb-4 inline-block">
+                  <ModAvatar
+                    avatar={second.avatar}
+                    name={second.name}
+                    size="xl"
+                    info={online[second.steamid]}
+                    avatarClassName="border-3 border-silver ring-4 ring-silver/30 shadow-lg shadow-silver/15"
+                  />
+                  <span className="absolute -bottom-2 -right-2 grid size-8.5 place-items-center rounded-2xl bg-silver text-surface text-xs font-black shadow-lg shadow-silver/30 border border-white/40 z-10">
+                    2
+                  </span>
                 </div>
-                <div className="text-center">
-                  <p className="text-warn">{second.mutes ?? 0}</p>
-                  <p className="text-[10px] text-muted">Мутов</p>
+
+                <div className="inline-block rounded-full bg-silver/20 border border-silver/40 px-3 py-0.5 text-[11px] font-black text-silver">
+                  2 МЕСТО &middot; СЕРЕБРО
                 </div>
-                <div className="text-center">
-                  <p className="text-success">{second.removed ?? 0}</p>
-                  <p className="text-[10px] text-muted">Снято</p>
+
+                <h3 className="mt-3 text-xl font-bold text-fg truncate">
+                  <a
+                    href={fearProfileUrl(second.steamid)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:underline hover:text-silver transition-colors"
+                  >
+                    {second.name}
+                  </a>
+                </h3>
+                <p className="text-xs text-muted font-mono mt-0.5">
+                  {second.steamid} &middot; {RANK_SHORT[rankOf(second)] ?? "мод"}
+                </p>
+
+                <div className="mt-4 rounded-2xl border border-border/60 bg-elevated/60 py-3.5 shadow-inner">
+                  <p className="text-3xl font-black tabular-nums text-silver">
+                    <AnimatedNumber value={second.total} />
+                  </p>
+                  <p className="text-xs text-muted">наказаний за месяц</p>
                 </div>
-              </div>
 
-              {second.slug ? (
-                <Link
-                  to="/$slug"
-                  params={{ slug: second.slug }}
-                  className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-border/80 bg-elevated/70 py-2 text-xs font-bold text-muted hover:border-silver hover:text-silver transition-all"
-                >
-                  Детальная статистика
-                  <ChevronRight className="size-3.5" />
-                </Link>
-              ) : null}
-            </div>
-          ) : (
-            <div className="order-2 md:order-1 rounded-3xl border border-border/40 p-8 text-center text-muted">
-              Нет претендента на 2 место
-            </div>
-          )}
-
-          {/* ── 1st Place (Gold Champion, Center & Taller) ── */}
-          {first ? (
-            <div className="order-1 md:order-2 relative overflow-hidden rounded-3xl border-2 border-gold bg-gradient-to-b from-gold/25 via-surface/95 to-elevated/80 glass-panel p-8 text-center shadow-2xl shadow-gold/20 transition-all hover:scale-[1.03] md:-translate-y-6">
-              <div className="absolute -top-12 left-1/2 -translate-x-1/2 size-48 bg-gold/25 blur-3xl pointer-events-none" />
-
-              <div className="relative mx-auto mb-4 inline-block">
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-gold animate-bounce z-10 pointer-events-none">
-                  <Crown className="size-9 drop-shadow-[0_0_12px_rgba(212,176,106,0.9)]" />
+                <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-bold border-t border-border/60 pt-3">
+                  <div className="text-center">
+                    <p className="text-danger"><AnimatedNumber value={second.bans ?? 0} /></p>
+                    <p className="text-[10px] text-muted">Банов</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-warn"><AnimatedNumber value={second.mutes ?? 0} /></p>
+                    <p className="text-[10px] text-muted">Мутов</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-success"><AnimatedNumber value={second.removed ?? 0} /></p>
+                    <p className="text-[10px] text-muted">Снято</p>
+                  </div>
                 </div>
-                <ModAvatar
-                  avatar={first.avatar}
-                  name={first.name}
-                  size="xl"
-                  info={online[first.steamid]}
-                  avatarClassName="border-3 border-gold ring-4 ring-gold/40 shadow-xl shadow-gold/25"
-                />
-                <span className="absolute -bottom-2.5 -right-2.5 grid size-9 place-items-center rounded-2xl bg-gold text-surface text-sm font-black shadow-lg shadow-gold/40 border border-gold-light/40 z-10">
-                  1
-                </span>
+
+                {second.slug ? (
+                  <Link
+                    to="/$slug"
+                    params={{ slug: second.slug }}
+                    className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-border/80 bg-elevated/70 py-2 text-xs font-bold text-muted hover:border-silver hover:text-silver transition-all"
+                  >
+                    Детальная статистика
+                    <ChevronRight className="size-3.5" />
+                  </Link>
+                ) : null}
               </div>
-
-              <div className="inline-block rounded-full bg-gold/25 border border-gold/50 px-4 py-1 text-xs font-black text-gold shadow-[0_0_15px_rgba(212,176,106,0.4)]">
-                🏆 ЧЕМПИОН МЕСЯЦА
+            ) : (
+              <div className="order-2 md:order-1 rounded-3xl border border-border/40 p-8 text-center text-muted">
+                Нет претендента на 2 место
               </div>
+            )}
 
-              <h3 className="mt-3.5 text-2xl font-black text-fg truncate">
-                <a
-                  href={fearProfileUrl(first.steamid)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hover:underline hover:text-gold transition-colors"
-                >
-                  {first.name}
-                </a>
-              </h3>
-              <p className="text-xs text-muted font-mono mt-0.5">
-                {first.steamid} &middot; {RANK_SHORT[rankOf(first)] ?? "мод"}
-              </p>
+            {/* ── 1st Place (Gold Champion, Center & Taller) ── */}
+            {first ? (
+              <div className="order-1 md:order-2 relative overflow-hidden rounded-3xl border-2 border-gold bg-gradient-to-b from-gold/25 via-surface/95 to-elevated/80 glass-panel p-8 text-center shadow-2xl shadow-gold/20 transition-all hover:scale-[1.03] md:-translate-y-6">
+                <div className="absolute -top-12 left-1/2 -translate-x-1/2 size-48 bg-gold/25 blur-3xl pointer-events-none" />
 
-              <div className="mt-5 rounded-2xl border border-gold/40 bg-elevated/80 py-4 shadow-inner">
-                <p className="text-4xl font-black tabular-nums text-gold">{first.total}</p>
-                <p className="text-xs font-medium text-muted mt-0.5">всего наказаний за месяц</p>
-              </div>
-
-              <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-bold border-t border-border/60 pt-3">
-                <div className="text-center">
-                  <p className="text-danger text-sm font-black">{first.bans ?? 0}</p>
-                  <p className="text-[10px] text-muted">Банов</p>
+                <div className="relative mx-auto mb-4 inline-block">
+                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-gold animate-bounce z-10 pointer-events-none">
+                    <Crown className="size-9 drop-shadow-[0_0_12px_rgba(212,176,106,0.9)]" />
+                  </div>
+                  <ModAvatar
+                    avatar={first.avatar}
+                    name={first.name}
+                    size="xl"
+                    info={online[first.steamid]}
+                    avatarClassName="border-3 border-gold ring-4 ring-gold/40 shadow-xl shadow-gold/25"
+                  />
+                  <span className="absolute -bottom-2.5 -right-2.5 grid size-9 place-items-center rounded-2xl bg-gold text-surface text-sm font-black shadow-lg shadow-gold/40 border border-gold-light/40 z-10">
+                    1
+                  </span>
                 </div>
-                <div className="text-center">
-                  <p className="text-warn text-sm font-black">{first.mutes ?? 0}</p>
-                  <p className="text-[10px] text-muted">Мутов</p>
+
+                <div className="inline-block rounded-full bg-gold/25 border border-gold/50 px-4 py-1 text-xs font-black text-gold shadow-[0_0_15px_rgba(212,176,106,0.4)]">
+                  🏆 ЧЕМПИОН МЕСЯЦА
                 </div>
-                <div className="text-center">
-                  <p className="text-success text-sm font-black">{first.removed ?? 0}</p>
-                  <p className="text-[10px] text-muted">Снято</p>
+
+                <h3 className="mt-3.5 text-2xl font-black text-fg truncate">
+                  <a
+                    href={fearProfileUrl(first.steamid)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:underline hover:text-gold transition-colors"
+                  >
+                    {first.name}
+                  </a>
+                </h3>
+                <p className="text-xs text-muted font-mono mt-0.5">
+                  {first.steamid} &middot; {RANK_SHORT[rankOf(first)] ?? "мод"}
+                </p>
+
+                <div className="mt-5 rounded-2xl border border-gold/40 bg-elevated/80 py-4 shadow-inner">
+                  <p className="text-4xl font-black tabular-nums text-gold">
+                    <AnimatedNumber value={first.total} />
+                  </p>
+                  <p className="text-xs font-medium text-muted mt-0.5">всего наказаний за месяц</p>
                 </div>
-              </div>
 
-              {first.slug ? (
-                <Link
-                  to="/$slug"
-                  params={{ slug: first.slug }}
-                  className="mt-5 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-gold/50 bg-gold/15 py-2.5 text-xs font-black text-gold hover:bg-gold hover:text-surface transition-all shadow-md shadow-gold/20"
-                >
-                  Детальная статистика чемпиона
-                  <ChevronRight className="size-3.5" />
-                </Link>
-              ) : null}
-            </div>
-          ) : null}
-
-          {/* ── 3rd Place (Bronze) ── */}
-          {third ? (
-            <div className="order-3 relative overflow-hidden rounded-3xl border border-bronze/50 bg-gradient-to-b from-bronze/15 via-surface/90 to-elevated/70 glass-panel p-6 text-center shadow-xl transition-all hover:scale-[1.02] hover:border-bronze">
-              <div className="relative mx-auto mb-4 inline-block">
-                <ModAvatar
-                  avatar={third.avatar}
-                  name={third.name}
-                  size="xl"
-                  info={online[third.steamid]}
-                  avatarClassName="border-3 border-bronze ring-4 ring-bronze/30 shadow-lg shadow-bronze/15"
-                />
-                <span className="absolute -bottom-2 -right-2 grid size-8.5 place-items-center rounded-2xl bg-bronze text-surface text-xs font-black shadow-lg shadow-bronze/30 border border-bronze-light/40 z-10">
-                  3
-                </span>
-              </div>
-
-              <div className="inline-block rounded-full bg-bronze/20 border border-bronze/40 px-3 py-0.5 text-[11px] font-black text-bronze">
-                3 МЕСТО &middot; БРОНЗА
-              </div>
-
-              <h3 className="mt-3 text-xl font-bold text-fg truncate">
-                <a
-                  href={fearProfileUrl(third.steamid)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hover:underline hover:text-bronze transition-colors"
-                >
-                  {third.name}
-                </a>
-              </h3>
-              <p className="text-xs text-muted font-mono mt-0.5">
-                {third.steamid} &middot; {RANK_SHORT[rankOf(third)] ?? "мод"}
-              </p>
-
-              <div className="mt-4 rounded-2xl border border-border/60 bg-elevated/60 py-3.5 shadow-inner">
-                <p className="text-3xl font-black tabular-nums text-bronze">{third.total}</p>
-                <p className="text-xs text-muted">наказаний за месяц</p>
-              </div>
-
-              <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-bold border-t border-border/60 pt-3">
-                <div className="text-center">
-                  <p className="text-danger">{third.bans ?? 0}</p>
-                  <p className="text-[10px] text-muted">Банов</p>
+                <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-bold border-t border-border/60 pt-3">
+                  <div className="text-center">
+                    <p className="text-danger text-sm font-black"><AnimatedNumber value={first.bans ?? 0} /></p>
+                    <p className="text-[10px] text-muted">Банов</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-warn text-sm font-black"><AnimatedNumber value={first.mutes ?? 0} /></p>
+                    <p className="text-[10px] text-muted">Мутов</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-success text-sm font-black"><AnimatedNumber value={first.removed ?? 0} /></p>
+                    <p className="text-[10px] text-muted">Снято</p>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-warn">{third.mutes ?? 0}</p>
-                  <p className="text-[10px] text-muted">Мутов</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-success">{third.removed ?? 0}</p>
-                  <p className="text-[10px] text-muted">Снято</p>
-                </div>
-              </div>
 
-              {third.slug ? (
-                <Link
-                  to="/$slug"
-                  params={{ slug: third.slug }}
-                  className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-border/80 bg-elevated/70 py-2 text-xs font-bold text-muted hover:border-bronze hover:text-bronze transition-all"
-                >
-                  Детальная статистика
-                  <ChevronRight className="size-3.5" />
-                </Link>
-              ) : null}
-            </div>
-          ) : (
-            <div className="order-3 rounded-3xl border border-border/40 p-8 text-center text-muted">
-              Нет претендента на 3 место
-            </div>
-          )}
-        </div>
+                {first.slug ? (
+                  <Link
+                    to="/$slug"
+                    params={{ slug: first.slug }}
+                    className="mt-5 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-gold/50 bg-gold/15 py-2.5 text-xs font-black text-gold hover:bg-gold hover:text-surface transition-all shadow-md shadow-gold/20"
+                  >
+                    Детальная статистика чемпиона
+                    <ChevronRight className="size-3.5" />
+                  </Link>
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* ── 3rd Place (Bronze) ── */}
+            {third ? (
+              <div className="order-3 relative overflow-hidden rounded-3xl border border-bronze/50 bg-gradient-to-b from-bronze/15 via-surface/90 to-elevated/70 glass-panel p-6 text-center shadow-xl transition-all hover:scale-[1.02] hover:border-bronze">
+                <div className="relative mx-auto mb-4 inline-block">
+                  <ModAvatar
+                    avatar={third.avatar}
+                    name={third.name}
+                    size="xl"
+                    info={online[third.steamid]}
+                    avatarClassName="border-3 border-bronze ring-4 ring-bronze/30 shadow-lg shadow-bronze/15"
+                  />
+                  <span className="absolute -bottom-2 -right-2 grid size-8.5 place-items-center rounded-2xl bg-bronze text-surface text-xs font-black shadow-lg shadow-bronze/30 border border-bronze-light/40 z-10">
+                    3
+                  </span>
+                </div>
+
+                <div className="inline-block rounded-full bg-bronze/20 border border-bronze/40 px-3 py-0.5 text-[11px] font-black text-bronze">
+                  3 МЕСТО &middot; БРОНЗА
+                </div>
+
+                <h3 className="mt-3 text-xl font-bold text-fg truncate">
+                  <a
+                    href={fearProfileUrl(third.steamid)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:underline hover:text-bronze transition-colors"
+                  >
+                    {third.name}
+                  </a>
+                </h3>
+                <p className="text-xs text-muted font-mono mt-0.5">
+                  {third.steamid} &middot; {RANK_SHORT[rankOf(third)] ?? "мод"}
+                </p>
+
+                <div className="mt-4 rounded-2xl border border-border/60 bg-elevated/60 py-3.5 shadow-inner">
+                  <p className="text-3xl font-black tabular-nums text-bronze">
+                    <AnimatedNumber value={third.total} />
+                  </p>
+                  <p className="text-xs text-muted">наказаний за месяц</p>
+                </div>
+
+                <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-bold border-t border-border/60 pt-3">
+                  <div className="text-center">
+                    <p className="text-danger"><AnimatedNumber value={third.bans ?? 0} /></p>
+                    <p className="text-[10px] text-muted">Банов</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-warn"><AnimatedNumber value={third.mutes ?? 0} /></p>
+                    <p className="text-[10px] text-muted">Мутов</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-success"><AnimatedNumber value={third.removed ?? 0} /></p>
+                    <p className="text-[10px] text-muted">Снято</p>
+                  </div>
+                </div>
+
+                {third.slug ? (
+                  <Link
+                    to="/$slug"
+                    params={{ slug: third.slug }}
+                    className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-border/80 bg-elevated/70 py-2 text-xs font-bold text-muted hover:border-bronze hover:text-bronze transition-all"
+                  >
+                    Детальная статистика
+                    <ChevronRight className="size-3.5" />
+                  </Link>
+                ) : null}
+              </div>
+            ) : (
+              <div className="order-3 rounded-3xl border border-border/40 p-8 text-center text-muted">
+                Нет претендента на 3 место
+              </div>
+            )}
+          </div>
+        </AnimatedBlock>
       ) : null}
 
       {/* ── Contenders Comparison Chart ────────────────────────────── */}
       {topContendersChart.length > 0 ? (
-        <section className="rounded-3xl border border-border/80 bg-surface/90 glass-panel p-5 sm:p-6 shadow-sm">
+        <AnimatedBlock delay={240}>
+          <section className="rounded-3xl border border-border/80 bg-surface/90 glass-panel p-5 sm:p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-muted flex items-center gap-2">
@@ -923,11 +941,13 @@ export function TopsView() {
             )}
           </div>
         </section>
+        </AnimatedBlock>
       ) : null}
 
       {/* ── Monthly Nominations (4 Особые номинации месяца) ─────────── */}
       {nominations ? (
-        <section className="space-y-3.5">
+        <AnimatedBlock delay={280}>
+          <section className="space-y-3.5">
           <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-subtle px-1 flex items-center gap-2">
             <Zap className="size-4 text-accent" />
             Особые номинации и достижения сезона
@@ -991,7 +1011,7 @@ export function TopsView() {
                   <p className="font-bold text-fg truncate text-sm mt-0.5">{nominations.topNorma.name}</p>
                   <p className="text-xs text-muted">
                     <span className="font-black text-success">
-                      {Math.round((nominations.topNorma.total / (nominations.topNorma.norma?.month || 1)) * 100)}%
+                      <AnimatedNumber value={Math.round((nominations.topNorma.total / (nominations.topNorma.norma?.month || 1)) * 100)} suffix="%" />
                     </span>{" "}
                     от нормы
                   </p>
@@ -1014,17 +1034,19 @@ export function TopsView() {
                   </p>
                   <p className="font-bold text-fg truncate text-sm mt-0.5">{nominations.topClean.name}</p>
                   <p className="text-xs text-muted">
-                    <span className="font-black text-accent">{nominations.topClean.removed ?? 0}</span> снятых из {nominations.topClean.total}
+                    <span className="font-black text-accent"><AnimatedNumber value={nominations.topClean.removed ?? 0} /></span> снятых из <AnimatedNumber value={nominations.topClean.total} />
                   </p>
                 </div>
               </div>
             ) : null}
           </div>
         </section>
+        </AnimatedBlock>
       ) : null}
 
       {/* ── Full Leaderboard Table (Рейтинговая таблица состава) ────── */}
-      <section className="rounded-3xl border border-border/80 bg-surface/90 glass-panel overflow-hidden shadow-sm">
+      <AnimatedBlock delay={320}>
+        <section className="rounded-3xl border border-border/80 bg-surface/90 glass-panel overflow-hidden shadow-sm">
         {/* Table Toolbar */}
         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between border-b border-border/60">
           <div className="flex items-center gap-3">
@@ -1173,16 +1195,16 @@ export function TopsView() {
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-center font-bold text-danger tabular-nums">
-                      {m.bans ?? 0}
+                      <AnimatedNumber value={m.bans ?? 0} />
                     </td>
                     <td className="px-5 py-3.5 text-center font-bold text-warn tabular-nums">
-                      {m.mutes ?? 0}
+                      <AnimatedNumber value={m.mutes ?? 0} />
                     </td>
                     <td className="px-5 py-3.5 text-center font-bold text-success tabular-nums">
-                      {m.removed ?? 0}
+                      <AnimatedNumber value={m.removed ?? 0} />
                     </td>
                     <td className="px-5 py-3.5 text-right font-black text-sm text-fg tabular-nums">
-                      {m.total}
+                      <AnimatedNumber value={m.total} />
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       {m.slug ? (
@@ -1203,6 +1225,7 @@ export function TopsView() {
           </table>
         </div>
       </section>
+      </AnimatedBlock>
 
       {/* ── Hall of Fame Archive ────────────────────────────────────── */}
       {data.history && data.history.length ? (

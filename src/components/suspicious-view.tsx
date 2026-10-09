@@ -19,6 +19,7 @@ import { PageHeaderSkeleton, RowsSkeleton } from "@/components/skeletons";
 import { getSuspiciousFn } from "@/lib/fn";
 import { fearProfileUrl } from "@/lib/constants";
 import type { SuspiciousPayload, SuspiciousSource } from "@/lib/types";
+import { AnimatedBlock, AnimatedNumber } from "@/components/animated-number";
 import { cn } from "@/lib/utils";
 
 const SOURCE_BADGES: Record<SuspiciousSource, { label: string; tone: "muted" | "warn" | "danger" }> = {
@@ -99,71 +100,76 @@ export function SuspiciousView() {
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8 space-y-6 animate-in fade-in duration-300">
       {/* ── Top Header Banner ──────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-3xl border border-danger/30 bg-gradient-to-r from-danger/10 via-surface/95 to-elevated/80 p-6 sm:p-7 shadow-xl glass-panel cyber-border-glow">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-danger/20 border border-danger/40 px-3 py-0.5 text-xs font-black uppercase tracking-wider text-danger">
-                СИСТЕМА МОНИТОРИНГА
-              </span>
-              {data?.updatedAt ? (
-                <span className="font-mono text-xs text-subtle">
-                  обновлено {fmtTime(data.updatedAt)} МСК
+      <AnimatedBlock delay={0}>
+        <div className="relative overflow-hidden rounded-3xl border border-danger/30 bg-gradient-to-r from-danger/10 via-surface/95 to-elevated/80 p-6 sm:p-7 shadow-xl glass-panel cyber-border-glow">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-danger/20 border border-danger/40 px-3 py-0.5 text-xs font-black uppercase tracking-wider text-danger">
+                  СИСТЕМА МОНИТОРИНГА
                 </span>
-              ) : null}
+                {data?.updatedAt ? (
+                  <span className="font-mono text-xs text-subtle">
+                    обновлено {fmtTime(data.updatedAt)} МСК
+                  </span>
+                ) : null}
+              </div>
+              <h1 className="mt-2 text-2xl sm:text-3xl font-black text-fg flex items-center gap-2.5">
+                Подозрительные аккаунты
+                <ShieldAlert className="size-6 text-danger animate-pulse" />
+              </h1>
+              <p className="mt-1 text-xs text-muted max-w-2xl leading-relaxed">
+                В радаре отображаются исключительно игроки, находящиеся онлайн на серверах. Как только игрок
+                выходит с сервера (даже если на него есть жалоба или тикет), он автоматически снимается со списка.
+              </p>
             </div>
-            <h1 className="mt-2 text-2xl sm:text-3xl font-black text-fg flex items-center gap-2.5">
-              Подозрительные аккаунты
-              <ShieldAlert className="size-6 text-danger animate-pulse" />
-            </h1>
-            <p className="mt-1 text-xs text-muted max-w-2xl leading-relaxed">
-              В радаре отображаются исключительно игроки, находящиеся онлайн на серверах. Как только игрок
-              выходит с сервера (даже если на него есть жалоба или тикет), он автоматически снимается со списка.
-            </p>
-          </div>
 
-          <Button
-            variant="secondary"
-            className="h-10 rounded-xl border-border/80 bg-elevated/80 px-4 text-xs font-bold text-fg hover:border-danger/40 shadow-sm"
-            disabled={refreshing}
-            onClick={() => void load(true)}
-          >
-            {refreshing ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-            Обновить радар
-          </Button>
+            <Button
+              variant="secondary"
+              className="h-10 rounded-xl border-border/80 bg-elevated/80 px-4 text-xs font-bold text-fg hover:border-danger/40 shadow-sm"
+              disabled={refreshing}
+              onClick={() => void load(true)}
+            >
+              {refreshing ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+              Обновить радар
+            </Button>
+          </div>
         </div>
-      </div>
+      </AnimatedBlock>
 
       {ticketsWarning ? (
-        <div className="flex items-start gap-3 rounded-2xl border border-warn/30 bg-warn/10 p-4 text-xs">
-          <TriangleAlert className="mt-0.5 size-4.5 shrink-0 text-warn" />
-          <div className="min-w-0">
-            <p className="font-bold text-warn">Интеграция тикетов fearproject.ru не активна</p>
-            <p className="mt-0.5 text-muted leading-relaxed">
-              {!ticketsWarning.configured
-                ? "В воркере статистики не задан FEAR_ADMIN_COOKIE — игроки из тикетов и жалобы временно не синхронизируются."
-                : `Ошибка синхронизации тикетов: ${ticketsWarning.error}`}
-            </p>
+        <AnimatedBlock delay={50}>
+          <div className="flex items-start gap-3 rounded-2xl border border-warn/30 bg-warn/10 p-4 text-xs">
+            <TriangleAlert className="mt-0.5 size-4.5 shrink-0 text-warn" />
+            <div className="min-w-0">
+              <p className="font-bold text-warn">Интеграция тикетов fearproject.ru не активна</p>
+              <p className="mt-0.5 text-muted leading-relaxed">
+                {!ticketsWarning.configured
+                  ? "В воркере статистики не задан FEAR_ADMIN_COOKIE — игроки из тикетов и жалобы временно не синхронизируются."
+                  : `Ошибка синхронизации тикетов: ${ticketsWarning.error}`}
+              </p>
+            </div>
           </div>
-        </div>
+        </AnimatedBlock>
       ) : null}
 
       {/* ── Suspicious Players List ─────────────────────────────────── */}
-      {players.length === 0 ? (
-        <div className="rounded-3xl border border-border/80 bg-surface/90 glass-panel px-6 py-16 text-center shadow-sm">
-          <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-success/15 border border-success/30 text-success shadow-lg shadow-success/10">
-            <ShieldCheck className="size-8" />
+      <AnimatedBlock delay={100}>
+        {players.length === 0 ? (
+          <div className="rounded-3xl border border-border/80 bg-surface/90 glass-panel px-6 py-16 text-center shadow-sm">
+            <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-success/15 border border-success/30 text-success shadow-lg shadow-success/10">
+              <ShieldCheck className="size-8" />
+            </div>
+            <p className="mt-4 text-base font-extrabold text-fg">Подозрительных игроков онлайн не обнаружено</p>
+            <p className="mt-1 text-xs text-muted">
+              На серверах проекта сейчас нет активных игроков с жалобами или аномальной статистикой.
+            </p>
+            <p className="mt-3 font-mono text-[11px] text-subtle">
+              Радар проверяет серверы каждые 30 секунд. Игроки не в сети в списке не отображаются.
+            </p>
           </div>
-          <p className="mt-4 text-base font-extrabold text-fg">Подозрительных игроков онлайн не обнаружено</p>
-          <p className="mt-1 text-xs text-muted">
-            На серверах проекта сейчас нет активных игроков с жалобами или аномальной статистикой.
-          </p>
-          <p className="mt-3 font-mono text-[11px] text-subtle">
-            Радар проверяет серверы каждые 30 секунд. Игроки не в сети в списке не отображаются.
-          </p>
-        </div>
-      ) : (
-        <ul className="divide-y divide-border/60 overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel shadow-sm">
+        ) : (
+          <ul className="divide-y divide-border/60 overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel shadow-sm">
           {players.map((p) => (
             <li
               key={p.steamid}
@@ -214,7 +220,7 @@ export function SuspiciousView() {
 
                 {p.reports != null && p.reports > 1 ? (
                   <Badge tone="muted" className="font-mono">
-                    репортов: {p.reports}
+                    репортов: <AnimatedNumber value={p.reports} />
                   </Badge>
                 ) : null}
 
@@ -253,14 +259,17 @@ export function SuspiciousView() {
           ))}
         </ul>
       )}
+      </AnimatedBlock>
 
-      <p className="flex items-start gap-2 text-xs text-subtle px-1">
-        <TicketCheck className="mt-0.5 size-4 shrink-0 text-accent" />
-        <span>
-          KD и игровое время вычисляются по данным профиля FearProject. Администрация и модераторы серверов
-          исключены из проверки.
-        </span>
-      </p>
+      <AnimatedBlock delay={150}>
+        <p className="flex items-start gap-2 text-xs text-subtle px-1">
+          <TicketCheck className="mt-0.5 size-4 shrink-0 text-accent" />
+          <span>
+            KD и игровое время вычисляются по данным профиля FearProject. Администрация и модераторы серверов
+            исключены из проверки.
+          </span>
+        </p>
+      </AnimatedBlock>
     </div>
   );
 }

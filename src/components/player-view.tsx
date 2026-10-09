@@ -20,6 +20,7 @@ import { getPlayerRecordsFn } from "@/lib/fn";
 import { downloadCsv } from "@/lib/csv";
 import { fearProfileUrl } from "@/lib/constants";
 import type { PlayerRecord } from "@/lib/types";
+import { AnimatedBlock, AnimatedNumber } from "@/components/animated-number";
 import { cn } from "@/lib/utils";
 
 function fmtDate(sec: number) {
@@ -153,86 +154,91 @@ export function PlayerView() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8 space-y-6 animate-in fade-in duration-300">
-      <div>
-        <Link
-          to="/stats"
-          className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-elevated/70 px-3 py-1.5 text-xs font-bold text-muted hover:border-accent hover:text-fg transition-all shadow-sm"
-        >
-          <ArrowLeft className="size-3.5" />
-          Назад к панели
-        </Link>
-      </div>
+      <AnimatedBlock delay={0}>
+        <div>
+          <Link
+            to="/stats"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-elevated/70 px-3 py-1.5 text-xs font-bold text-muted hover:border-accent hover:text-fg transition-all shadow-sm"
+          >
+            <ArrowLeft className="size-3.5" />
+            Назад к панели
+          </Link>
+        </div>
+      </AnimatedBlock>
 
       {/* ── Player Header Card ─────────────────────────────────────── */}
-      <article className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-r from-surface via-surface/95 to-elevated/70 p-6 sm:p-7 shadow-2xl glass-panel cyber-border-glow">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4 sm:gap-5">
-            {playerAvatar ? (
-              <img
-                src={playerAvatar}
-                alt={playerName ?? "Avatar"}
-                className="size-16 shrink-0 rounded-2xl object-cover border-2 border-border/80 shadow-md ring-2 ring-accent/20"
-              />
-            ) : (
-              <span className="grid size-16 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-surface to-elevated text-2xl font-black text-fg border-2 border-border/80 shadow-md">
-                {initial}
-              </span>
-            )}
-            <div className="min-w-0">
-              <h1 className="truncate text-xl sm:text-2xl font-black text-fg">
-                {playerName ?? "Игрок"}
-              </h1>
-              <p className="mt-0.5 truncate font-mono text-xs text-subtle">{steamid}</p>
-              <div className="mt-1 flex items-center gap-3 text-xs text-muted">
-                <span>{month ? `Период: ${month}` : "Вся история"}</span>
-                <span>&middot;</span>
-                <span className="font-bold text-fg">{(records ?? []).length} наказаний</span>
+      <AnimatedBlock delay={50}>
+        <article className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-r from-surface via-surface/95 to-elevated/70 p-6 sm:p-7 shadow-2xl glass-panel cyber-border-glow">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4 sm:gap-5">
+              {playerAvatar ? (
+                <img
+                  src={playerAvatar}
+                  alt={playerName ?? "Avatar"}
+                  className="size-16 shrink-0 rounded-2xl object-cover border-2 border-border/80 shadow-md ring-2 ring-accent/20"
+                />
+              ) : (
+                <span className="grid size-16 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-surface to-elevated text-2xl font-black text-fg border-2 border-border/80 shadow-md">
+                  {initial}
+                </span>
+              )}
+              <div className="min-w-0">
+                <h1 className="truncate text-xl sm:text-2xl font-black text-fg">
+                  {playerName ?? "Игрок"}
+                </h1>
+                <p className="mt-0.5 truncate font-mono text-xs text-subtle">{steamid}</p>
+                <div className="mt-1 flex items-center gap-3 text-xs text-muted">
+                  <span>{month ? `Период: ${month}` : "Вся история"}</span>
+                  <span>&middot;</span>
+                  <span className="font-bold text-fg"><AnimatedNumber value={(records ?? []).length} /> наказаний</span>
+                </div>
               </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <a
+                href={fearProfileUrl(steamid)}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border/80 bg-elevated/80 px-3.5 text-xs font-bold text-fg hover:border-accent hover:text-accent transition-all shadow-sm"
+              >
+                <ExternalLink className="size-3.5" />
+                Профиль FEAR
+              </a>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-9 rounded-xl border-border/80 bg-elevated/80 px-3.5 text-xs font-bold text-fg hover:border-accent shadow-sm"
+                onClick={exportCsv}
+                disabled={!visible.length}
+              >
+                <Download className="size-3.5" />
+                CSV
+              </Button>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            <a
-              href={fearProfileUrl(steamid)}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border/80 bg-elevated/80 px-3.5 text-xs font-bold text-fg hover:border-accent hover:text-accent transition-all shadow-sm"
-            >
-              <ExternalLink className="size-3.5" />
-              Профиль FEAR
-            </a>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-9 rounded-xl border-border/80 bg-elevated/80 px-3.5 text-xs font-bold text-fg hover:border-accent shadow-sm"
-              onClick={exportCsv}
-              disabled={!visible.length}
-            >
-              <Download className="size-3.5" />
-              CSV
-            </Button>
+          {/* Quick stat chips */}
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 border-t border-border/60 pt-4">
+            <div className="rounded-xl border border-danger/25 bg-danger/10 p-2.5 text-center">
+              <p className="text-xl font-black text-danger tabular-nums"><AnimatedNumber value={banCount} /></p>
+              <p className="text-[11px] font-bold text-danger/80">Банов</p>
+            </div>
+            <div className="rounded-xl border border-warn/25 bg-warn/10 p-2.5 text-center">
+              <p className="text-xl font-black text-warn tabular-nums"><AnimatedNumber value={muteCount} /></p>
+              <p className="text-[11px] font-bold text-warn/80">Мутов</p>
+            </div>
+            <div className="col-span-2 sm:col-span-1 rounded-xl border border-accent/25 bg-accent/10 p-2.5 text-center">
+              <p className="text-xl font-black text-accent tabular-nums"><AnimatedNumber value={(records ?? []).length} /></p>
+              <p className="text-[11px] font-bold text-accent">Всего</p>
+            </div>
           </div>
-        </div>
-
-        {/* Quick stat chips */}
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 border-t border-border/60 pt-4">
-          <div className="rounded-xl border border-danger/25 bg-danger/10 p-2.5 text-center">
-            <p className="text-xl font-black text-danger tabular-nums">{banCount}</p>
-            <p className="text-[11px] font-bold text-danger/80">Банов</p>
-          </div>
-          <div className="rounded-xl border border-warn/25 bg-warn/10 p-2.5 text-center">
-            <p className="text-xl font-black text-warn tabular-nums">{muteCount}</p>
-            <p className="text-[11px] font-bold text-warn/80">Мутов</p>
-          </div>
-          <div className="col-span-2 sm:col-span-1 rounded-xl border border-accent/25 bg-accent/10 p-2.5 text-center">
-            <p className="text-xl font-black text-accent tabular-nums">{(records ?? []).length}</p>
-            <p className="text-[11px] font-bold text-accent">Всего</p>
-          </div>
-        </div>
-      </article>
+        </article>
+      </AnimatedBlock>
 
       {/* ── Sanctions History List ─────────────────────────────────── */}
-      <section className="rounded-3xl border border-border/80 bg-surface/90 glass-panel overflow-hidden shadow-sm">
+      <AnimatedBlock delay={100}>
+        <section className="rounded-3xl border border-border/80 bg-surface/90 glass-panel overflow-hidden shadow-sm">
         <div className="p-5 border-b border-border/60 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-sm font-extrabold text-fg uppercase tracking-wider">
@@ -341,11 +347,14 @@ export function PlayerView() {
           </ul>
         )}
       </section>
+      </AnimatedBlock>
 
-      <p className="flex items-center gap-2 text-xs text-subtle">
-        <ShieldAlert className="size-3.5 text-accent" />
-        История всех наказаний игрока синхронизирована с серверами FearProject за всё время.
-      </p>
+      <AnimatedBlock delay={150}>
+        <p className="flex items-center gap-2 text-xs text-subtle">
+          <ShieldAlert className="size-3.5 text-accent" />
+          История всех наказаний игрока синхронизирована с серверами FearProject за всё время.
+        </p>
+      </AnimatedBlock>
     </div>
   );
 }

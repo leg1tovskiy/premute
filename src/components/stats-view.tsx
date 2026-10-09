@@ -31,6 +31,7 @@ import { getStatsFn, moderatorOnlineFn } from "@/lib/fn";
 import { RANK_SHORT, fearProfileUrl } from "@/lib/constants";
 import { usePanel } from "@/lib/panel";
 import type { StatsPayload } from "@/lib/types";
+import { AnimatedBlock, AnimatedNumber } from "@/components/animated-number";
 import { cn } from "@/lib/utils";
 
 type OnlineInfo = { server: string; nickname: string; map: string | null };
@@ -69,7 +70,9 @@ function MetricTile({
 }) {
   return (
     <div className={cn("flex flex-col items-center justify-center rounded-2xl border px-3 py-3 text-center", className)}>
-      <p className={cn("text-2xl font-bold tabular-nums leading-none", valueClassName)}>{value}</p>
+      <p className={cn("text-2xl font-bold tabular-nums leading-none", valueClassName)}>
+        <AnimatedNumber value={value} />
+      </p>
       <p className="mt-1.5 text-xs font-medium leading-tight text-muted">{label}</p>
       {sub ? <p className="mt-1 text-[11px] leading-tight text-subtle">{sub}</p> : null}
     </div>
@@ -204,7 +207,9 @@ function ModeratorCard({
       <div className="relative z-10 mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {/* Баны */}
         <div className="rounded-2xl border border-danger/25 bg-danger/10 p-3 text-center transition-all hover:bg-danger/15">
-          <p className="text-2xl font-black tabular-nums text-danger">{m.bans ?? 0}</p>
+          <p className="text-2xl font-black tabular-nums text-danger">
+            <AnimatedNumber value={m.bans ?? 0} />
+          </p>
           <p className="mt-1 text-[11px] font-medium text-danger/80 flex items-center justify-center gap-1">
             <Hammer className="size-3" /> Баны
           </p>
@@ -212,7 +217,9 @@ function ModeratorCard({
 
         {/* Муты */}
         <div className="rounded-2xl border border-warn/25 bg-warn/10 p-3 text-center transition-all hover:bg-warn/15">
-          <p className="text-2xl font-black tabular-nums text-warn">{m.mutes ?? 0}</p>
+          <p className="text-2xl font-black tabular-nums text-warn">
+            <AnimatedNumber value={m.mutes ?? 0} />
+          </p>
           <p className="mt-1 text-[11px] font-medium text-warn/80 flex items-center justify-center gap-1">
             <VolumeX className="size-3" /> Муты
           </p>
@@ -220,13 +227,17 @@ function ModeratorCard({
 
         {/* Всего за месяц */}
         <div className="rounded-2xl border border-accent/30 bg-accent/15 p-3 text-center shadow-inner transition-all hover:bg-accent/20">
-          <p className="text-2xl font-black tabular-nums text-accent">{m.total}</p>
+          <p className="text-2xl font-black tabular-nums text-accent">
+            <AnimatedNumber value={m.total} />
+          </p>
           <p className="mt-1 text-[11px] font-semibold text-accent/90">Всего мес.</p>
         </div>
 
         {/* Снято */}
         <div className="rounded-2xl border border-success/25 bg-success/10 p-3 text-center transition-all hover:bg-success/15">
-          <p className="text-2xl font-black tabular-nums text-success">{m.removed ?? 0}</p>
+          <p className="text-2xl font-black tabular-nums text-success">
+            <AnimatedNumber value={m.removed ?? 0} />
+          </p>
           <p className="mt-1 text-[11px] font-medium text-success/80 flex items-center justify-center gap-1">
             <Unlock className="size-3" /> Снято
           </p>
@@ -241,12 +252,12 @@ function ModeratorCard({
           </span>
           <span className="font-mono tabular-nums text-xs">
             <span className={cn("font-extrabold", monthDone ? "text-success" : "text-fg")}>
-              {m.total}
+              <AnimatedNumber value={m.total} />
             </span>{" "}
             <span className="text-subtle">/ {monthTarget ?? "—"}</span>
             {actualRatio != null ? (
               <span className={cn("ml-1.5 font-bold", monthDone ? "text-success" : "text-subtle")}>
-                ({actualRatio}%)
+                (<AnimatedNumber value={actualRatio} suffix="%" />)
               </span>
             ) : null}
           </span>
@@ -547,66 +558,83 @@ export function StatsView() {
       ) : null}
 
       {/* ── 4 High-Tech KPI Cards ────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
-        {kpis.map((c) => {
-          const prev = prevTotals ? prevTotals[c.key as keyof typeof prevTotals] : null;
-          const delta = typeof prev === "number" ? Number(c.value) - prev : null;
-          const Icon = c.icon;
+      <AnimatedBlock delay={50}>
+        <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
+          {kpis.map((c) => {
+            const prev = prevTotals ? prevTotals[c.key as keyof typeof prevTotals] : null;
+            const delta = typeof prev === "number" ? Number(c.value) - prev : null;
+            const Icon = c.icon;
 
-          return (
-            <div
-              key={c.label}
-              className={cn(
-                "group relative overflow-hidden rounded-3xl border bg-gradient-to-br p-5 shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl",
-                c.color,
-                c.border,
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted">{c.label}</span>
-                <span className="grid size-9 place-items-center rounded-xl border border-border/60 bg-elevated/70 text-fg shadow-sm transition-transform group-hover:scale-110">
-                  <Icon className={cn("size-4.5", c.accent)} />
-                </span>
-              </div>
-
-              <p className="mt-3 text-3xl font-black tabular-nums tracking-tight text-fg lg:text-4xl">
-                {c.value}
-              </p>
-
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {delta != null ? (
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums",
-                      delta > 0
-                        ? "bg-success/20 text-success border border-success/30"
-                        : delta < 0
-                          ? "bg-danger/20 text-danger border border-danger/30"
-                          : "bg-elevated text-muted border border-border",
-                    )}
-                  >
-                    {delta > 0 ? <TrendingUp className="size-3" /> : delta < 0 ? <TrendingDown className="size-3" /> : null}
-                    {delta > 0 ? `+${delta}` : delta < 0 ? `−${Math.abs(delta)}` : "±0"}
+            return (
+              <div
+                key={c.label}
+                className={cn(
+                  "group relative overflow-hidden rounded-3xl border bg-gradient-to-br p-5 shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl",
+                  c.color,
+                  c.border,
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted">{c.label}</span>
+                  <span className="grid size-9 place-items-center rounded-xl border border-border/60 bg-elevated/70 text-fg shadow-sm transition-transform group-hover:scale-110">
+                    <Icon className={cn("size-4.5", c.accent)} />
                   </span>
-                ) : null}
-                <span className="text-[11px] text-muted">{c.badge}</span>
+                </div>
+
+                <p className="mt-3 text-3xl font-black tabular-nums tracking-tight text-fg lg:text-4xl">
+                  <AnimatedNumber value={c.value} />
+                </p>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {delta != null ? (
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums",
+                        delta > 0
+                          ? "bg-success/20 text-success border border-success/30"
+                          : delta < 0
+                            ? "bg-danger/20 text-danger border border-danger/30"
+                            : "bg-elevated text-muted border border-border",
+                      )}
+                    >
+                      {delta > 0 ? <TrendingUp className="size-3" /> : delta < 0 ? <TrendingDown className="size-3" /> : null}
+                      {delta > 0 ? (
+                        <>+<AnimatedNumber value={delta} /></>
+                      ) : delta < 0 ? (
+                        <>−<AnimatedNumber value={Math.abs(delta)} /></>
+                      ) : (
+                        "±0"
+                      )}
+                    </span>
+                  ) : null}
+                  <span className="text-[11px] text-muted">{c.badge}</span>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      </AnimatedBlock>
 
       {/* ── Daily Punishment Chart ──────────────────────────────────── */}
-      {!isOwnStatsOnly ? <DailyChart /> : null}
+      {!isOwnStatsOnly ? (
+        <AnimatedBlock delay={100}>
+          <DailyChart />
+        </AnimatedBlock>
+      ) : null}
 
       {/* ── Top-10 Moderators Chart ─────────────────────────────────── */}
-      {!isOwnStatsOnly ? <ModeratorsChart mods={data.moderators} /> : null}
+      {!isOwnStatsOnly ? (
+        <AnimatedBlock delay={150}>
+          <ModeratorsChart mods={data.moderators} />
+        </AnimatedBlock>
+      ) : null}
 
       {/* ── Moderators Section Toolbar & Grid ────────────────────────── */}
-      <section className="space-y-4 pt-2">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/60 pb-4">
-          <div className="flex items-center gap-2.5">
-            <Users className="size-5 text-accent" />
+      <AnimatedBlock delay={200}>
+        <section className="space-y-4 pt-2">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/60 pb-4">
+            <div className="flex items-center gap-2.5">
+              <Users className="size-5 text-accent" />
             <div>
               <h2 className="text-base font-bold text-fg">Список модераторов</h2>
               <p className="text-xs text-muted">
@@ -737,8 +765,11 @@ export function StatsView() {
             ))}
           </div>
         )}
+      </section>
+      </AnimatedBlock>
 
-        {/* ── Monthly Summary Footer ───────────────────────────────── */}
+      {/* ── Monthly Summary Footer ───────────────────────────────── */}
+      <AnimatedBlock delay={250}>
         <div className="mt-8 overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel shadow-sm">
           <div className="border-b border-border/60 px-6 py-5">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-subtle">Общие итоги за месяц</p>
@@ -746,13 +777,15 @@ export function StatsView() {
               {kpis.map((t) => (
                 <div key={t.label} className="rounded-2xl border border-border/50 bg-elevated/40 p-3.5">
                   <dt className="text-xs text-subtle">{t.label}</dt>
-                  <dd className={cn("mt-1 text-2xl font-black tabular-nums", t.accent)}>{t.value}</dd>
+                  <dd className={cn("mt-1 text-2xl font-black tabular-nums", t.accent)}>
+                    <AnimatedNumber value={t.value} />
+                  </dd>
                 </div>
               ))}
             </dl>
             {data.totals.excluded ? (
               <p className="mt-3 text-xs text-subtle">
-                Исключено (тикет / поддержка): <span className="font-semibold text-fg">{data.totals.excluded}</span>
+                Исключено (тикет / поддержка): <span className="font-semibold text-fg"><AnimatedNumber value={data.totals.excluded} /></span>
               </p>
             ) : null}
           </div>
@@ -760,7 +793,7 @@ export function StatsView() {
             Статистика взята с официального портала FearProject.ru · Обновлено {fmtMsk(data.updatedAt)} МСК
           </p>
         </div>
-      </section>
+      </AnimatedBlock>
     </div>
   );
 }
