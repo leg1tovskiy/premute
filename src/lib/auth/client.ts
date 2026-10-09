@@ -232,7 +232,15 @@ export async function signOut(redirectTo = "/"): Promise<void> {
       const { error } = await authClient.signOut();
       if (error) throw new Error(error.message ?? "Sign-out failed");
     },
-    clearToken: () => setBearerToken(null),
+    clearToken: () => {
+      setBearerToken(null);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.removeItem("premute_cached_user");
+          localStorage.removeItem("premute_cached_profile");
+        } catch {}
+      }
+    },
     redirect: () => {
       window.location.href = redirectTo;
     },

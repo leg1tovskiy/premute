@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { authClient, authEnabled } from "./client";
 
 /** Normalized user shape used across the app, auth on or off. */
@@ -9,6 +10,26 @@ export type AppUser = {
   /** True when this is the sandbox/dev fallback (auth not configured). */
   isDevFallback: boolean;
 };
+
+const USER_CACHE_KEY = "premute_cached_user";
+
+function getCachedUser(): AppUser | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(USER_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedUser(user: AppUser | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (user) localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
+    else localStorage.removeItem(USER_CACHE_KEY);
+  } catch {}
+}
 
 /**
  * Stable fallback user, used ONLY when auth is disabled
@@ -58,17 +79,49 @@ export function useCurrentUserState(): CurrentUserState {
   if (!authEnabled) return { user: DEV_USER, isPending: false };
   // eslint-disable-next-line react-hooks/rules-of-hooks -- authEnabled is constant for the app's lifetime
   const { data, isPending } = authClient.useSession();
-  const user = data?.user;
-  return {
-    user: user
-      ? {
-          id: user.id,
-          displayName: user.name ?? null,
-          primaryEmail: user.email ?? null,
-          profileImageUrl: user.image ?? null,
+  const sessionUser = data?.user;
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (!isPending) {
+      if (sessionUser) {
+        setCachedUser({
+          id: sessionUser.id,
+          displayName: sessionUser.name ?? null,
+          primaryEmail: sessionUser.email ?? null,
+          profileImageUrl: sessionUser.image ?? null,
           isDevFallback: false,
-        }
-      : null,
+        });
+      } else {
+        setCachedUser(null);
+      }
+    }
+  }, [isPending, sessionUser]);
+
+  if (sessionUser) {
+    return {
+      user: {
+        id: sessionUser.id,
+        displayName: sessionUser.name ?? null,
+        primaryEmail: sessionUser.email ?? null,
+        profileImageUrl: sessionUser.image ?? null,
+        isDevFallback: false,
+      },
+      isPending: false,
+    };
+  }
+
+  // Пока сессия резолвится с сервера, если у нас есть сохранённый пользователь из предыдущего входа —
+  // возвращаем его сразу, чтобы экран авторизации не мелькал перед глазами.
+  if (isPending) {
+    const cached = getCachedUser();
+    if (cached) {
+      return { user: cached, isPending: true };
+    }
+  }
+
+  return {
+    user: null,
     isPending,
   };
 }

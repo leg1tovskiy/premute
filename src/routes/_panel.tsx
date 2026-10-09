@@ -134,11 +134,31 @@ function makeDefaultProfile(u: { id: string; displayName?: string | null; primar
   };
 }
 
+const PROFILE_CACHE_KEY = "premute_cached_profile";
+
+function getCachedProfile(): StaffProfile | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(PROFILE_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as StaffProfile) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedProfile(p: StaffProfile | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (p) localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(p));
+    else localStorage.removeItem(PROFILE_CACHE_KEY);
+  } catch {}
+}
+
 function PanelLayout() {
-  const { user: authUser } = useCurrentUserState();
+  const { user: authUser, isPending } = useCurrentUserState();
   const { isDark } = useTheme();
-  const [profile, setProfile] = useState<StaffProfile | null>(
-    import.meta.env.DEV ? LOCAL_DEV_PROFILE : null,
+  const [profile, setProfile] = useState<StaffProfile | null>(() =>
+    import.meta.env.DEV ? LOCAL_DEV_PROFILE : getCachedProfile(),
   );
 
   useEffect(() => {
@@ -147,6 +167,7 @@ function PanelLayout() {
         setProfile(LOCAL_DEV_PROFILE);
       } else {
         setProfile(null);
+        setCachedProfile(null);
       }
       return;
     }
@@ -159,7 +180,10 @@ function PanelLayout() {
       },
     })
       .then((p) => {
-        if (!cancelled) setProfile(p);
+        if (!cancelled) {
+          setProfile(p);
+          setCachedProfile(p);
+        }
       })
       .catch((e) => {
         console.error("[panel] getMe failed:", e);
@@ -169,11 +193,25 @@ function PanelLayout() {
     };
   }, [authUser]);
 
-  if (!import.meta.env.DEV && !authUser) {
-    return <LoginScreen />;
+  if (!import.meta.env.DEV) {
+    // Если сессия ещё проверяется и пользователя нет в кэше — держим нейтральный фон на доли секунды,
+    // чтобы экран авторизации не проскакивал перед входом
+    if (isPending && !authUser) {
+      return <div className="min-h-dvh bg-bg" />;
+    }
+    if (!authUser) {
+      return <LoginScreen />;
+    }
   }
 
-  const currentProfile = profile || (import.meta.env.DEV ? LOCAL_DEV_PROFILE : (authUser ? makeDefaultProfile(authUser) : null));
+  const currentProfile =
+    profile ||
+    (import.meta.env.DEV
+      ? LOCAL_DEV_PROFILE
+      : authUser
+        ? makeDefaultProfile(authUser)
+        : null);
+
   if (!currentProfile) {
     return <LoginScreen />;
   }
