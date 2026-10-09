@@ -268,8 +268,9 @@ async function fromSeed(): Promise<StatsPayload> {
 export async function loadStats(opts: { refresh?: boolean } = {}): Promise<StatsPayload> {
   const cached = await readDbCache();
   const age = cached ? Date.now() / 1000 - cached.updatedAt : Infinity;
-  // воркер на VPS обновляет статистику каждые 10 минут — сверяемся с ним на том же интервале
-  if (cached && !opts.refresh && age < 10 * 60) return { ...cached, stale: false };
+  // воркер на VPS обновляет статистику каждые 2 минуты (120 секунд)
+  // если кэш в БД свежий (< 2 минут) и не запрошен принудительный refresh — отдаём его сразу
+  if (cached && !opts.refresh && age < 2 * 60) return { ...cached, stale: false };
 
   const fromWorker = async (): Promise<StatsPayload | null> => {
     try {
@@ -318,101 +319,28 @@ export async function loadStats(opts: { refresh?: boolean } = {}): Promise<Stats
     }
   };
 
-  if (!opts.refresh) {
-    const worker = await fromWorker();
-    const fallback = cached ?? worker ?? (await fromSeed());
-    if (fallback !== cached) {
-      fallback.moderators = await attachSteamAvatars(fallback.moderators, cached);
+  const worker = await fromWorker();
+  if (worker) {
+    worker.moderators = await attachSteamAvatars(worker.moderators, cached);
+    try {
+      await writeDbCache(worker);
+    } catch (e) {
+      console.error("[stats] writeDbCache failed:", e);
     }
-    if (!cached) {
-      try {
-        await writeDbCache({ ...fallback, stale: true });
-      } catch {
-        /* ignore */
-      }
-    }
-    return { ...fallback, stale: !worker };
+    return worker;
   }
 
-  const workerFresh = await fromWorker();
-  if (workerFresh) {
-    workerFresh.moderators = await attachSteamAvatars(workerFresh.moderators, cached);
-    await writeDbCache(workerFresh);
-    return workerFresh;
-  }
+  // Защита от бана IP: Vercel serverless НИКОГДА не парсит fearproject.ru напрямую.
+  // Все обращения к API FearProject централизованы на VPS-воркере (64.188.66.194:3848).
+  // Если воркер временно недоступен — возвращаем кэш из БД со stale: true.
+  if (cached) return { ...cached, stale: true };
 
+  const seed = await fromSeed();
+  seed.moderators = await attachSteamAvatars(seed.moderators, cached);
   try {
-    const { start: monthStart, end: monthEnd } = currentMonthRange();
-    const weekStart = currentWeekStart();
-    const roster = await loadMods();
-    const bySteam = new Map(
-      roster.map((m) => [
-        m.steamid,
-        {
-          ...m,
-          bans: 0,
-          mutes: 0,
-          total: 0,
-          weekTotal: 0,
-          removed: 0,
-          excluded: 0,
-          lastSeenName: null as string | null,
-          lastOnline: null,
-          avatar: null as string | null,
-        },
-      ]),
-    );
-
-    for (const type of [1, 2] as const) {
-      const kind = type === 1 ? "ban" : "mute";
-      const items = await fetchRecent(type, Math.min(monthStart, weekStart), 25);
-      for (const p of items) {
-        const sid = String(p.admin_steamid || "");
-        const mod = bySteam.get(sid);
-        if (!mod) continue;
-        if (p.admin) mod.lastSeenName = p.admin;
-        if (p.created < monthStart || p.created >= monthEnd) {
-          if (p.created >= weekStart && p.created < monthStart && isCounted(p)) mod.weekTotal++;
-          continue;
-        }
-        if (isCounted(p)) {
-          if (kind === "ban") mod.bans++;
-          else mod.mutes++;
-          mod.total++;
-          if (p.created >= weekStart) mod.weekTotal++;
-        } else if (p.unpunish_admin || p.status === 2) {
-          mod.removed++;
-        } else {
-          mod.excluded++;
-        }
-      }
-    }
-
-    const moderators = [...bySteam.values()].map((m) => ({
-      ...m,
-      name: m.name === m.steamid && m.lastSeenName ? m.lastSeenName : m.name,
-    }));
-    const totals = {
-      bans: moderators.reduce((a, m) => a + m.bans, 0),
-      mutes: moderators.reduce((a, m) => a + m.mutes, 0),
-      total: moderators.reduce((a, m) => a + m.total, 0),
-      removed: moderators.reduce((a, m) => a + m.removed, 0),
-      excluded: moderators.reduce((a, m) => a + m.excluded, 0),
-    };
-    const payload = toPayload({
-      month: monthLabel(),
-      updatedAt: Math.floor(Date.now() / 1000),
-      totals,
-      moderators: await attachSteamAvatars(moderators, cached),
-      stale: false,
-    });
-    await writeDbCache(payload);
-    return payload;
-  } catch (e) {
-    console.error("[stats] refresh failed:", e instanceof Error ? e.message : e);
-    if (cached) return { ...cached, stale: true };
-    const seed = await fromSeed();
-    seed.moderators = await attachSteamAvatars(seed.moderators, cached);
-    return seed;
+    await writeDbCache({ ...seed, stale: true });
+  } catch {
+    /* ignore */
   }
+  return seed;
 }

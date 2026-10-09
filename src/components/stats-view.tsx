@@ -303,18 +303,22 @@ export function StatsView() {
   const [rankFilter, setRankFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"total" | "bans" | "mutes" | "norma">("total");
 
-  async function load(refresh = false) {
-    if (refresh) setRefreshing(true);
-    else setLoading(true);
+  async function load(refresh = false, silent = false) {
+    if (!silent) {
+      if (refresh) setRefreshing(true);
+      else setLoading(true);
+    }
     setError(null);
     try {
       const next = await getStatsFn({ data: { refresh } });
       setData(next);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Не удалось загрузить статистику");
+      if (!silent) setError(e instanceof Error ? e.message : "Не удалось загрузить статистику");
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (!silent) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }
 
@@ -356,7 +360,7 @@ export function StatsView() {
   }, []);
 
   useEffect(() => {
-    const t = setInterval(() => void load(true), 5 * 60_000);
+    const t = setInterval(() => void load(false, true), 2 * 60_000);
     return () => clearInterval(t);
   }, []);
 

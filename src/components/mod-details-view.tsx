@@ -575,25 +575,31 @@ export function ModDetailsView({
   const [datePreset, setDatePreset] = useState<"all" | "today" | "3days" | "week">("all");
   const [shareOpen, setShareOpen] = useState(false);
 
-  async function load() {
+  async function load(silent = false) {
     if (!slug) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const next = await getModDetailsFn({ data: { slug } });
       setData(next);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Не удалось загрузить статистику модератора");
+      if (!silent) setError(e instanceof Error ? e.message : "Не удалось загрузить статистику модератора");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
   useEffect(() => {
     void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
+
+  useEffect(() => {
+    const t = setInterval(() => void load(true), 2 * 60_000);
+    return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 

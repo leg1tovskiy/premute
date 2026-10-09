@@ -154,18 +154,22 @@ export function TopsView() {
     setChartMounted(true);
   }, []);
 
-  async function load(refresh = false) {
-    if (refresh) setRefreshing(true);
-    else setLoading(true);
+  async function load(refresh = false, silent = false) {
+    if (!silent) {
+      if (refresh) setRefreshing(true);
+      else setLoading(true);
+    }
     setError(null);
     try {
       const next = await getStatsFn({ data: { refresh } });
       setData(next);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Не удалось загрузить топ");
+      if (!silent) setError(e instanceof Error ? e.message : "Не удалось загрузить топ");
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (!silent) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }
 
@@ -204,6 +208,11 @@ export function TopsView() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    const t = setInterval(() => void load(false, true), 2 * 60_000);
+    return () => clearInterval(t);
   }, []);
 
   // Top 3 for podium
