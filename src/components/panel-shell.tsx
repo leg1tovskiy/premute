@@ -167,17 +167,18 @@ export function PanelShell({ children }: { children: ReactNode }) {
           </div>
           <Link
             to="/"
+            viewTransition
             className={cn(
-              "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all",
+              "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200",
               pathname === "/"
                 ? "border border-accent/30 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent text-fg shadow-[0_0_15px_-4px_color-mix(in_oklab,var(--color-accent)_35%,transparent)]"
                 : "border border-transparent text-muted hover:border-border/60 hover:bg-elevated/60 hover:text-fg",
             )}
           >
-            <Home className={cn("size-4 transition-colors", pathname === "/" ? "text-accent" : "text-subtle group-hover:text-fg")} />
+            <Home className={cn("size-4 transition-colors duration-200", pathname === "/" ? "text-accent" : "text-subtle group-hover:text-fg")} />
             <span>Главная</span>
             {pathname === "/" ? (
-              <span className="ml-auto size-1.5 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)]" />
+              <span className="ml-auto size-1.5 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)] animate-in fade-in zoom-in-75 duration-200" />
             ) : null}
           </Link>
 
@@ -188,17 +189,18 @@ export function PanelShell({ children }: { children: ReactNode }) {
               <Link
                 key={t.id}
                 to={t.to}
+                viewTransition
                 className={cn(
-                  "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all",
+                  "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200",
                   isActive
                     ? "border border-accent/30 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent text-fg shadow-[0_0_15px_-4px_color-mix(in_oklab,var(--color-accent)_35%,transparent)]"
                     : "border border-transparent text-muted hover:border-border/60 hover:bg-elevated/60 hover:text-fg",
                 )}
               >
-                <Icon className={cn("size-4 transition-colors", isActive ? "text-accent" : "text-subtle group-hover:text-fg")} />
+                <Icon className={cn("size-4 transition-colors duration-200", isActive ? "text-accent" : "text-subtle group-hover:text-fg")} />
                 <span>{t.label}</span>
                 {isActive ? (
-                  <span className="ml-auto size-1.5 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)]" />
+                  <span className="ml-auto size-1.5 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)] animate-in fade-in zoom-in-75 duration-200" />
                 ) : null}
               </Link>
             );
@@ -308,8 +310,12 @@ export function PanelShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 pb-16 md:pb-6">{children}</main>
+        {/* Page Content with smooth tab transition */}
+        <main className="flex-1 pb-16 md:pb-6">
+          <div key={pathname} className="animate-tab-enter min-h-full">
+            {children}
+          </div>
+        </main>
       </div>
 
       {/* ── Mobile Drawer ───────────────────────────────────────────── */}
@@ -337,9 +343,10 @@ export function PanelShell({ children }: { children: ReactNode }) {
             <nav className="mt-4 flex-1 space-y-1.5">
               <Link
                 to="/"
+                viewTransition
                 onClick={() => setMobileOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium",
+                  "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
                   pathname === "/" ? "bg-accent/15 text-accent font-semibold" : "text-muted hover:text-fg",
                 )}
               >
@@ -352,9 +359,10 @@ export function PanelShell({ children }: { children: ReactNode }) {
                   <Link
                     key={t.id}
                     to={t.to}
+                    viewTransition
                     onClick={() => setMobileOpen(false)}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium",
+                      "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
                       pathname === t.to ? "bg-accent/15 text-accent font-semibold" : "text-muted hover:text-fg",
                     )}
                   >

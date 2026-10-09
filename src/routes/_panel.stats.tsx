@@ -149,11 +149,13 @@ function StatsRoute() {
           </div>
         </div>
 
-        {viewMode === "personal" && profile.mySteamId ? (
-          <ModDetailsView explicitSlug={profile.mySteamId} hideBackLink={true} />
-        ) : (
-          <StatsView />
-        )}
+        <div key={viewMode} className="animate-tab-enter">
+          {viewMode === "personal" && profile.mySteamId ? (
+            <ModDetailsView explicitSlug={profile.mySteamId} hideBackLink={true} />
+          ) : (
+            <StatsView />
+          )}
+        </div>
       </div>
     );
   }

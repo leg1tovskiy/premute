@@ -354,6 +354,30 @@
     mask-composite: exclude;
     pointer-events: none;
   }
+
+  /* Smooth Tab Transitions */
+  @keyframes tabEnter {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-tab-enter {
+    animation: tabEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+    will-change: opacity, transform;
+  }
+}
+
+/* Smooth View Transitions */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.18s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
