@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import {
   ArrowLeft,
+  ArrowUpDown,
   Calendar,
   CalendarDays,
   Check,
@@ -574,7 +575,8 @@ export function ModDetailsView({
   const [status, setStatus] = useState<"all" | "active" | "expired" | "removed">("all");
   const [search, setSearch] = useState("");
 
-  const [datePreset, setDatePreset] = useState<"all" | "all_time" | "today" | "3days" | "week">("all");
+  const [datePreset, setDatePreset] = useState<"all" | "all_time" | "today" | "3days" | "week">("all_time");
+  const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
   const [allTimeRecords, setAllTimeRecords] = useState<PunishmentRecord[] | null>(null);
   const [loadingAllTime, setLoadingAllTime] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -589,6 +591,9 @@ export function ModDetailsView({
     try {
       const next = await getModDetailsFn({ data: { slug } });
       setData(next);
+      if (next?.allRecords && next.allRecords.length > 0) {
+        setAllTimeRecords(next.allRecords);
+      }
     } catch (e) {
       if (!silent) setError(e instanceof Error ? e.message : "Не удалось загрузить статистику модератора");
     } finally {
@@ -614,10 +619,14 @@ export function ModDetailsView({
 
   useEffect(() => {
     if (datePreset === "all_time" && allTimeRecords === null && !loadingAllTime && data?.moderator.steamid) {
-      void loadAllTime();
+      if (data?.allRecords && data.allRecords.length > 0) {
+        setAllTimeRecords(data.allRecords);
+      } else {
+        void loadAllTime();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [datePreset, data?.moderator.steamid]);
+  }, [datePreset, data?.moderator.steamid, data?.allRecords]);
 
   useEffect(() => {
     void load();
@@ -630,7 +639,10 @@ export function ModDetailsView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
-  const activeSource = datePreset === "all_time" ? (allTimeRecords ?? []) : (data?.records ?? []);
+  const activeSource =
+    datePreset === "all"
+      ? (data?.records ?? [])
+      : (allTimeRecords ?? data?.allRecords ?? data?.records ?? []);
 
   const records = useMemo(() => {
     if (!data) return [];
@@ -643,7 +655,7 @@ export function ModDetailsView({
     const todayStartSec = Math.floor(mskTodayStartUtc / 1000);
 
     return [...activeSource]
-      .sort((a, b) => b.created - a.created)
+      .sort((a, b) => (sortDir === "asc" ? a.created - b.created : b.created - a.created))
       .filter((r) => {
         if (kind !== "all" && r.kind !== kind) return false;
         const st =
@@ -665,7 +677,7 @@ export function ModDetailsView({
           r.playerSteamid.includes(q)
         );
       });
-  }, [data, activeSource, kind, status, datePreset, search]);
+  }, [data, activeSource, kind, status, datePreset, search, sortDir]);
 
   if (loading) {
     return (
@@ -848,29 +860,53 @@ export function ModDetailsView({
         {/* 4 Cyber Metric Chips */}
         <div className="relative z-10 mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-2xl border border-danger/25 bg-danger/10 p-3.5 text-center transition-all hover:bg-danger/15 shadow-sm">
-            <p className="text-3xl font-black tabular-nums text-danger"><AnimatedNumber value={m.bans ?? 0} /></p>
+            <p className="text-3xl font-black tabular-nums text-danger">
+              <AnimatedNumber value={m.allTimeBans ?? m.bans ?? 0} />
+            </p>
             <p className="mt-1 text-xs font-bold text-danger/80 flex items-center justify-center gap-1">
               <Hammer className="size-3.5" /> Банов выдано
             </p>
+            {m.bans != null && m.bans > 0 ? (
+              <p className="mt-1 text-[10px] text-danger/70 font-mono">за месяц: {m.bans}</p>
+            ) : null}
           </div>
 
           <div className="rounded-2xl border border-warn/25 bg-warn/10 p-3.5 text-center transition-all hover:bg-warn/15 shadow-sm">
-            <p className="text-3xl font-black tabular-nums text-warn"><AnimatedNumber value={m.mutes ?? 0} /></p>
+            <p className="text-3xl font-black tabular-nums text-warn">
+              <AnimatedNumber value={m.allTimeMutes ?? m.mutes ?? 0} />
+            </p>
             <p className="mt-1 text-xs font-bold text-warn/80 flex items-center justify-center gap-1">
               <VolumeX className="size-3.5" /> Мутов выдано
             </p>
+            {m.mutes != null && m.mutes > 0 ? (
+              <p className="mt-1 text-[10px] text-warn/70 font-mono">за месяц: {m.mutes}</p>
+            ) : null}
           </div>
 
           <div className="rounded-2xl border border-accent/30 bg-accent/15 p-3.5 text-center shadow-inner transition-all hover:bg-accent/20">
-            <p className="text-3xl font-black tabular-nums text-accent"><AnimatedNumber value={m.total} /></p>
-            <p className="mt-1 text-xs font-bold text-accent">Выдано за период</p>
+            <p className="text-3xl font-black tabular-nums text-accent">
+              <AnimatedNumber value={m.allTimeTotal ?? m.total} />
+            </p>
+            <p className="mt-1 text-xs font-bold text-accent">Выдано за всё время</p>
+            {m.firstPunishmentAt && m.lastPunishmentAt ? (
+              <p className="mt-1 text-[10px] text-accent/80 font-mono truncate" title={`с ${fmtDate(m.firstPunishmentAt)} по ${fmtDate(m.lastPunishmentAt)}`}>
+                с {fmtDate(m.firstPunishmentAt)} по {fmtDate(m.lastPunishmentAt)}
+              </p>
+            ) : (
+              <p className="mt-1 text-[10px] text-accent/80 font-mono">за месяц: {m.total}</p>
+            )}
           </div>
 
           <div className="rounded-2xl border border-success/25 bg-success/10 p-3.5 text-center transition-all hover:bg-success/15 shadow-sm">
-            <p className="text-3xl font-black tabular-nums text-success"><AnimatedNumber value={m.removed ?? 0} /></p>
+            <p className="text-3xl font-black tabular-nums text-success">
+              <AnimatedNumber value={m.allTimeRemoved ?? m.removed ?? 0} />
+            </p>
             <p className="mt-1 text-xs font-bold text-success/80 flex items-center justify-center gap-1">
               <Unlock className="size-3.5" /> Снято решений
             </p>
+            {m.removed != null && m.removed > 0 ? (
+              <p className="mt-1 text-[10px] text-success/70 font-mono">за месяц: {m.removed}</p>
+            ) : null}
           </div>
         </div>
       </article>
@@ -903,35 +939,75 @@ export function ModDetailsView({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-base font-extrabold text-fg flex items-center gap-2">
-                <span>{datePreset === "all_time" ? "Все наказания за всё время" : "Все наказания за период"}</span>
+                <span>
+                  {datePreset === "all_time"
+                    ? "Все наказания за всё время (с момента первого)"
+                    : datePreset === "all"
+                      ? "Все наказания за этот месяц"
+                      : "Все наказания за период"}
+                </span>
                 {loadingAllTime && <Loader2 className="size-3.5 animate-spin text-accent" />}
               </h2>
-              <p className="text-xs text-muted">
-                {records.length} записей &middot; {activeSource.filter((r) => r.kind === "ban").length} банов,{" "}
-                {activeSource.filter((r) => r.kind === "mute").length} мутов,{" "}
-                {activeSource.filter((r) => r.unpunishAdmin || r.status === 2).length} снято
-              </p>
+              <div className="text-xs text-muted flex items-center flex-wrap gap-1.5 mt-0.5">
+                {datePreset === "all_time" && m.firstPunishmentAt && m.lastPunishmentAt ? (
+                  <span className="font-semibold text-accent bg-accent/15 px-2 py-0.5 rounded-lg border border-accent/25 text-[11px]">
+                    Период: с {fmtDate(m.firstPunishmentAt)} по {fmtDate(m.lastPunishmentAt)}
+                  </span>
+                ) : datePreset === "all" && data.monthStart && data.monthEnd ? (
+                  <span className="font-semibold text-fg bg-elevated/80 px-2 py-0.5 rounded-lg border border-border/60 text-[11px]">
+                    Период: с {fmtDate(data.monthStart)} по {fmtDate(data.monthEnd)}
+                  </span>
+                ) : null}
+                <span>{records.length} записей</span>
+                <span>&middot;</span>
+                <span>{activeSource.filter((r) => r.kind === "ban").length} банов</span>
+                <span>&middot;</span>
+                <span>{activeSource.filter((r) => r.kind === "mute").length} мутов</span>
+                <span>&middot;</span>
+                <span>{activeSource.filter((r) => r.unpunishAdmin || r.status === 2).length} снято</span>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
               <Button
                 variant="secondary"
                 size="sm"
+                className="h-8.5 rounded-xl border-border/80 bg-elevated/70 px-2.5 text-xs font-bold text-muted hover:text-fg hover:border-accent"
+                onClick={() => setSortDir((prev) => (prev === "desc" ? "asc" : "desc"))}
+                title={
+                  sortDir === "desc"
+                    ? "Сортировка: от крайних к первым (нажмите для порядка от самого первого)"
+                    : "Сортировка: от самого первого к крайнему (нажмите для порядка от крайних)"
+                }
+              >
+                <ArrowUpDown className="size-3.5" />
+                <span className="hidden sm:inline">
+                  {sortDir === "desc" ? "Сначала новые" : "Сначала первые"}
+                </span>
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 className="h-8.5 rounded-xl border-border/80 bg-elevated/70 px-3 text-xs font-bold text-fg hover:border-accent"
                 onClick={() =>
                   data &&
-                  downloadCsv(datePreset === "all_time" ? `mod-${m.steamid}-all-time.csv` : `mod-${m.steamid}.csv`, [
-                    ["Дата", "Игрок", "SteamID игрока", "Тип", "Срок", "Статус", "Причина"],
-                    ...records.map((r) => [
-                      fmtDateTime(r.created),
-                      r.player,
-                      r.playerSteamid,
-                      r.kind === "ban" ? "Бан" : "Мут",
-                      r.durationLabel || "",
-                      recordStatus(r).label,
-                      r.reason || "",
-                    ]),
-                  ])
+                  downloadCsv(
+                    datePreset === "all_time"
+                      ? `mod-${m.steamid}-all-time.csv`
+                      : `mod-${m.steamid}.csv`,
+                    [
+                      ["Дата", "Игрок", "SteamID игрока", "Тип", "Срок", "Статус", "Причина"],
+                      ...records.map((r) => [
+                        fmtDateTime(r.created),
+                        r.player,
+                        r.playerSteamid,
+                        r.kind === "ban" ? "Бан" : "Мут",
+                        r.durationLabel || "",
+                        recordStatus(r).label,
+                        r.reason || "",
+                      ]),
+                    ],
+                  )
                 }
                 disabled={!records.length}
                 title="Экспорт наказаний в CSV"
@@ -1015,7 +1091,7 @@ export function ModDetailsView({
               {/* Date Preset Filter */}
               {(
                 [
-                  { id: "all_time", label: "За всё время" },
+                  { id: "all_time", label: "За всё время (с первого по крайнее)" },
                   { id: "all", label: "Этот месяц" },
                   { id: "week", label: "Неделя" },
                   { id: "3days", label: "3 дня" },
@@ -1035,14 +1111,14 @@ export function ModDetailsView({
                 >
                   {f.id === "all_time" && loadingAllTime && <Loader2 className="size-3 animate-spin" />}
                   <span>{f.label}</span>
-                  {f.id === "all_time" && allTimeRecords !== null && (
+                  {f.id === "all_time" && (allTimeRecords !== null || (data?.allRecords && data.allRecords.length > 0)) && (
                     <span
                       className={cn(
                         "rounded px-1.5 py-0.2 text-[10px] font-mono leading-none",
                         datePreset === f.id ? "bg-accent-fg/20 text-accent-fg" : "bg-surface text-muted",
                       )}
                     >
-                      {allTimeRecords.length}
+                      {allTimeRecords?.length ?? data?.allRecords?.length ?? 0}
                     </span>
                   )}
                 </button>

@@ -223,7 +223,7 @@ export const getModDetailsFn = createServerFn({ method: "POST" })
     if (!slug) return null;
     const { loadStats } = await import("./server/stats");
     const { withSlugs, findBySlug, normalizeSlug } = await import("./server/mod-slugs");
-    const { fetchWorkerPunishments } = await import("./server/discord");
+    const { fetchWorkerPunishments, fetchWorkerModAllPunishments } = await import("./server/discord");
     const stats = await loadStats({});
     const mods = await withSlugs(stats.moderators);
     const needle = normalizeSlug(slug);
@@ -303,8 +303,22 @@ export const getModDetailsFn = createServerFn({ method: "POST" })
       throw new Error("У вас нет прав на просмотр статистики других модераторов.");
     }
 
-    const worker = await fetchWorkerPunishments(mod.steamid);
+    const [worker, allWorker] = await Promise.all([
+      fetchWorkerPunishments(mod.steamid),
+      fetchWorkerModAllPunishments(mod.steamid),
+    ]);
     const recs = worker?.records ?? [];
+    const allRecs = allWorker?.records ?? [];
+
+    const sortedAll = [...allRecs].sort((a, b) => a.created - b.created);
+    const firstPunishmentAt = sortedAll.length > 0 ? sortedAll[0].created : null;
+    const lastPunishmentAt = sortedAll.length > 0 ? sortedAll[sortedAll.length - 1].created : null;
+
+    const allTimeBans = allRecs.filter((r) => r.kind === "ban" && r.counted !== false).length;
+    const allTimeMutes = allRecs.filter((r) => r.kind === "mute" && r.counted !== false).length;
+    const allTimeTotal = allTimeBans + allTimeMutes;
+    const allTimeRemoved = allRecs.filter((r) => r.unpunishAdmin || r.status === 2).length;
+
     const computedBans = recs.filter((r) => r.kind === "ban" && r.counted !== false).length;
     const computedMutes = recs.filter((r) => r.kind === "mute" && r.counted !== false).length;
     const computedTotal = computedBans + computedMutes;
@@ -354,7 +368,7 @@ export const getModDetailsFn = createServerFn({ method: "POST" })
       }
     }
 
-    const finalMod: ModRow = {
+    const finalMod = {
       steamid: mod.steamid,
       name: fearName,
       discord: mod.discord || (wMod?.discord as string) || null,
@@ -372,6 +386,12 @@ export const getModDetailsFn = createServerFn({ method: "POST" })
       pct: finalNorma?.month ? Math.round((total / finalNorma.month) * 100) : null,
       done: finalNorma?.month ? total >= finalNorma.month : false,
       slug: mod.slug || slug,
+      allTimeTotal: allTimeTotal > 0 ? allTimeTotal : total,
+      allTimeBans: allTimeBans > 0 ? allTimeBans : bans,
+      allTimeMutes: allTimeMutes > 0 ? allTimeMutes : mutes,
+      allTimeRemoved: allTimeRemoved > 0 ? allTimeRemoved : removed,
+      firstPunishmentAt,
+      lastPunishmentAt,
     };
 
     return {
@@ -381,6 +401,7 @@ export const getModDetailsFn = createServerFn({ method: "POST" })
       monthEnd: worker?.monthEnd ?? null,
       moderator: finalMod,
       records: recs,
+      allRecords: allRecs,
     };
   });
 

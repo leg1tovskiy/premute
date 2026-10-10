@@ -122,8 +122,17 @@ export type ModDetails = {
   updatedAt: number;
   monthStart: number | null;
   monthEnd: number | null;
-  moderator: ModRow & { slug: string };
+  moderator: ModRow & {
+    slug: string;
+    allTimeTotal?: number;
+    allTimeBans?: number;
+    allTimeMutes?: number;
+    allTimeRemoved?: number;
+    firstPunishmentAt?: number | null;
+    lastPunishmentAt?: number | null;
+  };
   records: PunishmentRecord[];
+  allRecords?: PunishmentRecord[];
 };
 
 export type BackupEntry = {
