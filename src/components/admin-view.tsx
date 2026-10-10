@@ -388,39 +388,52 @@ export function AdminView({ me }: { me: StaffProfile }) {
                     </button>
 
                     {openManual[u.userId] ? (
-                      <div className="p-3 pt-1 border-t border-border/40 space-y-2 animate-in fade-in duration-200">
-                        <p className="text-[10px] text-subtle pb-1">
-                          Индивидуальное переопределение пунктов доступа:
-                        </p>
+                      (() => {
+                        const roleRank = u.roleRank ?? null;
+                        const isSeniorOrStaff = roleRank !== null && roleRank >= 3;
+                        const statsByRole = isSeniorOrStaff;
+                        const activityByRole = isSeniorOrStaff;
+                        const suspiciousByRole = roleRank !== null && roleRank >= 1;
+                        const modsByRole = isSeniorOrStaff;
 
-                        <Toggle
-                          label="Полная статистика (все)"
-                          hint="Включено: доступ ко всей статистике и топам. Выключено: если указан SteamID — видит только свою личную статистику."
-                          checked={u.isOwner || u.canStats}
-                          disabled={locked || u.isOwner || u.isBanned}
-                          onChange={(v) => void patch(u.userId, { ...u, canStats: v })}
-                        />
-                        <Toggle
-                          label="Онлайн"
-                          hint="Вкладка «Онлайн» с онлайном модераторов на серверах FearProject"
-                          checked={u.isOwner || u.canActivity}
-                          disabled={locked || u.isOwner || u.isBanned}
-                          onChange={(v) => void patch(u.userId, { ...u, canActivity: v })}
-                        />
-                        <Toggle
-                          label="Игроки"
-                          hint="Вкладка «Игроки» (подозрительные аккаунты и новореги)"
-                          checked={u.isOwner || u.canSuspicious}
-                          disabled={locked || u.isOwner || u.isBanned}
-                          onChange={(v) => void patch(u.userId, { ...u, canSuspicious: v })}
-                        />
-                        <Toggle
-                          label="Модераторы"
-                          hint="Вкладка «Модераторы» (состав команды FearProject)"
-                          checked={u.isOwner || u.canMods}
-                          disabled={locked || u.isOwner || u.isBanned}
-                          onChange={(v) => void patch(u.userId, { ...u, canMods: v })}
-                        />
+                        return (
+                          <div className="p-3 pt-1 border-t border-border/40 space-y-2 animate-in fade-in duration-200">
+                            <p className="text-[10px] text-subtle pb-1">
+                              Индивидуальное переопределение пунктов доступа:
+                            </p>
+
+                            <Toggle
+                              label="Полная статистика (все)"
+                              hint="Включено: доступ ко всей статистике и топам. Выключено: если указан SteamID — видит только свою личную статистику."
+                              checked={u.isOwner || statsByRole || u.canStats}
+                              disabled={locked || u.isOwner || u.isBanned || statsByRole}
+                              byRole={statsByRole}
+                              onChange={(v) => void patch(u.userId, { ...u, canStats: v })}
+                            />
+                            <Toggle
+                              label="Онлайн"
+                              hint="Вкладка «Онлайн» с онлайном модераторов на серверах FearProject"
+                              checked={u.isOwner || activityByRole || u.canActivity}
+                              disabled={locked || u.isOwner || u.isBanned || activityByRole}
+                              byRole={activityByRole}
+                              onChange={(v) => void patch(u.userId, { ...u, canActivity: v })}
+                            />
+                            <Toggle
+                              label="Игроки"
+                              hint="Вкладка «Игроки» (подозрительные аккаунты и новореги)"
+                              checked={u.isOwner || suspiciousByRole || u.canSuspicious}
+                              disabled={locked || u.isOwner || u.isBanned || suspiciousByRole}
+                              byRole={suspiciousByRole}
+                              onChange={(v) => void patch(u.userId, { ...u, canSuspicious: v })}
+                            />
+                            <Toggle
+                              label="Модераторы"
+                              hint="Вкладка «Модераторы» (состав команды FearProject)"
+                              checked={u.isOwner || modsByRole || u.canMods}
+                              disabled={locked || u.isOwner || u.isBanned || modsByRole}
+                              byRole={modsByRole}
+                              onChange={(v) => void patch(u.userId, { ...u, canMods: v })}
+                            />
                         {me.caps.canGrantBotOwner ? (
                           <Toggle
                             label="Владелец бота"
@@ -447,7 +460,9 @@ export function AdminView({ me }: { me: StaffProfile }) {
                           />
                         ) : null}
                       </div>
-                    ) : null}
+                    );
+                  })()
+                ) : null}
                   </div>
 
                   {/* Card Footer: Dates & Actions */}
@@ -647,21 +662,30 @@ function Toggle({
   disabled,
   onChange,
   hint,
+  byRole,
 }: {
   label: string;
   checked: boolean;
   disabled?: boolean;
   onChange: (v: boolean) => void;
   hint?: string;
+  byRole?: boolean;
 }) {
   return (
     <label
-      title={hint}
+      title={byRole ? "Включено через роль (нельзя отключить)" : hint}
       className={`flex items-center justify-between gap-2 py-0.5 text-xs font-medium text-fg select-none ${
-        disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+        disabled ? "opacity-75 cursor-not-allowed" : "cursor-pointer"
       }`}
     >
-      <span className="truncate">{label}</span>
+      <span className="flex items-center gap-1.5 truncate min-w-0">
+        <span className="truncate">{label}</span>
+        {byRole ? (
+          <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.2 text-[9px] font-bold text-accent border border-accent/30">
+            роль
+          </span>
+        ) : null}
+      </span>
       <Switch checked={checked} disabled={disabled} onCheckedChange={onChange} />
     </label>
   );

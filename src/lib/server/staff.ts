@@ -530,6 +530,8 @@ export async function updateStaffPermissions(
   let canSuspicious = patch.canSuspicious ?? target.canSuspicious;
   let canMods = patch.canMods ?? target.canMods;
 
+  const currentRank = patch.roleRank !== undefined ? patch.roleRank : target.roleRank;
+
   if (patch.roleRank !== undefined && patch.roleRank !== null) {
     if (patch.roleRank === 1 || patch.roleRank === 2) {
       canStats = false;
@@ -537,6 +539,16 @@ export async function updateStaffPermissions(
       canSuspicious = true;
       canMods = false;
     } else if (patch.roleRank >= 3) {
+      canStats = true;
+      canActivity = true;
+      canSuspicious = true;
+      canMods = true;
+    }
+  } else if (currentRank !== null && currentRank !== undefined) {
+    // Нельзя забрать вкладки, полученные через текущую роль:
+    if (currentRank === 1 || currentRank === 2) {
+      canSuspicious = true;
+    } else if (currentRank >= 3) {
       canStats = true;
       canActivity = true;
       canSuspicious = true;
