@@ -525,35 +525,35 @@ export async function updateStaffPermissions(
   }
   const isOwner = patch.isOwner ?? target.isOwner;
 
-  let canStats = patch.canStats ?? target.canStats;
+  let canStats = patch.canStats !== undefined ? Boolean(patch.canStats) : flag(targetRows[0]?.can_stats);
   let canActivity = patch.canActivity !== undefined ? Boolean(patch.canActivity) : flag(targetRows[0]?.can_activity);
-  let canSuspicious = patch.canSuspicious ?? target.canSuspicious;
-  let canMods = patch.canMods ?? target.canMods;
+  let canSuspicious = patch.canSuspicious !== undefined ? Boolean(patch.canSuspicious) : flag(targetRows[0]?.can_suspicious);
+  let canMods = patch.canMods !== undefined ? Boolean(patch.canMods) : flag(targetRows[0]?.can_mods);
 
   const currentRank = patch.roleRank !== undefined ? patch.roleRank : target.roleRank;
 
   if (patch.roleRank !== undefined && patch.roleRank !== null) {
     if (patch.roleRank === 1 || patch.roleRank === 2) {
-      canStats = false;
-      canActivity = false;
+      if (patch.canStats === undefined) canStats = false;
+      if (patch.canActivity === undefined) canActivity = false;
       canSuspicious = true;
-      canMods = false;
+      if (patch.canMods === undefined) canMods = false;
     } else if (patch.roleRank >= 3) {
       canStats = true;
       canActivity = true;
       canSuspicious = true;
       canMods = true;
     }
-  } else if (currentRank !== null && currentRank !== undefined) {
-    // Нельзя забрать вкладки, полученные через текущую роль:
-    if (currentRank === 1 || currentRank === 2) {
-      canSuspicious = true;
-    } else if (currentRank >= 3) {
-      canStats = true;
-      canActivity = true;
-      canSuspicious = true;
-      canMods = true;
-    }
+  }
+
+  // Защита: вкладки, полученные через роль, нельзя забрать:
+  if (currentRank === 1 || currentRank === 2) {
+    canSuspicious = true;
+  } else if (currentRank != null && currentRank >= 3) {
+    canStats = true;
+    canActivity = true;
+    canSuspicious = true;
+    canMods = true;
   }
 
   if (patch.tag !== undefined && !actor.caps.isOwner) {

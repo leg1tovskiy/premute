@@ -86,7 +86,6 @@ export function AdminView({ me }: { me: StaffProfile }) {
   function handleRoleChange(u: StaffListItem, val: string) {
     if (val === "owner") {
       void patch(u.userId, {
-        ...u,
         isOwner: true,
         roleRank: null,
         canStats: true,
@@ -96,7 +95,6 @@ export function AdminView({ me }: { me: StaffProfile }) {
       });
     } else if (val === "none") {
       void patch(u.userId, {
-        ...u,
         isOwner: false,
         roleRank: null,
         canStats: false,
@@ -108,7 +106,6 @@ export function AdminView({ me }: { me: StaffProfile }) {
       const rank = Number(val);
       const isSenior = rank >= 3;
       void patch(u.userId, {
-        ...u,
         isOwner: false,
         roleRank: rank,
         canStats: isSenior,
@@ -313,12 +310,12 @@ export function AdminView({ me }: { me: StaffProfile }) {
                       <SteamIdField
                         value={u.mySteamId}
                         disabled={locked}
-                        onSave={(sid) => void patch(u.userId, { ...u, steamid: sid, mySteamId: sid })}
+                        onSave={(sid) => void patch(u.userId, { steamid: sid })}
                       />
                       <TagField
                         value={u.tag}
                         disabled={locked}
-                        onSave={(tag) => void patch(u.userId, { ...u, tag })}
+                        onSave={(tag) => void patch(u.userId, { tag })}
                       />
                     </div>
                   ) : null}
@@ -408,7 +405,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
                               checked={u.isOwner || statsByRole || u.canStats}
                               disabled={locked || u.isOwner || u.isBanned || statsByRole}
                               byRole={statsByRole}
-                              onChange={(v) => void patch(u.userId, { ...u, canStats: v })}
+                              onChange={(v) => void patch(u.userId, { canStats: v })}
                             />
                             <Toggle
                               label="Онлайн"
@@ -416,7 +413,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
                               checked={u.isOwner || activityByRole || u.canActivity}
                               disabled={locked || u.isOwner || u.isBanned || activityByRole}
                               byRole={activityByRole}
-                              onChange={(v) => void patch(u.userId, { ...u, canActivity: v })}
+                              onChange={(v) => void patch(u.userId, { canActivity: v })}
                             />
                             <Toggle
                               label="Игроки"
@@ -424,7 +421,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
                               checked={u.isOwner || suspiciousByRole || u.canSuspicious}
                               disabled={locked || u.isOwner || u.isBanned || suspiciousByRole}
                               byRole={suspiciousByRole}
-                              onChange={(v) => void patch(u.userId, { ...u, canSuspicious: v })}
+                              onChange={(v) => void patch(u.userId, { canSuspicious: v })}
                             />
                             <Toggle
                               label="Модераторы"
@@ -432,14 +429,14 @@ export function AdminView({ me }: { me: StaffProfile }) {
                               checked={u.isOwner || modsByRole || u.canMods}
                               disabled={locked || u.isOwner || u.isBanned || modsByRole}
                               byRole={modsByRole}
-                              onChange={(v) => void patch(u.userId, { ...u, canMods: v })}
+                              onChange={(v) => void patch(u.userId, { canMods: v })}
                             />
                         {me.caps.canGrantBotOwner ? (
                           <Toggle
                             label="Владелец бота"
                             checked={u.isRoot || u.isBotOwner}
                             disabled={locked || u.isRoot || u.isBanned}
-                            onChange={(v) => void patch(u.userId, { ...u, isBotOwner: v })}
+                            onChange={(v) => void patch(u.userId, { isBotOwner: v })}
                           />
                         ) : null}
                         {me.caps.canGrantOwner ? (
@@ -447,7 +444,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
                             label="Владелец сайта"
                             checked={u.isOwner || u.isRoot}
                             disabled={locked || u.isRoot || u.isBanned}
-                            onChange={(v) => void patch(u.userId, { ...u, isOwner: v })}
+                            onChange={(v) => void patch(u.userId, { isOwner: v })}
                           />
                         ) : null}
                         {!isMainOwner(u) && !u.isRoot && u.userId !== me.userId ? (
@@ -456,7 +453,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
                             hint="Заблокировать доступ пользователя к панели управления"
                             checked={Boolean(u.isBanned)}
                             disabled={locked}
-                            onChange={(v) => void patch(u.userId, { ...u, isBanned: v })}
+                            onChange={(v) => void patch(u.userId, { isBanned: v })}
                           />
                         ) : null}
                       </div>
