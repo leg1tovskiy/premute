@@ -127,119 +127,125 @@ export function PanelShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-dvh bg-bg text-fg">
       {/* ── Desktop Sidebar ────────────────────────────────────────── */}
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-border/70 bg-surface/70 glass-panel md:flex z-30">
-        {/* Brand */}
-        <div className="flex h-16 shrink-0 items-center justify-between border-b border-border/60 px-5">
+      <aside className="sticky top-0 hidden h-dvh w-64 lg:w-72 shrink-0 flex-col gap-3 p-3 md:flex z-30 select-none">
+        {/* Окошко 1: Бренд и статус серверов FEAR */}
+        <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3.5 shadow-sm space-y-3 shrink-0">
           <Link to="/" className="group flex items-center gap-3">
             <div className="relative">
               <img
                 src="/logo.png"
                 alt="PremuteBOT"
-                className="size-9 rounded-xl border border-border/80 object-cover shadow-sm transition-transform group-hover:scale-105"
+                className="size-10 rounded-xl border border-border/80 object-cover shadow-sm transition-transform group-hover:scale-105"
               />
               <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-surface bg-success" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-sm font-extrabold tracking-tight">PremuteBOT</span>
-                <span className="rounded bg-accent/15 px-1.5 py-0.2 text-[10px] font-bold text-accent">PRO</span>
+                <span className="rounded bg-accent/15 px-1.5 py-0.2 text-[10px] font-bold text-accent border border-accent/30">PRO</span>
               </div>
               <p className="text-[11px] text-subtle">FearProject CS2</p>
             </div>
           </Link>
-        </div>
 
-        {/* Server Pulse Card */}
-        <div className="mx-3 mt-4 rounded-xl border border-border/60 bg-elevated/40 p-3 shadow-inner">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-xs font-semibold text-fg">
-              <span className="relative flex size-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-                <span className="relative inline-flex size-2 rounded-full bg-success" />
+          {/* Server Pulse Card */}
+          <div className="rounded-xl border border-border/60 bg-elevated/50 p-2.5 shadow-inner">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2 text-xs font-semibold text-fg">
+                <span className="relative flex size-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                  <span className="relative inline-flex size-2 rounded-full bg-success" />
+                </span>
+                Серверы FEAR
               </span>
-              Серверы FEAR
-            </span>
-            <span className="text-[10px] font-mono text-muted">Sub-tick</span>
+              <span className="rounded bg-surface px-1.5 py-0.5 text-[10px] font-mono text-muted border border-border/50">Sub-tick</span>
+            </div>
+            <p className="mt-1 text-[11px] text-muted">Синхронизация активна</p>
           </div>
-          <p className="mt-1 text-[11px] text-muted">Синхронизация активна</p>
         </div>
 
-        {/* Navigation Groups */}
-        <nav className="no-scrollbar mt-4 flex-1 space-y-1 overflow-y-auto px-3" aria-label="Боковое меню">
-          <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-subtle">
+        {/* Окошко 2: Вкладки навигации */}
+        <div className="flex flex-1 flex-col rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3 shadow-sm min-h-0 overflow-hidden">
+          <div className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-subtle">
             Основное
           </div>
-          <Link
-            to="/"
-            className={cn(
-              "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200",
-              pathname === "/"
-                ? "border border-accent/30 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent text-fg shadow-[0_0_15px_-4px_color-mix(in_oklab,var(--color-accent)_35%,transparent)]"
-                : "border border-transparent text-muted hover:border-border/60 hover:bg-elevated/60 hover:text-fg",
-            )}
-          >
-            <Home className={cn("size-4 transition-colors duration-200", pathname === "/" ? "text-accent" : "text-subtle group-hover:text-fg")} />
-            <span>Главная</span>
-            {pathname === "/" ? (
-              <span className="ml-auto size-1.5 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)] animate-in fade-in zoom-in-75 duration-200" />
-            ) : null}
-          </Link>
-
-          {tabs.map((t) => {
-            const Icon = t.icon;
-            const isActive = pathname === t.to;
-            return (
-              <Link
-                key={t.id}
-                to={t.to}
-                className={cn(
-                  "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200",
-                  isActive
-                    ? "border border-accent/30 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent text-fg shadow-[0_0_15px_-4px_color-mix(in_oklab,var(--color-accent)_35%,transparent)]"
-                    : "border border-transparent text-muted hover:border-border/60 hover:bg-elevated/60 hover:text-fg",
-                )}
-              >
-                <Icon className={cn("size-4 transition-colors duration-200", isActive ? "text-accent" : "text-subtle group-hover:text-fg")} />
-                <span>{t.label}</span>
-                {isActive ? (
-                  <span className="ml-auto size-1.5 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)] animate-in fade-in zoom-in-75 duration-200" />
-                ) : null}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* User Card at bottom of sidebar */}
-        <div className="border-t border-border/60 bg-surface/90 p-3">
-          <div className="flex items-center gap-2.5 rounded-xl border border-border/50 bg-elevated/50 p-2.5">
-            <div className="relative shrink-0">
-              {profile.image ? (
-                <img src={profile.image} alt="" className="size-9 rounded-full border border-border object-cover" />
-              ) : (
-                <div className="grid size-9 place-items-center rounded-full bg-gradient-to-tr from-accent/30 to-elevated text-xs font-bold text-fg">
-                  {(profile.displayName || profile.tag || "U")[0].toUpperCase()}
-                </div>
+          <nav className="no-scrollbar flex-1 space-y-1.5 overflow-y-auto" aria-label="Боковое меню">
+            <Link
+              to="/"
+              className={cn(
+                "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200",
+                pathname === "/"
+                  ? "border border-accent/40 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent text-fg shadow-[0_0_15px_-4px_color-mix(in_oklab,var(--color-accent)_35%,transparent)] font-semibold"
+                  : "border border-transparent text-muted hover:border-border/60 hover:bg-elevated/60 hover:text-fg",
               )}
-              <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-surface bg-success" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-bold leading-tight text-fg">
-                {profile.displayName || profile.tag || "Администратор"}
-              </p>
-              <p className="truncate text-[10px] text-subtle font-medium">
-                {profile.isOwner ? "Владелец" : "Модератор"}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => void signOut()}
-              className="grid size-8 shrink-0 place-items-center rounded-lg border border-border/60 bg-surface/80 text-subtle hover:text-danger hover:border-danger/40 hover:bg-danger/10 transition-colors"
-              title="Выйти из аккаунта"
-              aria-label="Выйти из аккаунта"
             >
-              <LogOut className="size-3.5" />
-            </button>
+              <Home className={cn("size-4 transition-colors duration-200", pathname === "/" ? "text-accent" : "text-subtle group-hover:text-fg")} />
+              <span>Главная</span>
+              {pathname === "/" ? (
+                <span className="ml-auto size-1.5 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)] animate-in fade-in zoom-in-75 duration-200" />
+              ) : null}
+            </Link>
+
+            {tabs.map((t) => {
+              const Icon = t.icon;
+              const isActive = pathname === t.to;
+              return (
+                <Link
+                  key={t.id}
+                  to={t.to}
+                  className={cn(
+                    "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200",
+                    isActive
+                      ? "border border-accent/40 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent text-fg shadow-[0_0_15px_-4px_color-mix(in_oklab,var(--color-accent)_35%,transparent)] font-semibold"
+                      : "border border-transparent text-muted hover:border-border/60 hover:bg-elevated/60 hover:text-fg",
+                  )}
+                >
+                  <Icon className={cn("size-4 transition-colors duration-200", isActive ? "text-accent" : "text-subtle group-hover:text-fg")} />
+                  <span>{t.label}</span>
+                  {isActive ? (
+                    <span className="ml-auto size-1.5 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)] animate-in fade-in zoom-in-75 duration-200" />
+                  ) : null}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Окошко 3: Профиль (стиль как на Фото 2) */}
+        <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-4 text-center shadow-sm shrink-0">
+          <div className="relative mx-auto size-16">
+            {profile.image ? (
+              <img
+                src={profile.image}
+                alt=""
+                className="size-16 rounded-2xl border border-border/80 object-cover shadow-sm"
+              />
+            ) : (
+              <div className="grid size-16 place-items-center rounded-2xl border border-border/80 bg-gradient-to-tr from-accent/30 to-elevated text-base font-bold text-fg shadow-sm">
+                {(profile.displayName || profile.tag || "U")[0].toUpperCase()}
+              </div>
+            )}
+            <span className="absolute -bottom-1 -right-1 size-3.5 rounded-full border-2 border-surface bg-success shadow-sm" />
           </div>
+
+          <div className="mt-2.5">
+            <p className="truncate text-sm font-extrabold text-fg">
+              {profile.displayName || profile.tag || "Администратор"}
+            </p>
+            <p className="mt-0.5 truncate text-xs font-medium text-muted">
+              {profile.isOwner ? "Владелец" : "Модератор"}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            className="mt-3.5 flex w-full items-center justify-center gap-2 rounded-xl border border-border/80 bg-elevated/60 py-2 px-3 text-xs font-semibold text-fg hover:border-danger/60 hover:bg-danger/10 hover:text-danger transition-all duration-200 cursor-pointer shadow-sm active:scale-98"
+            title="Выйти из аккаунта"
+          >
+            <LogOut className="size-3.5" />
+            <span>Выйти</span>
+          </button>
         </div>
       </aside>
 
@@ -327,51 +333,120 @@ export function PanelShell({ children }: { children: ReactNode }) {
             className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="relative flex w-72 flex-col bg-surface p-5 shadow-2xl z-10 border-r border-border">
-            <div className="flex items-center justify-between pb-4 border-b border-border/60">
-              <div className="flex items-center gap-2.5">
-                <img src="/logo.png" alt="PremuteBOT" className="size-8 rounded-lg border border-border" />
-                <span className="font-bold text-sm">PremuteBOT</span>
+          <div className="relative flex w-72 flex-col bg-bg p-3 shadow-2xl z-10 gap-3 justify-between overflow-y-auto">
+            {/* Карточка 1: Бренд и статус */}
+            <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3.5 shadow-sm">
+              <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                <div className="flex items-center gap-2.5">
+                  <img src="/logo.png" alt="PremuteBOT" className="size-8 rounded-lg border border-border object-cover" />
+                  <div>
+                    <span className="font-bold text-sm block leading-tight">PremuteBOT</span>
+                    <span className="text-[10px] text-subtle">FearProject CS2</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileOpen(false)}
+                  className="grid size-8 place-items-center rounded-lg border border-border text-muted hover:text-fg transition-colors"
+                >
+                  <X className="size-4" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setMobileOpen(false)}
-                className="grid size-8 place-items-center rounded-lg border border-border text-muted"
-              >
-                <X className="size-4" />
-              </button>
+
+              {/* Server Pulse Card */}
+              <div className="mt-3 rounded-xl border border-border/60 bg-elevated/50 p-2.5 shadow-inner">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-xs font-semibold text-fg">
+                    <span className="relative flex size-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                      <span className="relative inline-flex size-2 rounded-full bg-success" />
+                    </span>
+                    Серверы FEAR
+                  </span>
+                  <span className="rounded bg-surface px-1.5 py-0.5 text-[10px] font-mono text-muted border border-border/50">Sub-tick</span>
+                </div>
+                <p className="mt-1 text-[11px] text-muted">Синхронизация активна</p>
+              </div>
             </div>
 
-            <nav className="mt-4 flex-1 space-y-1.5">
-              <Link
-                to="/"
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
-                  pathname === "/" ? "bg-accent/15 text-accent font-semibold" : "text-muted hover:text-fg",
+            {/* Карточка 2: Вкладки */}
+            <div className="flex-1 rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3 shadow-sm">
+              <div className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-subtle">
+                Основное
+              </div>
+              <nav className="space-y-1.5">
+                <Link
+                  to="/"
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-medium transition-all duration-200",
+                    pathname === "/"
+                      ? "border border-accent/40 bg-accent/15 text-accent font-semibold"
+                      : "text-muted hover:text-fg hover:bg-elevated/60",
+                  )}
+                >
+                  <Home className="size-4" />
+                  Главная
+                </Link>
+                {tabs.map((t) => {
+                  const Icon = t.icon;
+                  const isActive = pathname === t.to;
+                  return (
+                    <Link
+                      key={t.id}
+                      to={t.to}
+                      onClick={() => setMobileOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-medium transition-all duration-200",
+                        isActive
+                          ? "border border-accent/40 bg-accent/15 text-accent font-semibold"
+                          : "text-muted hover:text-fg hover:bg-elevated/60",
+                      )}
+                    >
+                      <Icon className="size-4" />
+                      {t.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Карточка 3: Профиль как на Фото 2 */}
+            <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-4 text-center shadow-sm">
+              <div className="relative mx-auto size-16">
+                {profile.image ? (
+                  <img
+                    src={profile.image}
+                    alt=""
+                    className="size-16 rounded-2xl border border-border/80 object-cover shadow-sm"
+                  />
+                ) : (
+                  <div className="grid size-16 place-items-center rounded-2xl border border-border/80 bg-gradient-to-tr from-accent/30 to-elevated text-base font-bold text-fg shadow-sm">
+                    {(profile.displayName || profile.tag || "U")[0].toUpperCase()}
+                  </div>
                 )}
+                <span className="absolute -bottom-1 -right-1 size-3.5 rounded-full border-2 border-surface bg-success shadow-sm" />
+              </div>
+
+              <div className="mt-2.5">
+                <p className="truncate text-sm font-extrabold text-fg">
+                  {profile.displayName || profile.tag || "Администратор"}
+                </p>
+                <p className="mt-0.5 truncate text-xs font-medium text-muted">
+                  {profile.isOwner ? "Владелец" : "Модератор"}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                className="mt-3.5 flex w-full items-center justify-center gap-2 rounded-xl border border-border/80 bg-elevated/60 py-2 px-3 text-xs font-semibold text-fg hover:border-danger/60 hover:bg-danger/10 hover:text-danger transition-all duration-200 cursor-pointer shadow-sm active:scale-98"
+                title="Выйти из аккаунта"
               >
-                <Home className="size-4" />
-                Главная
-              </Link>
-              {tabs.map((t) => {
-                const Icon = t.icon;
-                return (
-                  <Link
-                    key={t.id}
-                    to={t.to}
-                    onClick={() => setMobileOpen(false)}
-                    className={cn(
-                      "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
-                      pathname === t.to ? "bg-accent/15 text-accent font-semibold" : "text-muted hover:text-fg",
-                    )}
-                  >
-                    <Icon className="size-4" />
-                    {t.label}
-                  </Link>
-                );
-              })}
-            </nav>
+                <LogOut className="size-3.5" />
+                <span>Выйти</span>
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
