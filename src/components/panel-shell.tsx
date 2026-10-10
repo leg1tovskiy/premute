@@ -127,7 +127,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-dvh bg-bg text-fg">
       {/* ── Left Sidebar (Brand & Compact Tabs without empty space) ── */}
-      <aside className="sticky top-0 hidden w-60 lg:w-64 shrink-0 flex-col gap-3 p-3 md:flex z-30 select-none self-start">
+      <aside className="sticky top-0 hidden w-64 lg:w-72 shrink-0 flex-col gap-3 p-3 md:flex z-30 select-none self-start">
         {/* Окошко 1: Бренд и статус серверов FEAR */}
         <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3.5 shadow-sm space-y-3 shrink-0">
           <Link to="/" className="group flex items-center gap-3">
@@ -290,7 +290,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
       </div>
 
       {/* ── Right Sidebar (Профиль в правой части как на Фото 2) ─────── */}
-      <aside className="sticky top-0 hidden w-60 lg:w-64 shrink-0 flex-col gap-3 p-3 xl:flex z-30 select-none self-start">
+      <aside className="sticky top-0 hidden w-64 lg:w-72 shrink-0 flex-col gap-3 p-3 xl:flex z-30 select-none self-start">
         {/* Окошко 1: Профиль (как на Фото 1/2) */}
         <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-4 text-center shadow-sm">
           <div className="relative mx-auto size-16">
@@ -328,42 +328,24 @@ export function PanelShell({ children }: { children: ReactNode }) {
           </button>
         </div>
 
-        {/* Окошко 2: Панель управления (как на Фото 2) */}
+        {/* Окошко 2: Панель управления */}
         <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3.5 shadow-sm space-y-2.5">
           <div className="px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-subtle">
             Панель управления
           </div>
 
-          <div className="space-y-1 text-xs">
-            <button
-              type="button"
-              onClick={() => setPaletteOpen(true)}
-              className="flex w-full items-center justify-between rounded-xl border border-transparent px-3 py-2 text-muted hover:border-border/60 hover:bg-elevated/60 hover:text-fg transition-all"
-            >
-              <span className="flex items-center gap-2.5 font-medium">
-                <Command className="size-4 text-subtle" />
-                <span>Поиск</span>
-              </span>
-              <kbd className="rounded bg-surface px-1.5 py-0.5 font-mono text-[10px] text-subtle border border-border/60">
-                ⌘K
-              </kbd>
-            </button>
-
-            <div className="flex items-center justify-between rounded-xl border border-transparent px-3 py-2 text-muted">
-              <span className="flex items-center gap-2.5 font-medium">
-                <Sparkles className="size-4 text-subtle" />
-                <span>Тема</span>
-              </span>
-              <ThemeSelect />
-            </div>
+          <div className="space-y-2 text-xs">
+            <ThemeSelect fullWidth className="w-full" />
 
             {mskTime ? (
-              <div className="flex items-center justify-between rounded-xl border border-border/40 bg-elevated/40 px-3 py-2 text-muted font-mono text-[11px]">
-                <span className="flex items-center gap-2 text-subtle">
-                  <Clock className="size-3.5 text-accent" />
+              <div className="flex h-10 items-center justify-between rounded-xl border border-border/60 bg-elevated/40 px-3 text-xs">
+                <span className="flex items-center gap-2 text-subtle font-medium">
+                  <Clock className="size-4 text-accent shrink-0" />
                   <span>МСК</span>
                 </span>
-                <span className="font-bold text-fg">{mskTime}</span>
+                <span className="font-mono font-bold text-fg tabular-nums tracking-wider text-xs">
+                  {mskTime}
+                </span>
               </div>
             ) : null}
           </div>

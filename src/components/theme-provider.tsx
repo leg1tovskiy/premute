@@ -234,9 +234,11 @@ export function useTheme() {
 
 export function ThemeSelect({
   compact = false,
+  fullWidth = false,
   className,
 }: {
   compact?: boolean;
+  fullWidth?: boolean;
   className?: string;
 }) {
   const { theme, resolvedTheme, setTheme } = useTheme();
@@ -264,27 +266,30 @@ export function ThemeSelect({
   }, [open]);
 
   return (
-    <div className={cn("relative inline-block", className)}>
+    <div className={cn("relative", fullWidth ? "w-full" : "inline-block", className)}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="group inline-flex h-9 items-center gap-2 rounded-xl border border-border/80 bg-elevated/70 px-2.5 text-xs font-semibold text-muted transition-all hover:border-accent/40 hover:bg-elevated hover:text-fg shadow-sm active:scale-98"
+        className={cn(
+          "group inline-flex items-center gap-2 rounded-xl border border-border/80 bg-elevated/70 text-xs font-semibold text-muted transition-all hover:border-accent/40 hover:bg-elevated hover:text-fg shadow-sm active:scale-98 cursor-pointer",
+          fullWidth
+            ? "h-10 w-full justify-between px-3"
+            : "h-9 px-2.5",
+        )}
         title="Сменить тему оформления"
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        <div className="relative flex items-center justify-center">
+        <div className="flex items-center gap-2.5 min-w-0">
           <span
-            className="size-3 rounded-full border border-border/60 transition-transform group-hover:scale-110 shadow-sm"
+            className="size-3.5 rounded-full border border-border/60 transition-transform group-hover:scale-110 shadow-sm shrink-0"
             style={{ background: activeThemeMeta.color }}
           />
-        </div>
-        {!compact ? (
-          <span className="hidden sm:inline font-medium text-fg">
-            {activeThemeMeta.label}
+          <span className="font-medium text-fg truncate">
+            {fullWidth ? `Тема: ${activeThemeMeta.label}` : (!compact ? activeThemeMeta.label : null)}
           </span>
-        ) : null}
-        <Palette className="size-3.5 text-subtle transition-colors group-hover:text-accent" />
+        </div>
+        <Palette className="size-4 text-subtle transition-colors group-hover:text-accent shrink-0 ml-2" />
       </button>
 
       {/* Theme Picker Modal / Dialog via Portal */}
