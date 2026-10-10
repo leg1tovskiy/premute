@@ -384,6 +384,23 @@ export const getModDetailsFn = createServerFn({ method: "POST" })
     };
   });
 
+export const getModAllPunishmentsFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { steamid: string; refresh?: boolean }) => d)
+  .handler(async ({ context, data }): Promise<{ records: PunishmentRecord[] }> => {
+    const { getStaff } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.canStats || me.isBanned) throw new Error("Нет доступа к статистике.");
+    const steamid = String(data.steamid || "").trim();
+    if (!/^\d{17}$/.test(steamid)) throw new Error("SteamID64 — 17 цифр.");
+    if (!me.caps.canGeneralStats && me.mySteamId !== steamid) {
+      throw new Error("У вас нет прав на просмотр статистики других модераторов.");
+    }
+    const { fetchWorkerModAllPunishments } = await import("./server/discord");
+    const res = await fetchWorkerModAllPunishments(steamid, Boolean(data.refresh));
+    return { records: res?.records ?? [] };
+  });
+
 export const getDailyStatsFn = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }): Promise<DailyPoint[]> => {

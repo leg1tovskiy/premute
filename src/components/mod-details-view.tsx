@@ -13,6 +13,7 @@ import {
   ExternalLink,
   Flame,
   Hammer,
+  Loader2,
   RefreshCw,
   Search,
   Share2,
@@ -29,7 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeaderSkeleton, RowsSkeleton, Skeleton } from "@/components/skeletons";
-import { getModDetailsFn } from "@/lib/fn";
+import { getModDetailsFn, getModAllPunishmentsFn } from "@/lib/fn";
 import { downloadCsv } from "@/lib/csv";
 import { RANK_SHORT, fearProfileUrl } from "@/lib/constants";
 import type { ModDetails, PunishmentRecord } from "@/lib/types";
@@ -573,7 +574,9 @@ export function ModDetailsView({
   const [status, setStatus] = useState<"all" | "active" | "expired" | "removed">("all");
   const [search, setSearch] = useState("");
 
-  const [datePreset, setDatePreset] = useState<"all" | "today" | "3days" | "week">("all");
+  const [datePreset, setDatePreset] = useState<"all" | "all_time" | "today" | "3days" | "week">("all");
+  const [allTimeRecords, setAllTimeRecords] = useState<PunishmentRecord[] | null>(null);
+  const [loadingAllTime, setLoadingAllTime] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
 
   async function load(silent = false) {
@@ -593,6 +596,29 @@ export function ModDetailsView({
     }
   }
 
+  async function loadAllTime(forceRefresh = false) {
+    if (!data?.moderator.steamid) return;
+    if (allTimeRecords && !forceRefresh) return;
+    setLoadingAllTime(true);
+    try {
+      const res = await getModAllPunishmentsFn({
+        data: { steamid: data.moderator.steamid, refresh: forceRefresh },
+      });
+      setAllTimeRecords(res.records);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Не удалось загрузить историю наказаний за всё время");
+    } finally {
+      setLoadingAllTime(false);
+    }
+  }
+
+  useEffect(() => {
+    if (datePreset === "all_time" && allTimeRecords === null && !loadingAllTime && data?.moderator.steamid) {
+      void loadAllTime();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [datePreset, data?.moderator.steamid]);
+
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -604,6 +630,8 @@ export function ModDetailsView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
+  const activeSource = datePreset === "all_time" ? (allTimeRecords ?? []) : (data?.records ?? []);
+
   const records = useMemo(() => {
     if (!data) return [];
     const q = search.trim().toLowerCase();
@@ -614,7 +642,7 @@ export function ModDetailsView({
     const mskTodayStartUtc = Date.UTC(mskNow.getUTCFullYear(), mskNow.getUTCMonth(), mskNow.getUTCDate()) - mskOffset;
     const todayStartSec = Math.floor(mskTodayStartUtc / 1000);
 
-    return [...data.records]
+    return [...activeSource]
       .sort((a, b) => b.created - a.created)
       .filter((r) => {
         if (kind !== "all" && r.kind !== kind) return false;
@@ -637,7 +665,7 @@ export function ModDetailsView({
           r.playerSteamid.includes(q)
         );
       });
-  }, [data, kind, status, datePreset, search]);
+  }, [data, activeSource, kind, status, datePreset, search]);
 
   if (loading) {
     return (
@@ -874,11 +902,14 @@ export function ModDetailsView({
         <div className="p-5 border-b border-border/60 space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-extrabold text-fg">Все наказания за период</h2>
+              <h2 className="text-base font-extrabold text-fg flex items-center gap-2">
+                <span>{datePreset === "all_time" ? "Все наказания за всё время" : "Все наказания за период"}</span>
+                {loadingAllTime && <Loader2 className="size-3.5 animate-spin text-accent" />}
+              </h2>
               <p className="text-xs text-muted">
-                {records.length} записей &middot; {data.records.filter((r) => r.kind === "ban").length} банов,{" "}
-                {data.records.filter((r) => r.kind === "mute").length} мутов,{" "}
-                {data.records.filter((r) => r.unpunishAdmin || r.status === 2).length} снято
+                {records.length} записей &middot; {activeSource.filter((r) => r.kind === "ban").length} банов,{" "}
+                {activeSource.filter((r) => r.kind === "mute").length} мутов,{" "}
+                {activeSource.filter((r) => r.unpunishAdmin || r.status === 2).length} снято
               </p>
             </div>
 
@@ -889,7 +920,7 @@ export function ModDetailsView({
                 className="h-8.5 rounded-xl border-border/80 bg-elevated/70 px-3 text-xs font-bold text-fg hover:border-accent"
                 onClick={() =>
                   data &&
-                  downloadCsv(`mod-${m.steamid}.csv`, [
+                  downloadCsv(datePreset === "all_time" ? `mod-${m.steamid}-all-time.csv` : `mod-${m.steamid}.csv`, [
                     ["Дата", "Игрок", "SteamID игрока", "Тип", "Срок", "Статус", "Причина"],
                     ...records.map((r) => [
                       fmtDateTime(r.created),
@@ -912,9 +943,17 @@ export function ModDetailsView({
                 variant="ghost"
                 size="sm"
                 className="h-8.5 w-8.5 rounded-xl border border-border/80 bg-elevated/70 p-0 text-muted hover:text-fg"
-                onClick={() => void load()}
+                onClick={() => {
+                  if (datePreset === "all_time") {
+                    void loadAllTime(true);
+                  } else {
+                    void load(true);
+                  }
+                }}
+                disabled={loading || loadingAllTime}
+                title="Обновить список"
               >
-                <RefreshCw className="size-3.5" />
+                <RefreshCw className={cn("size-3.5", (loading || loadingAllTime) && "animate-spin")} />
               </Button>
             </div>
           </div>
@@ -976,10 +1015,11 @@ export function ModDetailsView({
               {/* Date Preset Filter */}
               {(
                 [
-                  { id: "all", label: "Все дни" },
-                  { id: "today", label: "Сегодня" },
-                  { id: "3days", label: "3 дня" },
+                  { id: "all_time", label: "За всё время" },
+                  { id: "all", label: "Этот месяц" },
                   { id: "week", label: "Неделя" },
+                  { id: "3days", label: "3 дня" },
+                  { id: "today", label: "Сегодня" },
                 ] as const
               ).map((f) => (
                 <button
@@ -987,13 +1027,24 @@ export function ModDetailsView({
                   type="button"
                   onClick={() => setDatePreset(f.id)}
                   className={cn(
-                    "h-7.5 rounded-xl border px-2.5 text-xs font-bold transition-all",
+                    "h-7.5 rounded-xl border px-2.5 text-xs font-bold transition-all flex items-center gap-1.5",
                     datePreset === f.id
                       ? "border-accent bg-accent text-accent-fg shadow-sm"
                       : "border-border/60 bg-elevated/60 text-muted hover:text-fg",
                   )}
                 >
-                  {f.label}
+                  {f.id === "all_time" && loadingAllTime && <Loader2 className="size-3 animate-spin" />}
+                  <span>{f.label}</span>
+                  {f.id === "all_time" && allTimeRecords !== null && (
+                    <span
+                      className={cn(
+                        "rounded px-1.5 py-0.2 text-[10px] font-mono leading-none",
+                        datePreset === f.id ? "bg-accent-fg/20 text-accent-fg" : "bg-surface text-muted",
+                      )}
+                    >
+                      {allTimeRecords.length}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -1012,9 +1063,18 @@ export function ModDetailsView({
         </div>
 
         {/* Sanctions List */}
-        {records.length === 0 ? (
+        {loadingAllTime && activeSource.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center text-muted gap-3">
+            <Loader2 className="size-6 animate-spin text-accent" />
+            <p className="text-xs font-medium">Загрузка наказаний за всё время с FearProject...</p>
+          </div>
+        ) : records.length === 0 ? (
           <p className="px-5 py-12 text-center text-xs text-muted">
-            {data.records.length === 0 ? "За текущий месяц наказаний нет." : "Ничего не найдено по заданным фильтрам."}
+            {activeSource.length === 0
+              ? datePreset === "all_time"
+                ? "Наказаний за всё время не найдено."
+                : "За текущий месяц наказаний нет."
+              : "Ничего не найдено по заданным фильтрам."}
           </p>
         ) : (
           <ul className="max-h-[70vh] divide-y divide-border/60 overflow-y-auto">

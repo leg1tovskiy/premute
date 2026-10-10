@@ -429,6 +429,24 @@ export async function fetchWorkerPunishments(steamid: string): Promise<WorkerPun
   }
 }
 
+export async function fetchWorkerModAllPunishments(
+  steamid: string,
+  refresh = false,
+): Promise<{ ok: boolean; records: PunishmentRecord[] } | null> {
+  try {
+    const res = await fetch(
+      `${STATS_WORKER_URL}/mod-all?steamid=${encodeURIComponent(steamid)}&s=${encodeURIComponent(panelSecret())}${refresh ? "&refresh=1" : ""}`,
+      { signal: AbortSignal.timeout(20000) },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as { ok?: boolean; records?: PunishmentRecord[] };
+    if (!json.ok || !Array.isArray(json.records)) return null;
+    return { ok: true, records: json.records };
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchWorkerDaily(): Promise<{ month?: string; days?: DailyPoint[] } | null> {
   try {
     const res = await fetch(`${STATS_WORKER_URL}/daily?s=${encodeURIComponent(panelSecret())}`, {
