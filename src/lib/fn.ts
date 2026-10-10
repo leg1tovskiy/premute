@@ -456,10 +456,16 @@ export const getSuspiciousFn = createServerFn({ method: "GET" })
       }
     }
 
+    let newcomers = data.newcomers ?? [];
+    if (newcomers.length === 0 && players.length > 0) {
+      newcomers = players.filter((p) => p.playtime > 0 && p.playtime < 10 * 3600);
+    }
+
     return {
       updatedAt: data.updatedAt ?? null,
       tickets: data.tickets ?? null,
       players,
+      newcomers,
     };
   });
 

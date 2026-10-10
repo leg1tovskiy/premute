@@ -510,6 +510,7 @@ export async function fetchWorkerSuspicious(): Promise<{
   updatedAt?: number;
   tickets?: SuspiciousTicketsInfo;
   players?: SuspiciousPlayer[];
+  newcomers?: SuspiciousPlayer[];
 } | null> {
   try {
     const res = await fetch(`${STATS_WORKER_URL}/suspicious?s=${encodeURIComponent(panelSecret())}`, {
@@ -521,6 +522,7 @@ export async function fetchWorkerSuspicious(): Promise<{
       updatedAt?: number;
       tickets?: SuspiciousTicketsInfo;
       players?: SuspiciousPlayer[];
+      newcomers?: SuspiciousPlayer[];
     };
     if (!json.ok) return null;
     return json;

@@ -242,6 +242,7 @@ export type SuspiciousPayload = {
   updatedAt: number | null;
   tickets: SuspiciousTicketsInfo | null;
   players: SuspiciousPlayer[];
+  newcomers?: SuspiciousPlayer[];
 };
 
 export type GuildMember = {
