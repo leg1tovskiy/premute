@@ -10,6 +10,7 @@ import {
 } from "./config";
 import { createHash } from "node:crypto";
 import type {
+  ActivityPayload,
   BackupsPayload,
   DailyPoint,
   GameServer,
@@ -633,6 +634,22 @@ export async function fetchWorkerOnline(ids: string[]): Promise<Record<string, O
     const json = (await res.json()) as { ok?: boolean; online?: Record<string, OnlineInfo> };
     if (!json.ok || !json.online) return null;
     return json.online;
+  } catch {
+    return null;
+  }
+}
+
+/** Кто из модеров сейчас в игре: сервер, карта, время на сервере, команда T/CT/Spec. */
+export async function fetchWorkerActivity(): Promise<ActivityPayload | null> {
+  try {
+    const res = await fetch(
+      `${STATS_WORKER_URL}/activity?s=${encodeURIComponent(panelSecret())}`,
+      { signal: AbortSignal.timeout(8000) },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as ActivityPayload & { ok?: boolean };
+    if (!json.ok) return null;
+    return json;
   } catch {
     return null;
   }

@@ -38,6 +38,7 @@ export function computeCaps(
     is_owner: unknown;
     is_bot_owner: unknown;
     can_stats: unknown;
+    can_activity?: unknown;
     can_suspicious: unknown;
     can_moderation: unknown;
     can_voice: unknown;
@@ -54,6 +55,7 @@ export function computeCaps(
       isRoot: false,
       isOwner: false,
       canStats: false,
+      canActivity: false,
       canGeneralStats: false,
       canOwnStats: false,
       canSuspicious: false,
@@ -82,6 +84,8 @@ export function computeCaps(
   const isSundayAccess = !permanentGeneralStats && canOwnStats && isSunday;
   const canGeneralStats = permanentGeneralStats || isSundayAccess;
   const canStats = canGeneralStats || canOwnStats;
+  // Вкладка "Активность" привязана к Статистике, если есть доступ и к "Активность"
+  const canActivity = canStats && (isOwner || flag(row.can_activity));
   const canSuspicious = isOwner || flag(row.can_suspicious);
   const canModeration = isOwner || flag(row.can_moderation);
   const canVoice = isOwner || flag(row.can_voice);
@@ -95,6 +99,7 @@ export function computeCaps(
     isRoot,
     isOwner,
     canStats,
+    canActivity,
     canGeneralStats,
     canOwnStats,
     isSundayAccess,
@@ -111,7 +116,7 @@ export function computeCaps(
     canGrantOwner: isRoot,
     // Назначать/снимать «владельцев бота» может только корневой владелец.
     canGrantBotOwner: isRoot,
-    waiting: !(canStats || canSuspicious || canModeration || canVoice || canMods || canLogs || canPower || canConsole || canAdmin),
+    waiting: !(canStats || canActivity || canSuspicious || canModeration || canVoice || canMods || canLogs || canPower || canConsole || canAdmin),
     isBanned: false,
   };
 }
@@ -148,6 +153,7 @@ type StaffRow = {
   is_bot_owner: unknown;
   is_banned?: unknown;
   can_stats: unknown;
+  can_activity?: unknown;
   can_suspicious: unknown;
   can_moderation: unknown;
   can_voice: unknown;
@@ -189,6 +195,7 @@ function toProfile(row: StaffRow, mySteamId?: string | null, fearName?: string |
     isBotOwner: flag(row.is_bot_owner) && !caps.isRoot,
     isBanned,
     canStats: caps.canGeneralStats,
+    canActivity: caps.canActivity,
     canSuspicious: flag(row.can_suspicious),
     canModeration: flag(row.can_moderation),
     canVoice: flag(row.can_voice),
@@ -220,6 +227,7 @@ function devStaffProfile(): StaffProfile {
     isBotOwner: true,
     isBanned: false,
     canStats: true,
+    canActivity: true,
     canSuspicious: true,
     canModeration: true,
     canVoice: true,
@@ -234,6 +242,7 @@ function devStaffProfile(): StaffProfile {
         is_owner: true,
         is_bot_owner: true,
         can_stats: true,
+        can_activity: true,
         can_suspicious: true,
         can_moderation: true,
         can_voice: true,
@@ -280,13 +289,14 @@ export async function upsertStaff(
     await sql`
       insert into staff (
         user_id, display_name, email, image, discord_id,
-        is_root, is_owner, can_stats, created_at, last_seen
+        is_root, is_owner, can_stats, can_activity, created_at, last_seen
       ) values (
         ${userId},
         ${profile.displayName ?? null},
         ${profile.email ?? null},
         ${profile.image ?? null},
         ${oauthDiscordId},
+        ${isRoot},
         ${isRoot},
         ${isRoot},
         ${isRoot},
@@ -304,6 +314,7 @@ export async function upsertStaff(
         is_root = case when ${isRoot} then true else is_root end,
         is_owner = case when ${isRoot} then true else is_owner end,
         can_stats = case when ${isRoot} then true else can_stats end,
+        can_activity = case when ${isRoot} then true else can_activity end,
         last_seen = now()
       where user_id = ${userId}
     `;
@@ -339,6 +350,7 @@ export async function listStaff(): Promise<StaffListItem[]> {
   const sql = await getSql();
   await sql.query("alter table staff add column if not exists is_banned boolean not null default false");
   await sql.query("alter table staff add column if not exists steamid text");
+  await sql.query("alter table staff add column if not exists can_activity boolean not null default false");
   const rows = await sql<StaffRow>`select * from staff order by is_root desc, is_owner desc, last_seen desc`;
   const { readRoster } = await import("./roster");
   const roster = await readRoster();
@@ -375,6 +387,7 @@ export async function claimDiscordId(userId: string, discordId: string): Promise
           is_root = true,
           is_owner = true,
           can_stats = true,
+          can_activity = true,
           can_suspicious = true,
           can_moderation = true,
           can_voice = true,
@@ -398,6 +411,7 @@ export async function updateStaffPermissions(
   targetUserId: string,
   patch: {
     canStats?: boolean;
+    canActivity?: boolean;
     canSuspicious?: boolean;
     canMods?: boolean;
     isOwner?: boolean;
@@ -417,6 +431,7 @@ export async function updateStaffPermissions(
   await sql.query("alter table staff add column if not exists can_logs boolean not null default false");
   await sql.query("alter table staff add column if not exists can_power boolean not null default false");
   await sql.query("alter table staff add column if not exists can_suspicious boolean not null default false");
+  await sql.query("alter table staff add column if not exists can_activity boolean not null default false");
 
   const targetRows = await sql<StaffRow>`select * from staff where user_id = ${targetUserId} limit 1`;
   if (!targetRows.length) throw new Error("Пользователь не найден.");
@@ -482,6 +497,7 @@ export async function updateStaffPermissions(
   const isOwner = patch.isOwner ?? target.isOwner;
 
   const canStats = patch.canStats ?? target.canStats;
+  const canActivity = patch.canActivity !== undefined ? Boolean(patch.canActivity) : flag(targetRows[0]?.can_activity);
   const canSuspicious = patch.canSuspicious ?? target.canSuspicious;
   const canMods = patch.canMods ?? target.canMods;
   if (patch.tag !== undefined && !actor.caps.isOwner) {
@@ -507,6 +523,7 @@ export async function updateStaffPermissions(
   await sql`
     update staff set
       can_stats = ${canStats},
+      can_activity = ${canActivity},
       can_suspicious = ${canSuspicious},
       can_mods = ${canMods},
       is_root = ${isRoot},

@@ -2,6 +2,7 @@ export type Caps = {
   isRoot: boolean;
   isOwner: boolean;
   canStats: boolean;
+  canActivity: boolean;
   canGeneralStats: boolean;
   canOwnStats: boolean;
   canSuspicious: boolean;
@@ -33,6 +34,7 @@ export type StaffProfile = {
   isBotOwner: boolean;
   isBanned: boolean;
   canStats: boolean;
+  canActivity: boolean;
   canSuspicious: boolean;
   canModeration: boolean;
   canVoice: boolean;
@@ -307,4 +309,31 @@ export type GameServer = {
 export type GameServersPayload = {
   updatedAt: number | null;
   servers: GameServer[];
+};
+
+export type OnlineModerator = {
+  steamid: string;
+  name: string;
+  nickname: string;
+  avatar: string;
+  rank: number | null;
+  isRosterMod: boolean;
+  isAdminRole: boolean;
+  adminRole: string;
+  server: string;
+  serverAddr: string;
+  map: string;
+  team: "T" | "CT" | "Spec";
+  sessionStart: number;
+  sessionDuration: number;
+  kills: number;
+  deaths: number;
+  ping: number;
+};
+
+export type ActivityPayload = {
+  ok: boolean;
+  ts: number;
+  count: number;
+  moderators: OnlineModerator[];
 };

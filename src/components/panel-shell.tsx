@@ -79,7 +79,9 @@ function useMskClock() {
 
 export function PanelShell({ children }: { children: ReactNode }) {
   const { profile } = usePanel();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const location = useRouterState({ select: (s) => s.location });
+  const pathname = location.pathname;
+  const isActivityTab = pathname === "/stats" && (location.search as any)?.tab === "activity";
   const navigate = useNavigate();
   const setPaletteOpen = usePalette((s) => s.setOpen);
   const tabs = allowedTabs(profile.caps);
@@ -122,7 +124,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   const currentTab = tabs.find((t) => t.to === pathname);
-  const pageTitle = pathname === "/" ? "Главная" : currentTab?.label || "Статистика";
+  const pageTitle = pathname === "/" ? "Главная" : (isActivityTab ? "Активность онлайн" : currentTab?.label || "Статистика");
 
   return (
     <div className="flex min-h-dvh bg-bg text-fg">
@@ -179,30 +181,52 @@ export function PanelShell({ children }: { children: ReactNode }) {
 
             {tabs.map((t) => {
               const Icon = t.icon;
-              const isActive = pathname === t.to;
+              const isActive = t.to === "/stats" ? (pathname === "/stats" && !isActivityTab) : pathname === t.to;
               return (
-                <Link
-                  key={t.id}
-                  to={t.to}
-                  className={cn(
-                    "group relative flex items-center gap-3 rounded-[14px] px-2.5 py-2 transition-all duration-150",
-                    isActive
-                      ? "bg-elevated/90 text-fg font-semibold shadow-sm"
-                      : "text-muted hover:bg-elevated/40 hover:text-fg font-medium",
-                  )}
-                >
-                  <span
+                <div key={t.id} className="space-y-1">
+                  <Link
+                    to={t.to}
                     className={cn(
-                      "grid size-8 place-items-center rounded-[10px] transition-colors shrink-0",
+                      "group relative flex items-center gap-3 rounded-[14px] px-2.5 py-2 transition-all duration-150",
                       isActive
-                        ? "bg-surface text-fg shadow-sm"
-                        : "bg-surface/50 text-subtle group-hover:bg-surface group-hover:text-fg",
+                        ? "bg-elevated/90 text-fg font-semibold shadow-sm"
+                        : "text-muted hover:bg-elevated/40 hover:text-fg font-medium",
                     )}
                   >
-                    <Icon className="size-4" />
-                  </span>
-                  <span className="text-sm">{t.label}</span>
-                </Link>
+                    <span
+                      className={cn(
+                        "grid size-8 place-items-center rounded-[10px] transition-colors shrink-0",
+                        isActive
+                          ? "bg-surface text-fg shadow-sm"
+                          : "bg-surface/50 text-subtle group-hover:bg-surface group-hover:text-fg",
+                      )}
+                    >
+                      <Icon className="size-4" />
+                    </span>
+                    <span className="text-sm">{t.label}</span>
+                  </Link>
+
+                  {t.id === "stats" && profile.caps.canActivity ? (
+                    <div className="ml-5 pl-2.5 border-l border-border/70 my-1 space-y-0.5">
+                      <Link
+                        to="/stats"
+                        search={{ tab: "activity" }}
+                        className={cn(
+                          "group relative flex items-center justify-between rounded-xl px-2.5 py-1.5 transition-all text-xs",
+                          isActivityTab
+                            ? "bg-success/15 text-success font-bold border border-success/30 shadow-sm"
+                            : "text-muted hover:bg-elevated/50 hover:text-fg font-medium",
+                        )}
+                      >
+                        <span className="flex items-center gap-2">
+                          <Radio className={cn("size-3.5", isActivityTab ? "text-success animate-pulse" : "text-muted")} />
+                          <span>Активность</span>
+                        </span>
+                        <span className="size-1.5 rounded-full bg-success shadow-[0_0_6px_var(--color-success)]" />
+                      </Link>
+                    </div>
+                  ) : null}
+                </div>
               );
             })}
           </nav>
@@ -407,31 +431,54 @@ export function PanelShell({ children }: { children: ReactNode }) {
                 </Link>
                 {tabs.map((t) => {
                   const Icon = t.icon;
-                  const isActive = pathname === t.to;
+                  const isActive = t.to === "/stats" ? (pathname === "/stats" && !isActivityTab) : pathname === t.to;
                   return (
-                    <Link
-                      key={t.id}
-                      to={t.to}
-                      onClick={() => setMobileOpen(false)}
-                      className={cn(
-                        "group flex items-center gap-3 rounded-[14px] px-2.5 py-2 transition-all duration-150",
-                        isActive
-                          ? "bg-elevated/90 text-fg font-semibold shadow-sm"
-                          : "text-muted hover:bg-elevated/40 hover:text-fg font-medium",
-                      )}
-                    >
-                      <span
+                    <div key={t.id} className="space-y-1">
+                      <Link
+                        to={t.to}
+                        onClick={() => setMobileOpen(false)}
                         className={cn(
-                          "grid size-8 place-items-center rounded-[10px] transition-colors shrink-0",
+                          "group flex items-center gap-3 rounded-[14px] px-2.5 py-2 transition-all duration-150",
                           isActive
-                            ? "bg-surface text-fg shadow-sm"
-                            : "bg-surface/50 text-subtle group-hover:bg-surface group-hover:text-fg",
+                            ? "bg-elevated/90 text-fg font-semibold shadow-sm"
+                            : "text-muted hover:bg-elevated/40 hover:text-fg font-medium",
                         )}
                       >
-                        <Icon className="size-4" />
-                      </span>
-                      <span className="text-sm">{t.label}</span>
-                    </Link>
+                        <span
+                          className={cn(
+                            "grid size-8 place-items-center rounded-[10px] transition-colors shrink-0",
+                            isActive
+                              ? "bg-surface text-fg shadow-sm"
+                              : "bg-surface/50 text-subtle group-hover:bg-surface group-hover:text-fg",
+                          )}
+                        >
+                          <Icon className="size-4" />
+                        </span>
+                        <span className="text-sm">{t.label}</span>
+                      </Link>
+
+                      {t.id === "stats" && profile.caps.canActivity ? (
+                        <div className="ml-5 pl-2.5 border-l border-border/70 my-1 space-y-0.5">
+                          <Link
+                            to="/stats"
+                            search={{ tab: "activity" }}
+                            onClick={() => setMobileOpen(false)}
+                            className={cn(
+                              "group relative flex items-center justify-between rounded-xl px-2.5 py-1.5 transition-all text-xs",
+                              isActivityTab
+                                ? "bg-success/15 text-success font-bold border border-success/30 shadow-sm"
+                                : "text-muted hover:bg-elevated/50 hover:text-fg font-medium",
+                            )}
+                          >
+                            <span className="flex items-center gap-2">
+                              <Radio className={cn("size-3.5", isActivityTab ? "text-success animate-pulse" : "text-muted")} />
+                              <span>Активность</span>
+                            </span>
+                            <span className="size-1.5 rounded-full bg-success shadow-[0_0_6px_var(--color-success)]" />
+                          </Link>
+                        </div>
+                      ) : null}
+                    </div>
                   );
                 })}
               </nav>

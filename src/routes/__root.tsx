@@ -51,13 +51,15 @@ export const Route = createRootRoute({
       },
     ],
   }),
-  errorComponent: ({ error }) => {
+  errorComponent: ({ error }: { error: unknown }) => {
+    const err = error as (Error & { message?: string; name?: string }) | null | undefined;
+    const msg = err?.message || "";
     const isChunkError =
-      Boolean(error) &&
-      (error.message?.includes("Failed to fetch dynamically imported module") ||
-        error.message?.includes("Importing a module script failed") ||
-        error.message?.includes("error loading dynamically imported module") ||
-        error.name === "ChunkLoadError");
+      Boolean(err) &&
+      (msg.includes("Failed to fetch dynamically imported module") ||
+        msg.includes("Importing a module script failed") ||
+        msg.includes("error loading dynamically imported module") ||
+        err?.name === "ChunkLoadError");
 
     if (typeof window !== "undefined" && isChunkError) {
       const key = "premute_last_chunk_reload";
@@ -84,7 +86,7 @@ export const Route = createRootRoute({
           <p className="mt-2 max-w-md text-xs text-[#8b909a] leading-relaxed">
             {isChunkError
               ? "Была опубликована новая версия панели. Нажмите кнопку ниже для обновления страницы."
-              : (error?.message || "Что-то пошло не так при загрузке страницы.")}
+              : (msg || "Что-то пошло не так при загрузке страницы.")}
           </p>
           <button
             type="button"

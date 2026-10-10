@@ -1,12 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware } from "@/lib/auth/middleware";
 import type {
+  ActivityPayload,
   BackupsPayload,
   DailyPoint,
   DiscordClaim,
   GameServersPayload,
   ModDetails,
+  ModRow,
   PlayerRecord,
+  PunishmentRecord,
   RosterPayload,
   StaffListItem,
   StaffProfile,
@@ -84,6 +87,7 @@ export const setStaffPerms = createServerFn({ method: "POST" })
     (d: {
       userId: string;
       canStats?: boolean;
+      canActivity?: boolean;
       canSuspicious?: boolean;
       canMods?: boolean;
       isOwner?: boolean;
@@ -101,6 +105,7 @@ export const setStaffPerms = createServerFn({ method: "POST" })
     if (me.isBanned) throw new Error("Аккаунт заблокирован.");
     const updated = await updateStaffPermissions(me, data.userId, {
       canStats: data.canStats,
+      canActivity: data.canActivity,
       canSuspicious: data.canSuspicious,
       canMods: data.canMods,
       isOwner: data.isOwner,
@@ -575,6 +580,21 @@ export const moderatorOnlineFn = createServerFn({ method: "POST" })
       return res || {};
     },
   );
+
+export const getActivityFn = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }): Promise<ActivityPayload> => {
+    const { getStaff } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me) throw new Error("Профиль не найден.");
+    if (me.isBanned) throw new Error("Аккаунт заблокирован.");
+    if (!me.caps.canStats || !me.caps.canActivity) {
+      throw new Error("Доступ к активности ограничен.");
+    }
+    const { fetchWorkerActivity } = await import("./server/discord");
+    const res = await fetchWorkerActivity();
+    return res || { ok: true, ts: Math.floor(Date.now() / 1000), count: 0, moderators: [] };
+  });
 
 const STEAMID_RE = /^\d{17}$/;
 

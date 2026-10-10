@@ -1,15 +1,16 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Download, ExternalLink, Loader2, Shield, ShieldCheck, Sparkles, Terminal, Trash2, X } from "lucide-react";
+import { Download, ExternalLink, Loader2, Shield, ShieldCheck, Sparkles, Terminal, Trash2, User, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { PageHeaderSkeleton, RowsSkeleton } from "@/components/skeletons";
+import { PageHeaderSkeleton, CardsSkeleton } from "@/components/skeletons";
 import { deleteStaffFn, exportBackupFn, listStaffFn, setStaffPerms } from "@/lib/fn";
 import { ROOT_DISCORD_ID, fearProfileUrl } from "@/lib/constants";
 import type { StaffListItem, StaffProfile } from "@/lib/types";
 import { AnimatedBlock } from "@/components/animated-number";
+import { cn } from "@/lib/utils";
 
 export function AdminView({ me }: { me: StaffProfile }) {
   const [rows, setRows] = useState<StaffListItem[]>([]);
@@ -62,6 +63,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
         data: {
           userId,
           canStats: next.canStats,
+          canActivity: next.canActivity,
           canSuspicious: next.canSuspicious,
           canMods: next.canMods,
           isOwner: next.isOwner,
@@ -104,15 +106,15 @@ export function AdminView({ me }: { me: StaffProfile }) {
 
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10 space-y-6">
+      <div className="mx-auto w-full max-w-[1500px] px-4 py-8 sm:px-8 space-y-6">
         <PageHeaderSkeleton />
-        <RowsSkeleton rows={4} />
+        <CardsSkeleton count={6} />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 space-y-6">
+    <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 space-y-6">
       {/* ── Admin Header Banner ────────────────────────────────────── */}
       <AnimatedBlock delay={0}>
         <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-r from-surface via-surface/95 to-elevated/70 p-6 sm:p-7 shadow-2xl glass-panel cyber-border-glow">
@@ -128,51 +130,84 @@ export function AdminView({ me }: { me: StaffProfile }) {
             </h1>
             <p className="max-w-3xl text-xs sm:text-sm text-muted leading-relaxed">
               Гибкая настройка прав администраторов и модераторов. Управление доступом к статистике,
-              радару подозрительных аккаунтов, составу и ролям владельцев.
+              активности онлайн, радару подозрительных аккаунтов, составу и ролям владельцев.
             </p>
           </div>
         </div>
       </AnimatedBlock>
 
-      {/* ── Users Access Matrix ────────────────────────────────────── */}
+      {/* ── Compact Tiles Grid (как у модераторов) ────────────────────── */}
       <AnimatedBlock delay={60}>
-        <div className="overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel shadow-sm">
         {rows.length === 0 ? (
-          <p className="px-5 py-12 text-center text-xs text-muted">
+          <div className="overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel p-12 text-center text-xs text-muted">
             Пользователей с активным доступом пока нет.
-          </p>
+          </div>
         ) : (
-          <ul className="divide-y divide-border/60">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {rows.map((u) => {
               const locked = u.isRoot && u.userId !== me.userId;
+              const handle = u.displayName || u.email || "Без имени";
+              const initial = handle.trim().charAt(0).toUpperCase();
+
               return (
-                <li
+                <article
                   key={u.userId}
-                  className="flex flex-col gap-4 p-5 transition-colors hover:bg-elevated/40"
+                  className="group relative flex min-w-0 flex-col overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel p-5 shadow-lg transition-all hover:scale-[1.01] hover:border-accent/50 hover:shadow-2xl hover:shadow-accent/10"
                 >
-                  <div className="flex items-center gap-4">
-                    {u.image ? (
-                      <img
-                        src={u.image}
-                        alt=""
-                        className="size-11 shrink-0 rounded-2xl object-cover border-2 border-border/80 shadow-md"
-                      />
-                    ) : (
-                      <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-surface to-elevated text-sm font-black text-fg border-2 border-border/80 shadow-md">
-                        {(u.displayName || u.email || "?").charAt(0).toUpperCase()}
-                      </span>
-                    )}
+                  {/* Subtle top glow if root or owner */}
+                  {u.isRoot ? (
+                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 size-36 rounded-full bg-amber-500/15 blur-2xl pointer-events-none" />
+                  ) : u.isOwner ? (
+                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 size-36 rounded-full bg-accent/15 blur-2xl pointer-events-none" />
+                  ) : null}
+
+                  {/* Header: Avatar, Name, Badges */}
+                  <div className="relative z-10 flex items-start gap-3.5">
+                    <div className="relative shrink-0">
+                      {u.image ? (
+                        <img
+                          src={u.image}
+                          alt=""
+                          loading="lazy"
+                          className={cn(
+                            "size-12 rounded-2xl object-cover border-2 shadow-md transition-all",
+                            u.isRoot
+                              ? "border-amber-400/80 ring-2 ring-amber-400/30"
+                              : "border-border/80 ring-2 ring-transparent group-hover:ring-accent/40",
+                          )}
+                        />
+                      ) : (
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            "grid size-12 place-items-center rounded-2xl text-base font-black border-2 shadow-md",
+                            u.isRoot
+                              ? "bg-amber-500/20 text-amber-300 border-amber-400/60"
+                              : "bg-gradient-to-tr from-surface to-elevated text-fg border-border/80",
+                          )}
+                        >
+                          {initial}
+                        </span>
+                      )}
+                    </div>
 
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-extrabold text-sm text-fg">
-                          {u.displayName || u.email || "Без имени"}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="truncate font-extrabold text-sm text-fg" title={handle}>
+                          {handle}
                         </p>
+                      </div>
+
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
                         {u.isRoot ? (
                           <OwnershipBadge
                             tone="gold"
                             canClick={meIsMainOwner && !isMainOwner(u)}
-                            title={meIsMainOwner && !isMainOwner(u) ? "Понизить до «Владельца»" : "Корневой владелец"}
+                            title={
+                              meIsMainOwner && !isMainOwner(u)
+                                ? "Понизить до «Владельца»"
+                                : "Корневой владелец"
+                            }
                             onClick={() => toggleOwnership(u)}
                           >
                             <Shield className="mr-1 size-3" />
@@ -188,51 +223,74 @@ export function AdminView({ me }: { me: StaffProfile }) {
                             Владелец
                           </OwnershipBadge>
                         ) : null}
+
                         {u.isOwner && !u.isRoot ? (
-                          <Badge tone="accent" className="font-bold">владелец сайта</Badge>
+                          <Badge tone="accent" className="font-bold">
+                            владелец сайта
+                          </Badge>
                         ) : null}
-                        {u.tag ? <Badge className="font-bold font-mono text-[10px]">{u.tag}</Badge> : null}
+
+                        {u.tag ? (
+                          <Badge className="font-bold font-mono text-[10px]">{u.tag}</Badge>
+                        ) : null}
+
                         {u.isBanned ? (
-                          <Badge tone="danger" className="font-bold text-[10px]">ЗАБАНЕН В ПАНЕЛИ</Badge>
+                          <Badge tone="danger" className="font-bold text-[10px]">
+                            ЗАБАНЕН В ПАНЕЛИ
+                          </Badge>
                         ) : u.isOwner || u.canStats ? (
-                          <Badge tone="success" className="font-bold text-[10px]">Вся статистика</Badge>
+                          <Badge tone="success" className="font-bold text-[10px]">
+                            Вся статистика
+                          </Badge>
                         ) : u.mySteamId ? (
-                          <Badge tone="accent" className="font-bold text-[10px]">Только своя стата</Badge>
+                          <Badge tone="accent" className="font-bold text-[10px]">
+                            Только своя стата
+                          </Badge>
                         ) : (
-                          <Badge tone="muted" className="font-bold text-[10px]">Стата закрыта</Badge>
+                          <Badge tone="muted" className="font-bold text-[10px]">
+                            Стата закрыта
+                          </Badge>
                         )}
                       </div>
 
-                      <p className="mt-0.5 text-xs text-subtle font-mono">
-                        {u.email || "—"}
-                        {u.discordId ? ` · Discord: ${u.discordId}` : " · Discord не привязан"}
-                        {u.mySteamId ? ` · SteamID: ${u.mySteamId}` : " · SteamID не привязан"}
-                      </p>
-                    </div>
-
-                    {me.caps.isOwner ? (
-                      <div className="flex flex-wrap items-center gap-3">
-                        <SteamIdField
-                          value={u.mySteamId}
-                          disabled={locked}
-                          onSave={(sid) => void patch(u.userId, { ...u, steamid: sid, mySteamId: sid })}
-                        />
-                        <TagField
-                          value={u.tag}
-                          disabled={locked}
-                          onSave={(tag) => void patch(u.userId, { ...u, tag })}
-                        />
+                      <div className="mt-1 text-[11px] text-subtle font-mono truncate space-y-0.5">
+                        {u.email ? <p className="truncate">{u.email}</p> : null}
+                        {u.discordId ? <p className="truncate">Discord: {u.discordId}</p> : null}
                       </div>
-                    ) : null}
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-border/60 bg-elevated/60 p-3.5">
+                  {/* Compact SteamID & Tag Inputs */}
+                  {me.caps.isOwner ? (
+                    <div className="relative z-10 mt-3.5 grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-2xl border border-border/60 bg-elevated/40 p-2.5">
+                      <SteamIdField
+                        value={u.mySteamId}
+                        disabled={locked}
+                        onSave={(sid) => void patch(u.userId, { ...u, steamid: sid, mySteamId: sid })}
+                      />
+                      <TagField
+                        value={u.tag}
+                        disabled={locked}
+                        onSave={(tag) => void patch(u.userId, { ...u, tag })}
+                      />
+                    </div>
+                  ) : null}
+
+                  {/* Permissions Switches Matrix */}
+                  <div className="relative z-10 mt-3 rounded-2xl border border-border/60 bg-elevated/60 p-3 space-y-2">
                     <Toggle
                       label="Полная статистика (все)"
                       hint="Включено: доступ ко всей статистике и топам. Выключено: если указан SteamID — видит только свою личную статистику."
                       checked={u.isOwner || u.canStats}
                       disabled={locked || u.isOwner || u.isBanned}
                       onChange={(v) => void patch(u.userId, { ...u, canStats: v })}
+                    />
+                    <Toggle
+                      label="Активность"
+                      hint="Вкладка «Активность» с онлайном модераторов на серверах FearProject (привязана к статистике)"
+                      checked={u.isOwner || u.canActivity}
+                      disabled={locked || u.isOwner || u.isBanned}
+                      onChange={(v) => void patch(u.userId, { ...u, canActivity: v })}
                     />
                     <Toggle
                       label="Подозрительные"
@@ -271,24 +329,31 @@ export function AdminView({ me }: { me: StaffProfile }) {
                         onChange={(v) => void patch(u.userId, { ...u, isBanned: v })}
                       />
                     ) : null}
+                  </div>
+
+                  {/* Card Footer: Dates & Actions */}
+                  <div className="relative z-10 mt-3 pt-2.5 border-t border-border/50 flex items-center justify-between text-[11px] text-subtle">
+                    <span className="font-mono">
+                      {u.createdAt ? `Рег: ${new Date(u.createdAt).toLocaleDateString("ru-RU")}` : ""}
+                    </span>
+
                     {!isMainOwner(u) && !u.isRoot && u.userId !== me.userId ? (
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 rounded-xl text-xs font-bold text-danger hover:bg-danger/10 hover:text-danger ml-auto"
+                        className="h-7 px-2 rounded-lg text-xs font-bold text-danger hover:bg-danger/10 hover:text-danger"
                         onClick={() => handleDelete(u)}
                       >
-                        <Trash2 className="mr-1.5 size-3.5" />
-                        Удалить аккаунт
+                        <Trash2 className="mr-1 size-3" />
+                        Удалить
                       </Button>
                     ) : null}
                   </div>
-                </li>
+                </article>
               );
             })}
-          </ul>
+          </div>
         )}
-      </div>
       </AnimatedBlock>
 
       {/* ── Database Backup ────────────────────────────────────────── */}
@@ -350,9 +415,9 @@ function SteamIdField({
   return (
     <label className="grid gap-1 text-[11px] font-bold text-muted">
       SteamID64
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1">
         <Input
-          className="h-8 w-44 rounded-xl text-xs font-mono"
+          className="h-8 w-full min-w-0 rounded-xl text-xs font-mono"
           maxLength={17}
           disabled={disabled}
           placeholder="76561198..."
@@ -370,7 +435,7 @@ function SteamIdField({
             type="button"
             title="Отвязать SteamID"
             onClick={handleClear}
-            className="grid size-8 place-items-center rounded-xl border border-border/80 bg-surface/90 text-subtle hover:text-danger hover:border-danger/50 transition-colors shadow-sm cursor-pointer"
+            className="grid size-8 shrink-0 place-items-center rounded-xl border border-border/80 bg-surface/90 text-subtle hover:text-danger hover:border-danger/50 transition-colors shadow-sm cursor-pointer"
           >
             <X className="size-3.5" />
           </button>
@@ -381,7 +446,7 @@ function SteamIdField({
             target="_blank"
             rel="noreferrer"
             title="Открыть профиль на FearProject"
-            className="grid size-8 place-items-center rounded-xl border border-border/80 bg-surface/90 text-subtle hover:text-accent hover:border-accent/50 transition-colors shadow-sm"
+            className="grid size-8 shrink-0 place-items-center rounded-xl border border-border/80 bg-surface/90 text-subtle hover:text-accent hover:border-accent/50 transition-colors shadow-sm"
           >
             <ExternalLink className="size-3.5" />
           </a>
@@ -408,7 +473,7 @@ function TagField({
     <label className="grid gap-1 text-[11px] font-bold text-muted">
       Тег
       <Input
-        className="h-8 w-32 rounded-xl text-xs font-mono"
+        className="h-8 w-full min-w-0 rounded-xl text-xs font-mono"
         maxLength={24}
         disabled={disabled}
         placeholder="CURATOR"
@@ -446,7 +511,7 @@ function OwnershipBadge({
           type="button"
           title={title}
           onClick={onClick}
-          className="inline-flex items-center px-2 py-0.5"
+          className="inline-flex items-center px-2 py-0.5 cursor-pointer"
         >
           {children}
         </button>
@@ -473,12 +538,12 @@ function Toggle({
   return (
     <label
       title={hint}
-      className={`flex items-center gap-2 text-xs font-medium text-fg select-none ${
+      className={`flex items-center justify-between gap-2 py-0.5 text-xs font-medium text-fg select-none ${
         disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
       }`}
     >
+      <span className="truncate">{label}</span>
       <Switch checked={checked} disabled={disabled} onCheckedChange={onChange} />
-      <span>{label}</span>
     </label>
   );
 }
