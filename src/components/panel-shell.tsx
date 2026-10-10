@@ -126,8 +126,8 @@ export function PanelShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-dvh bg-bg text-fg">
-      {/* ── Desktop Sidebar ────────────────────────────────────────── */}
-      <aside className="sticky top-0 hidden h-dvh w-64 lg:w-72 shrink-0 flex-col gap-3 p-3 md:flex z-30 select-none">
+      {/* ── Left Sidebar (Brand & Compact Tabs without empty space) ── */}
+      <aside className="sticky top-0 hidden w-60 lg:w-64 shrink-0 flex-col gap-3 p-3 md:flex z-30 select-none self-start">
         {/* Окошко 1: Бренд и статус серверов FEAR */}
         <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3.5 shadow-sm space-y-3 shrink-0">
           <Link to="/" className="group flex items-center gap-3">
@@ -164,12 +164,12 @@ export function PanelShell({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        {/* Окошко 2: Вкладки навигации */}
-        <div className="flex flex-1 flex-col rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3 shadow-sm min-h-0 overflow-hidden">
+        {/* Окошко 2: Вкладки навигации (компактные, без лишнего пустого пространства!) */}
+        <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3 shadow-sm shrink-0">
           <div className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-subtle">
             Основное
           </div>
-          <nav className="no-scrollbar flex-1 space-y-1.5 overflow-y-auto" aria-label="Боковое меню">
+          <nav className="space-y-1.5" aria-label="Боковое меню">
             <Link
               to="/"
               className={cn(
@@ -210,9 +210,89 @@ export function PanelShell({ children }: { children: ReactNode }) {
             })}
           </nav>
         </div>
+      </aside>
 
-        {/* Окошко 3: Профиль (стиль как на Фото 2) */}
-        <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-4 text-center shadow-sm shrink-0">
+      {/* ── Main Container (Topbar + Content) ───────────────────────── */}
+      <div className="flex flex-1 flex-col min-w-0">
+        {/* Topbar */}
+        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b border-border/60 bg-bg/80 px-4 backdrop-blur-xl sm:px-6">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="grid size-9 place-items-center rounded-xl border border-border bg-elevated text-muted transition-colors hover:text-fg md:hidden"
+              aria-label="Открыть меню"
+            >
+              <Menu className="size-4" />
+            </button>
+
+            <div>
+              <h1 className="text-sm font-bold tracking-tight text-fg sm:text-base">
+                {pageTitle}
+              </h1>
+              <p className="hidden text-[11px] text-muted sm:block">
+                Панель управления проектом FearProject
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {/* Live MSK Clock Pill */}
+            {mskTime ? (
+              <div className="hidden items-center gap-1.5 rounded-full border border-border/60 bg-elevated/50 px-3 py-1 text-xs text-muted font-mono lg:inline-flex xl:hidden">
+                <Clock className="size-3.5 text-accent" />
+                <span>{mskTime} МСК</span>
+              </div>
+            ) : null}
+
+            {/* Quick search button */}
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              className="inline-flex h-9 items-center gap-2.5 rounded-xl border border-border/80 bg-elevated/70 px-3 text-xs text-muted transition-all hover:border-accent/40 hover:bg-elevated hover:text-fg shadow-sm"
+              title="Палитра команд (Ctrl + K)"
+            >
+              <Search className="size-3.5 text-subtle" />
+              <span className="hidden md:inline">Поиск...</span>
+              <kbd className="hidden rounded bg-surface px-1.5 py-0.5 font-mono text-[10px] text-subtle border border-border/60 sm:inline-block">
+                ⌘K
+              </kbd>
+            </button>
+
+            <StatusIndicator />
+            <NotificationBell />
+
+            <div className="hidden md:inline-flex xl:hidden items-center">
+              <ThemeSelect />
+            </div>
+
+            <div className="md:hidden flex items-center gap-1.5">
+              <ThemeSelect />
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                className="grid size-8 place-items-center rounded-lg border border-border/60 bg-elevated text-subtle hover:text-danger hover:border-danger/40 transition-colors"
+                title="Выйти"
+                aria-label="Выйти"
+              >
+                <LogOut className="size-3.5" />
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content with smooth page transition */}
+        <main className="flex-1 pb-16 md:pb-6">
+          <div key={pathname} className="animate-page-enter min-h-full">
+            {children}
+          </div>
+        </main>
+      </div>
+
+      {/* ── Right Sidebar (Профиль в правой части как на Фото 2) ─────── */}
+      <aside className="sticky top-0 hidden w-60 lg:w-64 shrink-0 flex-col gap-3 p-3 xl:flex z-30 select-none self-start">
+        {/* Окошко 1: Профиль (как на Фото 1/2) */}
+        <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-4 text-center shadow-sm">
           <div className="relative mx-auto size-16">
             {profile.image ? (
               <img
@@ -247,84 +327,48 @@ export function PanelShell({ children }: { children: ReactNode }) {
             <span>Выйти</span>
           </button>
         </div>
-      </aside>
 
-      {/* ── Main Container (Topbar + Content) ───────────────────────── */}
-      <div className="flex flex-1 flex-col min-w-0">
-        {/* Topbar */}
-        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b border-border/60 bg-bg/80 px-4 backdrop-blur-xl sm:px-6">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="grid size-9 place-items-center rounded-xl border border-border bg-elevated text-muted transition-colors hover:text-fg md:hidden"
-              aria-label="Открыть меню"
-            >
-              <Menu className="size-4" />
-            </button>
-
-            <div>
-              <h1 className="text-sm font-bold tracking-tight text-fg sm:text-base">
-                {pageTitle}
-              </h1>
-              <p className="hidden text-[11px] text-muted sm:block">
-                Панель управления проектом FearProject
-              </p>
-            </div>
+        {/* Окошко 2: Панель управления (как на Фото 2) */}
+        <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3.5 shadow-sm space-y-2.5">
+          <div className="px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-subtle">
+            Панель управления
           </div>
 
-          <div className="flex items-center gap-2.5">
-            {/* Live MSK Clock Pill */}
-            {mskTime ? (
-              <div className="hidden items-center gap-1.5 rounded-full border border-border/60 bg-elevated/50 px-3 py-1 text-xs text-muted font-mono lg:inline-flex">
-                <Clock className="size-3.5 text-accent" />
-                <span>{mskTime} МСК</span>
-              </div>
-            ) : null}
-
-            {/* Quick search button */}
+          <div className="space-y-1 text-xs">
             <button
               type="button"
               onClick={() => setPaletteOpen(true)}
-              className="inline-flex h-9 items-center gap-2.5 rounded-xl border border-border/80 bg-elevated/70 px-3 text-xs text-muted transition-all hover:border-accent/40 hover:bg-elevated hover:text-fg shadow-sm"
-              title="Палитра команд (Ctrl + K)"
+              className="flex w-full items-center justify-between rounded-xl border border-transparent px-3 py-2 text-muted hover:border-border/60 hover:bg-elevated/60 hover:text-fg transition-all"
             >
-              <Search className="size-3.5 text-subtle" />
-              <span className="hidden md:inline">Поиск...</span>
-              <kbd className="hidden rounded bg-surface px-1.5 py-0.5 font-mono text-[10px] text-subtle border border-border/60 sm:inline-block">
+              <span className="flex items-center gap-2.5 font-medium">
+                <Command className="size-4 text-subtle" />
+                <span>Поиск</span>
+              </span>
+              <kbd className="rounded bg-surface px-1.5 py-0.5 font-mono text-[10px] text-subtle border border-border/60">
                 ⌘K
               </kbd>
             </button>
 
-            <StatusIndicator />
-            <NotificationBell />
-
-            <div className="hidden md:inline-flex items-center">
+            <div className="flex items-center justify-between rounded-xl border border-transparent px-3 py-2 text-muted">
+              <span className="flex items-center gap-2.5 font-medium">
+                <Sparkles className="size-4 text-subtle" />
+                <span>Тема</span>
+              </span>
               <ThemeSelect />
             </div>
 
-            <div className="md:hidden flex items-center gap-1.5">
-              <ThemeSelect />
-              <button
-                type="button"
-                onClick={() => void signOut()}
-                className="grid size-8 place-items-center rounded-lg border border-border/60 bg-elevated text-subtle hover:text-danger hover:border-danger/40 transition-colors"
-                title="Выйти"
-                aria-label="Выйти"
-              >
-                <LogOut className="size-3.5" />
-              </button>
-            </div>
+            {mskTime ? (
+              <div className="flex items-center justify-between rounded-xl border border-border/40 bg-elevated/40 px-3 py-2 text-muted font-mono text-[11px]">
+                <span className="flex items-center gap-2 text-subtle">
+                  <Clock className="size-3.5 text-accent" />
+                  <span>МСК</span>
+                </span>
+                <span className="font-bold text-fg">{mskTime}</span>
+              </div>
+            ) : null}
           </div>
-        </header>
-
-        {/* Page Content with smooth page transition */}
-        <main className="flex-1 pb-16 md:pb-6">
-          <div key={pathname} className="animate-page-enter min-h-full">
-            {children}
-          </div>
-        </main>
-      </div>
+        </div>
+      </aside>
 
       {/* ── Mobile Drawer ───────────────────────────────────────────── */}
       {mobileOpen ? (
