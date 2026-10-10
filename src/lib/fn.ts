@@ -96,6 +96,7 @@ export const setStaffPerms = createServerFn({ method: "POST" })
       setRoot?: boolean;
       tag?: string | null;
       steamid?: string | null;
+      roleRank?: number | null;
     }) => d,
   )
   .handler(async ({ context, data }): Promise<StaffListItem> => {
@@ -114,6 +115,7 @@ export const setStaffPerms = createServerFn({ method: "POST" })
       setRoot: data.setRoot,
       tag: data.tag,
       steamid: data.steamid,
+      roleRank: data.roleRank,
     });
     await writeLog(context.userId, "set_perms", JSON.stringify(data));
     return updated;

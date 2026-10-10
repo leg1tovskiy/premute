@@ -53,9 +53,9 @@ export async function upsertRosterMod(mod: RosterMod): Promise<RosterMod[]> {
     insert into mod_roster (steamid, name, rank, discord)
     values (${mod.steamid}, ${mod.name}, ${mod.rank}, ${mod.discord ?? null})
     on conflict (steamid) do update set
-      name = excluded.name,
+      name = coalesce(excluded.name, mod_roster.name),
       rank = excluded.rank,
-      discord = excluded.discord
+      discord = coalesce(excluded.discord, mod_roster.discord)
   `;
   return readRoster();
 }

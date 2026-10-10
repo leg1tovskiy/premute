@@ -2,6 +2,7 @@ import { getSql } from "@/lib/db";
 import { randomUUID } from "node:crypto";
 import type { Caps, StaffListItem, StaffProfile } from "@/lib/types";
 import { ROOT_DISCORD_ID } from "./config";
+import { RANK_TITLE } from "@/lib/constants";
 
 function flag(v: unknown): boolean {
   return v === true || v === "t" || v === "true";
@@ -39,15 +40,16 @@ export function computeCaps(
     is_bot_owner: unknown;
     can_stats: unknown;
     can_activity?: unknown;
-    can_suspicious: unknown;
-    can_moderation: unknown;
-    can_voice: unknown;
-    can_mods: unknown;
-    can_logs: unknown;
-    can_power: unknown;
+    can_suspicious?: unknown;
+    can_moderation?: unknown;
+    can_voice?: unknown;
+    can_mods?: unknown;
+    can_logs?: unknown;
+    can_power?: unknown;
     is_banned?: unknown;
   },
   mySteamId?: string | null,
+  rosterRank?: number | null,
 ): Caps {
   const isBanned = flag(row.is_banned);
   if (isBanned) {
@@ -75,26 +77,36 @@ export function computeCaps(
     };
   }
   const isRoot = flag(row.is_root);
-  // «Владелец сайта» — полный доступ к сайту. «Владелец бота» (красный) — команды Discord.
+  // «Владелец сайта» — полный доступ к сайту.
   const isOwner = isRoot || flag(row.is_owner);
-  const permanentGeneralStats = isOwner || flag(row.can_stats);
   const canOwnStats = Boolean(mySteamId);
   const isSunday = isSundayMSK();
-  // Модераторы без постоянного доступа к общей стате видят общую только по воскресеньям с 00:00 до 23:59 МСК
-  const isSundayAccess = !permanentGeneralStats && canOwnStats && isSunday;
+
+  // Если у пользователя есть роль из ростера FearProject:
+  // 1 (Мл. Модератор), 2 (Модератор): статистика (только своя) и вкладка Игроки
+  // 3 (Ст. Модератор), 4 (Ст. Администратор), 5 (Стафф): доступ ко всем вкладкам, кроме админки
+  const isModOrJunior = rosterRank === 1 || rosterRank === 2;
+  const isSeniorOrStaff = rosterRank != null && rosterRank >= 3;
+
+  let permanentGeneralStats = isOwner || flag(row.can_stats) || isSeniorOrStaff;
+  if (isModOrJunior && !flag(row.can_stats)) {
+    permanentGeneralStats = false;
+  }
+
+  const isSundayAccess = !permanentGeneralStats && canOwnStats && isSunday && !isModOrJunior;
   const canGeneralStats = permanentGeneralStats || isSundayAccess;
   const canStats = canGeneralStats || canOwnStats;
-  // Вкладка "Онлайн" привязана к Статистике: если модератор видит свою или общую стату, то доступен "Онлайн"
-  const canActivity = canStats || isOwner || flag(row.can_activity);
-  const canSuspicious = isOwner || flag(row.can_suspicious);
-  const canModeration = isOwner || flag(row.can_moderation);
-  const canVoice = isOwner || flag(row.can_voice);
-  const canMods = isOwner || flag(row.can_mods);
-  const canLogs = isOwner || flag(row.can_logs);
-  const canPower = isOwner || flag(row.can_power);
+
+  const canActivity = isOwner || isSeniorOrStaff || flag(row.can_activity);
+  const canSuspicious = isOwner || isSeniorOrStaff || isModOrJunior || flag(row.can_suspicious);
+  const canMods = isOwner || isSeniorOrStaff || flag(row.can_mods);
+  const canModeration = isOwner || isSeniorOrStaff || flag(row.can_moderation);
+  const canVoice = isOwner || isSeniorOrStaff || flag(row.can_voice);
+  const canLogs = isOwner || isSeniorOrStaff || flag(row.can_logs);
+  const canPower = isOwner || isSeniorOrStaff || flag(row.can_power);
   const canAdmin = isOwner;
-  // Консоль сервера — только корневые владельцы бота. Отдельного тумблера нет.
   const canConsole = isRoot;
+
   return {
     isRoot,
     isOwner,
@@ -112,9 +124,7 @@ export function computeCaps(
     canPower,
     canConsole,
     canAdmin,
-    // Новых «владельцев сайта» может назначать только корневой владелец.
     canGrantOwner: isRoot,
-    // Назначать/снимать «владельцев бота» может только корневой владелец.
     canGrantBotOwner: isRoot,
     waiting: !(canStats || canActivity || canSuspicious || canModeration || canVoice || canMods || canLogs || canPower || canConsole || canAdmin),
     isBanned: false,
@@ -165,7 +175,12 @@ type StaffRow = {
   last_seen: unknown;
 };
 
-function toProfile(row: StaffRow, mySteamId?: string | null, fearName?: string | null): StaffProfile {
+function toProfile(
+  row: StaffRow,
+  mySteamId?: string | null,
+  fearName?: string | null,
+  rosterRank?: number | null,
+): StaffProfile {
   let effectiveSteamId: string | null = null;
   const sid = row.steamid ? String(row.steamid).trim() : null;
   if (sid === "none" || sid === "null" || sid === "") {
@@ -176,7 +191,7 @@ function toProfile(row: StaffRow, mySteamId?: string | null, fearName?: string |
     effectiveSteamId = mySteamId;
   }
   const isBanned = flag(row.is_banned);
-  const caps = computeCaps(row, effectiveSteamId);
+  const caps = computeCaps(row, effectiveSteamId, rosterRank);
 
   const displayName = fearName ||
     (row.display_name && !/^\d{17,20}$/.test(row.display_name) ? row.display_name : null) ||
@@ -196,20 +211,27 @@ function toProfile(row: StaffRow, mySteamId?: string | null, fearName?: string |
     isBanned,
     canStats: caps.canGeneralStats,
     canActivity: caps.canActivity,
-    canSuspicious: flag(row.can_suspicious),
-    canModeration: flag(row.can_moderation),
-    canVoice: flag(row.can_voice),
-    canMods: flag(row.can_mods),
-    canLogs: flag(row.can_logs),
-    canPower: flag(row.can_power),
+    canSuspicious: caps.canSuspicious,
+    canModeration: flag(row.can_moderation) || caps.canModeration,
+    canVoice: flag(row.can_voice) || caps.canVoice,
+    canMods: caps.canMods,
+    canLogs: flag(row.can_logs) || caps.canLogs,
+    canPower: flag(row.can_power) || caps.canPower,
     createdAt: iso(row.created_at),
     lastSeen: iso(row.last_seen),
+    roleRank: rosterRank ?? null,
+    roleTitle: rosterRank ? (RANK_TITLE[rosterRank] ?? "Модератор") : (caps.isOwner ? "Владелец" : null),
     caps,
   };
 }
 
-function toListItem(row: StaffRow, mySteamId?: string | null, fearName?: string | null): StaffListItem {
-  const { caps: _c, ...rest } = toProfile(row, mySteamId, fearName);
+function toListItem(
+  row: StaffRow,
+  mySteamId?: string | null,
+  fearName?: string | null,
+  rosterRank?: number | null,
+): StaffListItem {
+  const { caps: _c, ...rest } = toProfile(row, mySteamId, fearName, rosterRank);
   return rest;
 }
 
@@ -326,8 +348,13 @@ export async function upsertStaff(
   const { readRoster } = await import("./roster");
   const roster = await readRoster();
   const mySteamId = isExplicitlyCleared ? null : (rows[0].steamid || findSteamIdInRoster(roster, rows[0].discord_id, rows[0].display_name));
+  if (mySteamId && !rows[0].steamid && !isExplicitlyCleared) {
+    try {
+      await sql`update staff set steamid = ${mySteamId} where user_id = ${userId}`;
+    } catch {}
+  }
   const rMod = mySteamId ? roster.find((m) => m.steamid === mySteamId) : null;
-  return toProfile(rows[0], mySteamId, rMod?.name);
+  return toProfile(rows[0], mySteamId, rMod?.name, rMod?.rank);
 }
 
 export async function getStaff(userId: string): Promise<StaffProfile | null> {
@@ -343,7 +370,7 @@ export async function getStaff(userId: string): Promise<StaffProfile | null> {
   const roster = await readRoster();
   const mySteamId = isExplicitlyCleared ? null : (rows[0].steamid || findSteamIdInRoster(roster, rows[0].discord_id, rows[0].display_name));
   const rMod = mySteamId ? roster.find((m) => m.steamid === mySteamId) : null;
-  return toProfile(rows[0], mySteamId, rMod?.name);
+  return toProfile(rows[0], mySteamId, rMod?.name, rMod?.rank);
 }
 
 export async function listStaff(): Promise<StaffListItem[]> {
@@ -358,7 +385,7 @@ export async function listStaff(): Promise<StaffListItem[]> {
     const isExplicitlyCleared = row.steamid === "none" || row.steamid === "null";
     const mySteamId = isExplicitlyCleared ? null : (row.steamid || findSteamIdInRoster(roster, row.discord_id, row.display_name));
     const rMod = mySteamId ? roster.find((m) => m.steamid === mySteamId) : null;
-    return toListItem(row, mySteamId, rMod?.name);
+    return toListItem(row, mySteamId, rMod?.name, rMod?.rank);
   });
 }
 
@@ -403,7 +430,8 @@ export async function claimDiscordId(userId: string, discordId: string): Promise
   const { readRoster } = await import("./roster");
   const roster = await readRoster();
   const mySteamId = findSteamIdInRoster(roster, rows[0]?.discord_id, rows[0]?.display_name);
-  return toProfile(rows[0], mySteamId);
+  const rMod = mySteamId ? roster.find((m) => m.steamid === mySteamId) : null;
+  return toProfile(rows[0], mySteamId, rMod?.name, rMod?.rank);
 }
 
 export async function updateStaffPermissions(
@@ -420,6 +448,7 @@ export async function updateStaffPermissions(
     setRoot?: boolean;
     tag?: string | null;
     steamid?: string | null;
+    roleRank?: number | null;
   },
 ): Promise<StaffListItem> {
   if (!actor.caps.canAdmin) throw new Error("Недостаточно прав.");
@@ -496,10 +525,25 @@ export async function updateStaffPermissions(
   }
   const isOwner = patch.isOwner ?? target.isOwner;
 
-  const canStats = patch.canStats ?? target.canStats;
-  const canActivity = patch.canActivity !== undefined ? Boolean(patch.canActivity) : flag(targetRows[0]?.can_activity);
-  const canSuspicious = patch.canSuspicious ?? target.canSuspicious;
-  const canMods = patch.canMods ?? target.canMods;
+  let canStats = patch.canStats ?? target.canStats;
+  let canActivity = patch.canActivity !== undefined ? Boolean(patch.canActivity) : flag(targetRows[0]?.can_activity);
+  let canSuspicious = patch.canSuspicious ?? target.canSuspicious;
+  let canMods = patch.canMods ?? target.canMods;
+
+  if (patch.roleRank !== undefined && patch.roleRank !== null) {
+    if (patch.roleRank === 1 || patch.roleRank === 2) {
+      canStats = false;
+      canActivity = false;
+      canSuspicious = true;
+      canMods = false;
+    } else if (patch.roleRank >= 3) {
+      canStats = true;
+      canActivity = true;
+      canSuspicious = true;
+      canMods = true;
+    }
+  }
+
   if (patch.tag !== undefined && !actor.caps.isOwner) {
     throw new Error("Теги могут назначать только владельцы.");
   }
@@ -534,6 +578,24 @@ export async function updateStaffPermissions(
     where user_id = ${targetUserId}
   `;
   const rows = await sql<StaffRow>`select * from staff where user_id = ${targetUserId} limit 1`;
+
+  if (patch.roleRank !== undefined && patch.roleRank !== null && patch.roleRank >= 1 && patch.roleRank <= 5) {
+    const effectiveSid = steamidUpdate !== "none" ? (steamidUpdate || target.mySteamId) : null;
+    if (effectiveSid) {
+      try {
+        const { upsertRosterMod } = await import("./roster");
+        await upsertRosterMod({
+          steamid: effectiveSid,
+          name: target.displayName || effectiveSid,
+          rank: patch.roleRank,
+          discord: target.discordId,
+        });
+      } catch (err) {
+        console.error("[staff] upsert roster mod:", err);
+      }
+    }
+  }
+
   if (steamidUpdate && steamidUpdate !== "none" && (target.discordId || targetRows[0]?.discord_id)) {
     const disc = target.discordId || targetRows[0]?.discord_id;
     try {
@@ -567,7 +629,8 @@ export async function updateStaffPermissions(
   const mySteamId = isExplicitlyCleared
     ? null
     : (rows[0]?.steamid || findSteamIdInRoster(roster, rows[0]?.discord_id, rows[0]?.display_name));
-  return toListItem(rows[0], mySteamId);
+  const rMod = mySteamId ? roster.find((m) => m.steamid === mySteamId) : null;
+  return toListItem(rows[0], mySteamId, rMod?.name, rMod?.rank);
 }
 
 export async function deleteStaffUser(actor: StaffProfile, targetUserId: string): Promise<void> {
@@ -649,26 +712,34 @@ export async function selfBindSteamId(userId: string, rawSteamId: string): Promi
   const roster = await readRoster();
   const rMod = roster.find((m) => m.steamid === sid);
   const fearName = rMod?.name || null;
+  const modRank = rMod?.rank ?? null;
 
-  if (fearName) {
-    await sql`
-      update staff set
-        steamid = ${sid},
-        display_name = case
-          when display_name is null or display_name ~ '^[0-9]{17,20}$' then ${fearName}
-          else display_name
-        end,
-        last_seen = now()
-      where user_id = ${userId}
-    `;
-  } else {
-    await sql`
-      update staff set
-        steamid = ${sid},
-        last_seen = now()
-      where user_id = ${userId}
-    `;
-  }
+  // Автоматическая выдача прав по роли из ростера:
+  // мл. Модер (1) и модер (2): только своя статистика и вкладка Игроки
+  // Ст. Модер (3), Ст. Админ (4), Стафф (5): доступ ко всем вкладкам кроме админки
+  const isSeniorOrStaff = modRank != null && modRank >= 3;
+  const isModOrJunior = modRank === 1 || modRank === 2;
+  const hasRank = isSeniorOrStaff || isModOrJunior;
+
+  const canStatsAuto = isSeniorOrStaff;
+  const canSuspiciousAuto = isSeniorOrStaff || isModOrJunior;
+  const canModsAuto = isSeniorOrStaff;
+  const canActivityAuto = isSeniorOrStaff;
+
+  await sql`
+    update staff set
+      steamid = ${sid},
+      can_stats = case when ${hasRank} then ${canStatsAuto} else can_stats end,
+      can_suspicious = case when ${hasRank} then ${canSuspiciousAuto} else can_suspicious end,
+      can_mods = case when ${hasRank} then ${canModsAuto} else can_mods end,
+      can_activity = case when ${hasRank} then ${canActivityAuto} else can_activity end,
+      display_name = case
+        when display_name is null or display_name ~ '^[0-9]{17,20}$' then coalesce(${fearName}, display_name)
+        else display_name
+      end,
+      last_seen = now()
+    where user_id = ${userId}
+  `;
 
   const disc = userRows[0].discord_id ? String(userRows[0].discord_id).trim() : null;
   if (disc) {

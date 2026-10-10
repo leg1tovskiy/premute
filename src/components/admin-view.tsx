@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Download, ExternalLink, Loader2, Shield, ShieldCheck, Sparkles, Terminal, Trash2, User, Users, X } from "lucide-react";
+import { ChevronDown, Download, ExternalLink, Loader2, Shield, ShieldCheck, SlidersHorizontal, Sparkles, Terminal, Trash2, User, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
   const [rows, setRows] = useState<StaffListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [backingUp, setBackingUp] = useState(false);
+  const [openManual, setOpenManual] = useState<Record<string, boolean>>({});
   const meIsMainOwner = me.userId === ROOT_DISCORD_ID || me.discordId === ROOT_DISCORD_ID;
 
   async function downloadBackup() {
@@ -56,7 +57,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
 
   async function patch(
     userId: string,
-    next: Partial<StaffListItem> & { setRoot?: boolean; steamid?: string | null },
+    next: Partial<StaffListItem> & { setRoot?: boolean; steamid?: string | null; roleRank?: number | null },
   ) {
     try {
       const updated = await setStaffPerms({
@@ -72,12 +73,49 @@ export function AdminView({ me }: { me: StaffProfile }) {
           setRoot: next.setRoot,
           tag: next.tag,
           steamid: next.steamid !== undefined ? next.steamid : next.mySteamId,
+          roleRank: next.roleRank,
         },
       });
       setRows((prev) => prev.map((r) => (r.userId === userId ? updated : r)));
       toast.success("Данные успешно сохранены");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Ошибка при сохранении прав");
+    }
+  }
+
+  function handleRoleChange(u: StaffListItem, val: string) {
+    if (val === "owner") {
+      void patch(u.userId, {
+        ...u,
+        isOwner: true,
+        roleRank: null,
+        canStats: true,
+        canActivity: true,
+        canSuspicious: true,
+        canMods: true,
+      });
+    } else if (val === "none") {
+      void patch(u.userId, {
+        ...u,
+        isOwner: false,
+        roleRank: null,
+        canStats: false,
+        canActivity: false,
+        canSuspicious: false,
+        canMods: false,
+      });
+    } else {
+      const rank = Number(val);
+      const isSenior = rank >= 3;
+      void patch(u.userId, {
+        ...u,
+        isOwner: false,
+        roleRank: rank,
+        canStats: isSenior,
+        canActivity: isSenior,
+        canSuspicious: true,
+        canMods: isSenior,
+      });
     }
   }
 
@@ -129,8 +167,8 @@ export function AdminView({ me }: { me: StaffProfile }) {
               <Shield className="size-6 text-accent" />
             </h1>
             <p className="max-w-3xl text-xs sm:text-sm text-muted leading-relaxed">
-              Гибкая настройка прав администраторов и модераторов. Управление доступом к статистике,
-              активности онлайн, радару подозрительных аккаунтов, составу и ролям владельцев.
+              Гибкая настройка ролей и прав администраторов и модераторов. Управление доступом к статистике,
+              онлайну на серверах, списку игроков, составу команды и правам владельцев.
             </p>
           </div>
         </div>
@@ -230,6 +268,15 @@ export function AdminView({ me }: { me: StaffProfile }) {
                           </Badge>
                         ) : null}
 
+                        {!u.isRoot && !u.isOwner && u.roleRank ? (
+                          <Badge
+                            tone={u.roleRank >= 5 ? "gold" : u.roleRank >= 3 ? "warn" : "accent"}
+                            className="font-bold text-[10px]"
+                          >
+                            {u.roleTitle || (u.roleRank === 1 ? "Мл. Модератор" : u.roleRank === 2 ? "Модератор" : u.roleRank === 3 ? "Ст. Модератор" : u.roleRank === 4 ? "Ст. Администратор" : "Стафф")}
+                          </Badge>
+                        ) : null}
+
                         {u.tag ? (
                           <Badge className="font-bold font-mono text-[10px]">{u.tag}</Badge>
                         ) : null}
@@ -276,58 +323,130 @@ export function AdminView({ me }: { me: StaffProfile }) {
                     </div>
                   ) : null}
 
-                  {/* Permissions Switches Matrix */}
-                  <div className="relative z-10 mt-3 rounded-2xl border border-border/60 bg-elevated/60 p-3 space-y-2">
-                    <Toggle
-                      label="Полная статистика (все)"
-                      hint="Включено: доступ ко всей статистике и топам. Выключено: если указан SteamID — видит только свою личную статистику."
-                      checked={u.isOwner || u.canStats}
-                      disabled={locked || u.isOwner || u.isBanned}
-                      onChange={(v) => void patch(u.userId, { ...u, canStats: v })}
-                    />
-                    <Toggle
-                      label="Онлайн"
-                      hint="Вкладка «Онлайн» с онлайном модераторов на серверах FearProject (привязана к статистике)"
-                      checked={u.isOwner || u.canActivity || u.canStats}
-                      disabled={locked || u.isOwner || u.isBanned}
-                      onChange={(v) => void patch(u.userId, { ...u, canActivity: v })}
-                    />
-                    <Toggle
-                      label="Подозрительные"
-                      checked={u.isOwner || u.canSuspicious}
-                      disabled={locked || u.isOwner || u.isBanned}
-                      onChange={(v) => void patch(u.userId, { ...u, canSuspicious: v })}
-                    />
-                    <Toggle
-                      label="Модераторы"
-                      checked={u.isOwner || u.canMods}
-                      disabled={locked || u.isOwner || u.isBanned}
-                      onChange={(v) => void patch(u.userId, { ...u, canMods: v })}
-                    />
-                    {me.caps.canGrantBotOwner ? (
-                      <Toggle
-                        label="Владелец бота"
-                        checked={u.isRoot || u.isBotOwner}
-                        disabled={locked || u.isRoot || u.isBanned}
-                        onChange={(v) => void patch(u.userId, { ...u, isBotOwner: v })}
-                      />
-                    ) : null}
-                    {me.caps.canGrantOwner ? (
-                      <Toggle
-                        label="Владелец сайта"
-                        checked={u.isOwner || u.isRoot}
-                        disabled={locked || u.isRoot || u.isBanned}
-                        onChange={(v) => void patch(u.userId, { ...u, isOwner: v })}
-                      />
-                    ) : null}
-                    {!isMainOwner(u) && !u.isRoot && u.userId !== me.userId ? (
-                      <Toggle
-                        label="Бан в панели"
-                        hint="Заблокировать доступ пользователя к панели управления"
-                        checked={Boolean(u.isBanned)}
-                        disabled={locked}
-                        onChange={(v) => void patch(u.userId, { ...u, isBanned: v })}
-                      />
+                  {/* ── Назначение роли ────────────────────────── */}
+                  {me.caps.canAdmin ? (
+                    <div className="relative z-10 mt-3 rounded-2xl border border-border/70 bg-elevated/40 p-2.5 sm:p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-fg flex items-center gap-1.5">
+                          <ShieldCheck className="size-3.5 text-accent" />
+                          Назначение роли
+                        </span>
+                        {u.roleRank ? (
+                          <Badge tone={u.roleRank >= 5 ? "gold" : u.roleRank >= 3 ? "warn" : "accent"} className="text-[9px] font-black">
+                            Ранг {u.roleRank}
+                          </Badge>
+                        ) : null}
+                      </div>
+
+                      <div className="relative">
+                        <select
+                          value={
+                            u.isRoot
+                              ? "root"
+                              : u.isOwner
+                              ? "owner"
+                              : u.roleRank
+                              ? String(u.roleRank)
+                              : "none"
+                          }
+                          disabled={locked || u.isRoot || u.isBanned}
+                          onChange={(e) => handleRoleChange(u, e.target.value)}
+                          className="w-full h-8.5 rounded-xl border border-border/80 bg-surface/90 px-3 text-xs font-semibold text-fg shadow-sm focus:border-accent focus:outline-none disabled:opacity-50 transition-colors cursor-pointer"
+                        >
+                          <option value="none">Без роли (доступ закрыт)</option>
+                          <option value="1">Мл. Модератор (только своя стата + Игроки)</option>
+                          <option value="2">Модератор (только своя стата + Игроки)</option>
+                          <option value="3">Ст. Модератор (все вкладки)</option>
+                          <option value="4">Ст. Администратор (все вкладки)</option>
+                          <option value="5">Стафф (все вкладки)</option>
+                          {me.caps.canGrantOwner ? (
+                            <option value="owner">Владелец сайта (все вкладки + админка)</option>
+                          ) : null}
+                          {u.isRoot ? <option value="root" disabled>Корневой владелец (ROOT)</option> : null}
+                        </select>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* ── Ручная настройка прав (аккордеон) ────────────────────────── */}
+                  <div className="relative z-10 mt-2 rounded-2xl border border-border/60 bg-elevated/30 overflow-hidden transition-all">
+                    <button
+                      type="button"
+                      onClick={() => setOpenManual((prev) => ({ ...prev, [u.userId]: !prev[u.userId] }))}
+                      className="flex w-full items-center justify-between p-2.5 text-xs font-bold text-muted hover:text-fg hover:bg-elevated/50 transition-colors cursor-pointer select-none"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <SlidersHorizontal className="size-3.5 text-muted" />
+                        Ручная настройка прав
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-subtle font-mono">
+                          {openManual[u.userId] ? "Скрыть" : "Настроить"}
+                        </span>
+                        <ChevronDown className={cn("size-3.5 transition-transform duration-200", openManual[u.userId] && "rotate-180")} />
+                      </div>
+                    </button>
+
+                    {openManual[u.userId] ? (
+                      <div className="p-3 pt-1 border-t border-border/40 space-y-2 animate-in fade-in duration-200">
+                        <p className="text-[10px] text-subtle pb-1">
+                          Индивидуальное переопределение пунктов доступа:
+                        </p>
+
+                        <Toggle
+                          label="Полная статистика (все)"
+                          hint="Включено: доступ ко всей статистике и топам. Выключено: если указан SteamID — видит только свою личную статистику."
+                          checked={u.isOwner || u.canStats}
+                          disabled={locked || u.isOwner || u.isBanned}
+                          onChange={(v) => void patch(u.userId, { ...u, canStats: v })}
+                        />
+                        <Toggle
+                          label="Онлайн"
+                          hint="Вкладка «Онлайн» с онлайном модераторов на серверах FearProject"
+                          checked={u.isOwner || u.canActivity}
+                          disabled={locked || u.isOwner || u.isBanned}
+                          onChange={(v) => void patch(u.userId, { ...u, canActivity: v })}
+                        />
+                        <Toggle
+                          label="Игроки"
+                          hint="Вкладка «Игроки» (подозрительные аккаунты и новореги)"
+                          checked={u.isOwner || u.canSuspicious}
+                          disabled={locked || u.isOwner || u.isBanned}
+                          onChange={(v) => void patch(u.userId, { ...u, canSuspicious: v })}
+                        />
+                        <Toggle
+                          label="Модераторы"
+                          hint="Вкладка «Модераторы» (состав команды FearProject)"
+                          checked={u.isOwner || u.canMods}
+                          disabled={locked || u.isOwner || u.isBanned}
+                          onChange={(v) => void patch(u.userId, { ...u, canMods: v })}
+                        />
+                        {me.caps.canGrantBotOwner ? (
+                          <Toggle
+                            label="Владелец бота"
+                            checked={u.isRoot || u.isBotOwner}
+                            disabled={locked || u.isRoot || u.isBanned}
+                            onChange={(v) => void patch(u.userId, { ...u, isBotOwner: v })}
+                          />
+                        ) : null}
+                        {me.caps.canGrantOwner ? (
+                          <Toggle
+                            label="Владелец сайта"
+                            checked={u.isOwner || u.isRoot}
+                            disabled={locked || u.isRoot || u.isBanned}
+                            onChange={(v) => void patch(u.userId, { ...u, isOwner: v })}
+                          />
+                        ) : null}
+                        {!isMainOwner(u) && !u.isRoot && u.userId !== me.userId ? (
+                          <Toggle
+                            label="Бан в панели"
+                            hint="Заблокировать доступ пользователя к панели управления"
+                            checked={Boolean(u.isBanned)}
+                            disabled={locked}
+                            onChange={(v) => void patch(u.userId, { ...u, isBanned: v })}
+                          />
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
 

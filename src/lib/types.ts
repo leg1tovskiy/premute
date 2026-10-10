@@ -43,6 +43,8 @@ export type StaffProfile = {
   canPower: boolean;
   createdAt: string;
   lastSeen: string;
+  roleRank?: number | null;
+  roleTitle?: string | null;
   caps: Caps;
 };
 

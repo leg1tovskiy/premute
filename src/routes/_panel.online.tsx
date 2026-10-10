@@ -4,7 +4,7 @@ import { RequireCap } from "@/lib/panel";
 
 export const Route = createFileRoute("/_panel/online")({
   component: () => (
-    <RequireCap cap="canStats">
+    <RequireCap cap="canActivity">
       <ActivityView />
     </RequireCap>
   ),
