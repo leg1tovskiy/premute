@@ -158,7 +158,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
             <Link
               to="/"
               className={cn(
-                "group relative flex items-center gap-3 rounded-[10px] px-2.5 py-2 transition-all duration-150",
+                "group relative flex items-center gap-3 rounded-[14px] px-2.5 py-2 transition-all duration-150",
                 pathname === "/"
                   ? "bg-elevated/90 text-fg font-semibold shadow-sm"
                   : "text-muted hover:bg-elevated/40 hover:text-fg font-medium",
@@ -166,7 +166,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
             >
               <span
                 className={cn(
-                  "grid size-8 place-items-center rounded-[8px] transition-colors shrink-0",
+                  "grid size-8 place-items-center rounded-[10px] transition-colors shrink-0",
                   pathname === "/"
                     ? "bg-surface text-fg shadow-sm"
                     : "bg-surface/50 text-subtle group-hover:bg-surface group-hover:text-fg",
@@ -185,7 +185,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
                   key={t.id}
                   to={t.to}
                   className={cn(
-                    "group relative flex items-center gap-3 rounded-[10px] px-2.5 py-2 transition-all duration-150",
+                    "group relative flex items-center gap-3 rounded-[14px] px-2.5 py-2 transition-all duration-150",
                     isActive
                       ? "bg-elevated/90 text-fg font-semibold shadow-sm"
                       : "text-muted hover:bg-elevated/40 hover:text-fg font-medium",
@@ -193,7 +193,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
                 >
                   <span
                     className={cn(
-                      "grid size-8 place-items-center rounded-[8px] transition-colors shrink-0",
+                      "grid size-8 place-items-center rounded-[10px] transition-colors shrink-0",
                       isActive
                         ? "bg-surface text-fg shadow-sm"
                         : "bg-surface/50 text-subtle group-hover:bg-surface group-hover:text-fg",
@@ -387,7 +387,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
                   to="/"
                   onClick={() => setMobileOpen(false)}
                   className={cn(
-                    "group flex items-center gap-3 rounded-[10px] px-2.5 py-2 transition-all duration-150",
+                    "group flex items-center gap-3 rounded-[14px] px-2.5 py-2 transition-all duration-150",
                     pathname === "/"
                       ? "bg-elevated/90 text-fg font-semibold shadow-sm"
                       : "text-muted hover:bg-elevated/40 hover:text-fg font-medium",
@@ -395,7 +395,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
                 >
                   <span
                     className={cn(
-                      "grid size-8 place-items-center rounded-[8px] transition-colors shrink-0",
+                      "grid size-8 place-items-center rounded-[10px] transition-colors shrink-0",
                       pathname === "/"
                         ? "bg-surface text-fg shadow-sm"
                         : "bg-surface/50 text-subtle group-hover:bg-surface group-hover:text-fg",
@@ -414,7 +414,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
                       to={t.to}
                       onClick={() => setMobileOpen(false)}
                       className={cn(
-                        "group flex items-center gap-3 rounded-[10px] px-2.5 py-2 transition-all duration-150",
+                        "group flex items-center gap-3 rounded-[14px] px-2.5 py-2 transition-all duration-150",
                         isActive
                           ? "bg-elevated/90 text-fg font-semibold shadow-sm"
                           : "text-muted hover:bg-elevated/40 hover:text-fg font-medium",
@@ -422,7 +422,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
                     >
                       <span
                         className={cn(
-                          "grid size-8 place-items-center rounded-[8px] transition-colors shrink-0",
+                          "grid size-8 place-items-center rounded-[10px] transition-colors shrink-0",
                           isActive
                             ? "bg-surface text-fg shadow-sm"
                             : "bg-surface/50 text-subtle group-hover:bg-surface group-hover:text-fg",
