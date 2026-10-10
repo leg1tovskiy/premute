@@ -23,11 +23,11 @@ export type TabDef = {
 };
 
 export const TABS: TabDef[] = [
-  { id: "stats", to: "/stats", label: "Стата", desc: "Статистика модераторов", icon: BarChart3, cap: "canStats" },
+  { id: "stats", to: "/stats", label: "Статистика", desc: "Статистика модераторов", icon: BarChart3, cap: "canStats" },
   { id: "tops", to: "/tops", label: "Топы", desc: "Рейтинг модераторов", icon: Trophy, cap: "canGeneralStats" },
   { id: "suspicious", to: "/suspicious", label: "Игроки", desc: "Подозрительные и новореги", icon: Gamepad2, cap: "canSuspicious" },
-  { id: "mods", to: "/mods", label: "Моды", desc: "Состав команды", icon: Users, cap: "canMods" },
-  { id: "admin", to: "/admin", label: "Админ", desc: "Настройки панели", icon: Shield, cap: "canAdmin" },
+  { id: "mods", to: "/mods", label: "Модераторы", desc: "Состав команды", icon: Users, cap: "canMods" },
+  { id: "admin", to: "/admin", label: "Панель управления", desc: "Настройки панели", icon: Shield, cap: "canAdmin" },
 ];
 
 export function allowedTabs(caps: Caps): TabDef[] {
