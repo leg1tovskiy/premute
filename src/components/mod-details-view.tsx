@@ -861,52 +861,36 @@ export function ModDetailsView({
         <div className="relative z-10 mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-2xl border border-danger/25 bg-danger/10 p-3.5 text-center transition-all hover:bg-danger/15 shadow-sm">
             <p className="text-3xl font-black tabular-nums text-danger">
-              <AnimatedNumber value={m.allTimeBans ?? m.bans ?? 0} />
+              <AnimatedNumber value={m.bans ?? 0} />
             </p>
             <p className="mt-1 text-xs font-bold text-danger/80 flex items-center justify-center gap-1">
               <Hammer className="size-3.5" /> Банов выдано
             </p>
-            {m.bans != null && m.bans > 0 ? (
-              <p className="mt-1 text-[10px] text-danger/70 font-mono">за месяц: {m.bans}</p>
-            ) : null}
           </div>
 
           <div className="rounded-2xl border border-warn/25 bg-warn/10 p-3.5 text-center transition-all hover:bg-warn/15 shadow-sm">
             <p className="text-3xl font-black tabular-nums text-warn">
-              <AnimatedNumber value={m.allTimeMutes ?? m.mutes ?? 0} />
+              <AnimatedNumber value={m.mutes ?? 0} />
             </p>
             <p className="mt-1 text-xs font-bold text-warn/80 flex items-center justify-center gap-1">
               <VolumeX className="size-3.5" /> Мутов выдано
             </p>
-            {m.mutes != null && m.mutes > 0 ? (
-              <p className="mt-1 text-[10px] text-warn/70 font-mono">за месяц: {m.mutes}</p>
-            ) : null}
           </div>
 
           <div className="rounded-2xl border border-accent/30 bg-accent/15 p-3.5 text-center shadow-inner transition-all hover:bg-accent/20">
             <p className="text-3xl font-black tabular-nums text-accent">
-              <AnimatedNumber value={m.allTimeTotal ?? m.total} />
+              <AnimatedNumber value={m.total} />
             </p>
-            <p className="mt-1 text-xs font-bold text-accent">Выдано за всё время</p>
-            {m.firstPunishmentAt && m.lastPunishmentAt ? (
-              <p className="mt-1 text-[10px] text-accent/80 font-mono truncate" title={`с ${fmtDate(m.firstPunishmentAt)} по ${fmtDate(m.lastPunishmentAt)}`}>
-                с {fmtDate(m.firstPunishmentAt)} по {fmtDate(m.lastPunishmentAt)}
-              </p>
-            ) : (
-              <p className="mt-1 text-[10px] text-accent/80 font-mono">за месяц: {m.total}</p>
-            )}
+            <p className="mt-1 text-xs font-bold text-accent">Всего за месяц</p>
           </div>
 
           <div className="rounded-2xl border border-success/25 bg-success/10 p-3.5 text-center transition-all hover:bg-success/15 shadow-sm">
             <p className="text-3xl font-black tabular-nums text-success">
-              <AnimatedNumber value={m.allTimeRemoved ?? m.removed ?? 0} />
+              <AnimatedNumber value={m.removed ?? 0} />
             </p>
             <p className="mt-1 text-xs font-bold text-success/80 flex items-center justify-center gap-1">
               <Unlock className="size-3.5" /> Снято решений
             </p>
-            {m.removed != null && m.removed > 0 ? (
-              <p className="mt-1 text-[10px] text-success/70 font-mono">за месяц: {m.removed}</p>
-            ) : null}
           </div>
         </div>
       </article>
