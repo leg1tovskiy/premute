@@ -55,6 +55,28 @@ function fmtTime(sec: number) {
   }
 }
 
+function cleanNickname(nickname: string | undefined | null): string {
+  if (!nickname) return "";
+  return nickname
+    .replace(/[\u200B-\u200D\uFEFF\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, "")
+    .trim();
+}
+
+function getPlayerDisplayName(nickname: string | undefined | null, steamid: string): string {
+  const cleaned = cleanNickname(nickname);
+  if (cleaned) return cleaned;
+  return `Игрок #${steamid.slice(-4)}`;
+}
+
+function getPlayerInitial(nickname: string | undefined | null): string {
+  const cleaned = cleanNickname(nickname);
+  if (cleaned) {
+    const first = cleaned.charAt(0);
+    if (first) return first.toUpperCase();
+  }
+  return "?";
+}
+
 type SubTab = "suspicious" | "newcomers";
 type NewcomersSort = "time_asc" | "time_desc" | "kd_desc" | "kills_desc";
 
@@ -108,7 +130,7 @@ export function SuspiciousView() {
       const q = newcomersSearch.trim().toLowerCase();
       list = list.filter(
         (p) =>
-          p.nickname.toLowerCase().includes(q) ||
+          (p.nickname ? p.nickname.toLowerCase() : "").includes(q) ||
           p.steamid.includes(q) ||
           (p.server && p.server.toLowerCase().includes(q)) ||
           (p.map && p.map.toLowerCase().includes(q)),
@@ -327,101 +349,127 @@ export function SuspiciousView() {
               </div>
             ) : (
               <ul className="divide-y divide-border/60 overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel shadow-sm">
-                {players.map((p) => (
-                  <li
-                    key={p.steamid}
-                    className="flex flex-col gap-3.5 p-4.5 sm:flex-row sm:items-center sm:px-6 transition-colors hover:bg-elevated/40"
-                  >
-                    <div className="flex min-w-0 flex-1 items-center gap-3.5">
-                      <div className="relative shrink-0">
-                        {p.avatar ? (
-                          <img
-                            src={p.avatar}
-                            alt=""
-                            className="size-11 shrink-0 rounded-2xl object-cover border-2 border-border/80 shadow-md"
-                          />
-                        ) : (
-                          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-surface to-elevated text-sm font-black text-fg border-2 border-border/80 shadow-md">
-                            {(p.nickname.trim().charAt(0) || "?").toUpperCase()}
-                          </span>
-                        )}
-                        <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-surface bg-success shadow-[0_0_8px_var(--color-success)]" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-extrabold text-fg">{p.nickname || p.steamid}</p>
-                          <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-success/15 border border-success/30 px-1.5 py-0.5 font-mono text-[10px] font-bold text-success">
-                            <span className="size-1.5 rounded-full bg-success animate-pulse" />
-                            В ИГРЕ
-                          </span>
+                {players.map((p) => {
+                  const displayName = getPlayerDisplayName(p.nickname, p.steamid);
+                  const initial = getPlayerInitial(p.nickname);
+                  return (
+                    <li
+                      key={p.steamid}
+                      className="flex flex-col gap-3.5 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between sm:px-6 transition-colors hover:bg-elevated/40"
+                    >
+                      {/* Left: Avatar + Details */}
+                      <div className="flex min-w-0 flex-1 items-center gap-3.5">
+                        <div className="relative shrink-0">
+                          {p.avatar ? (
+                            <img
+                              src={p.avatar}
+                              alt=""
+                              className="size-11 shrink-0 rounded-2xl object-cover border-2 border-border/80 shadow-md"
+                            />
+                          ) : (
+                            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-surface to-elevated text-sm font-black text-fg border-2 border-border/80 shadow-md">
+                              {initial}
+                            </span>
+                          )}
+                          <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-surface bg-success shadow-[0_0_8px_var(--color-success)]" />
                         </div>
-                        <p className="truncate font-mono text-[11px] text-subtle mt-0.5">
-                          <button
-                            type="button"
-                            onClick={() => copySteamId(p.steamid)}
-                            className="hover:text-fg hover:underline inline-flex items-center gap-1"
-                            title="Нажмите, чтобы скопировать SteamID"
-                          >
-                            {p.steamid}
-                            <Copy className="size-2.5 opacity-60" />
-                          </button>
-                          {p.server ? <span className="text-muted"> &middot; {p.server}</span> : ""}
-                          {p.map ? <span className="text-accent font-semibold"> ({p.map})</span> : ""}
-                        </p>
-                      </div>
-                    </div>
 
-                    <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-                      <Badge tone={SOURCE_BADGES[p.source ?? "online"].tone} className="font-bold">
-                        {SOURCE_BADGES[p.source ?? "online"].label}
-                      </Badge>
+                        <div className="min-w-0 flex-1 space-y-1">
+                          {/* Line 1: Nickname + Badges */}
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                            <span
+                              className="text-sm font-extrabold text-fg truncate max-w-[200px] sm:max-w-[280px]"
+                              title={displayName}
+                            >
+                              {displayName}
+                            </span>
 
-                      {p.reason ? (
-                        <Badge tone="danger" className="font-bold flex items-center gap-1">
-                          <MessageSquareWarning className="size-3" />
-                          {p.reason}
-                        </Badge>
-                      ) : null}
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-success/15 border border-success/30 px-1.5 py-0.5 font-mono text-[10px] font-bold text-success">
+                              <span className="size-1.5 rounded-full bg-success animate-pulse" />
+                              В ИГРЕ
+                            </span>
 
-                      {p.reports != null && p.reports > 1 ? (
-                        <Badge tone="muted" className="font-mono">
-                          репортов: <AnimatedNumber value={p.reports} />
-                        </Badge>
-                      ) : null}
+                            <Badge tone={SOURCE_BADGES[p.source ?? "online"].tone} className="font-bold text-[10px] px-2 py-0.5">
+                              {SOURCE_BADGES[p.source ?? "online"].label}
+                            </Badge>
 
-                      {p.playtime > 0 ? (
-                        <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-elevated/60 px-2.5 py-1 text-xs">
-                          <span className="font-black text-danger">KD {p.kd.toFixed(2)}</span>
-                          <span className="text-muted flex items-center gap-1">
-                            <Timer className="size-3" />
-                            {fmtPlaytime(p.playtime)}
-                          </span>
-                          <span className="font-mono text-subtle">
-                            ({p.kills}/{p.deaths})
-                          </span>
+                            {p.reason ? (
+                              <Badge tone="danger" className="font-bold text-[10px] px-2 py-0.5 flex items-center gap-1">
+                                <MessageSquareWarning className="size-3 shrink-0" />
+                                <span>{p.reason}</span>
+                              </Badge>
+                            ) : null}
+
+                            {p.reports != null && p.reports > 1 ? (
+                              <Badge tone="muted" className="font-mono text-[10px] px-2 py-0.5">
+                                репортов: <AnimatedNumber value={p.reports} />
+                              </Badge>
+                            ) : null}
+                          </div>
+
+                          {/* Line 2: SteamID + Server + Map */}
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] text-subtle">
+                            <button
+                              type="button"
+                              onClick={() => copySteamId(p.steamid)}
+                              className="hover:text-fg hover:underline inline-flex items-center gap-1 shrink-0 font-mono"
+                              title="Нажмите, чтобы скопировать SteamID"
+                            >
+                              <span>{p.steamid}</span>
+                              <Copy className="size-2.5 opacity-60" />
+                            </button>
+                            {p.server ? (
+                              <span className="text-muted inline-flex items-center gap-1">
+                                <span className="text-subtle/50">&middot;</span>
+                                <span className="text-fg/80">{p.server}</span>
+                              </span>
+                            ) : null}
+                            {p.map ? (
+                              <span className="text-accent font-semibold inline-flex items-center gap-1">
+                                <span className="text-subtle/50">&middot;</span>
+                                <span>({p.map})</span>
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
-                      ) : null}
+                      </div>
 
-                      <Link
-                        to="/player/$steamid"
-                        params={{ steamid: p.steamid }}
-                        className="inline-flex h-8 items-center rounded-xl border border-border/80 bg-elevated px-3 text-xs font-bold text-muted hover:border-accent hover:text-fg transition-all"
-                      >
-                        История
-                      </Link>
+                      {/* Right: Stats & Actions */}
+                      <div className="flex items-center gap-2 shrink-0 self-start lg:self-center pt-1 lg:pt-0">
+                        {p.playtime > 0 ? (
+                          <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-elevated/60 px-2.5 py-1 text-xs shrink-0">
+                            <span className="font-black text-danger font-mono">KD {p.kd.toFixed(2)}</span>
+                            <span className="text-muted flex items-center gap-1">
+                              <Timer className="size-3 shrink-0" />
+                              {fmtPlaytime(p.playtime)}
+                            </span>
+                            <span className="font-mono text-subtle">
+                              ({p.kills}/{p.deaths})
+                            </span>
+                          </div>
+                        ) : null}
 
-                      <a
-                        href={fearProfileUrl(p.steamid)}
-                        target="_blank"
-                        rel="noreferrer"
-                        title="Профиль на FearProject"
-                        className="inline-flex size-8 items-center justify-center rounded-xl border border-border/80 bg-elevated text-muted hover:border-accent hover:text-fg transition-all"
-                      >
-                        <ExternalLink className="size-3.5" />
-                      </a>
-                    </div>
-                  </li>
-                ))}
+                        <Link
+                          to="/player/$steamid"
+                          params={{ steamid: p.steamid }}
+                          className="inline-flex h-8 items-center rounded-xl border border-border/80 bg-elevated px-3 text-xs font-bold text-muted hover:border-accent hover:text-fg hover:bg-elevated/80 transition-all shadow-sm shrink-0"
+                        >
+                          История
+                        </Link>
+
+                        <a
+                          href={fearProfileUrl(p.steamid)}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Профиль на FearProject"
+                          className="inline-flex size-8 items-center justify-center rounded-xl border border-border/80 bg-elevated text-muted hover:border-accent hover:text-fg hover:bg-elevated/80 transition-all shadow-sm shrink-0"
+                        >
+                          <ExternalLink className="size-3.5" />
+                        </a>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </AnimatedBlock>
@@ -497,12 +545,14 @@ export function SuspiciousView() {
                 <ul className="divide-y divide-border/60 overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel shadow-sm">
                   {displayedNewcomers.map((p) => {
                     const hours = p.playtime / 3600;
+                    const displayName = getPlayerDisplayName(p.nickname, p.steamid);
+                    const initial = getPlayerInitial(p.nickname);
                     return (
                       <li
                         key={p.steamid}
-                        className="flex flex-col gap-3.5 p-4.5 sm:flex-row sm:items-center sm:px-6 transition-colors hover:bg-elevated/40"
+                        className="flex flex-col gap-3.5 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between sm:px-6 transition-colors hover:bg-elevated/40"
                       >
-                        {/* Avatar & Player Info */}
+                        {/* Left: Avatar & Player Info */}
                         <div className="flex min-w-0 flex-1 items-center gap-3.5">
                           <div className="relative shrink-0">
                             {p.avatar ? (
@@ -513,56 +563,80 @@ export function SuspiciousView() {
                               />
                             ) : (
                               <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-surface to-elevated text-sm font-black text-fg border-2 border-border/80 shadow-md">
-                                {(p.nickname.trim().charAt(0) || "?").toUpperCase()}
+                                {initial}
                               </span>
                             )}
                             <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-surface bg-success shadow-[0_0_8px_var(--color-success)]" />
                           </div>
 
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="truncate text-sm font-extrabold text-fg">{p.nickname || p.steamid}</p>
+                          <div className="min-w-0 flex-1 space-y-1">
+                            {/* Line 1: Nickname + Badges */}
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                              <span
+                                className="text-sm font-extrabold text-fg truncate max-w-[200px] sm:max-w-[280px]"
+                                title={displayName}
+                              >
+                                {displayName}
+                              </span>
+
                               <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-success/15 border border-success/30 px-1.5 py-0.5 font-mono text-[10px] font-bold text-success">
                                 <span className="size-1.5 rounded-full bg-success animate-pulse" />
                                 В ИГРЕ
                               </span>
+
+                              {/* Playtime badge */}
+                              <div
+                                className={cn(
+                                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold shadow-sm font-mono",
+                                  hours < 1
+                                    ? "bg-emerald-500/15 border-emerald-500/35 text-emerald-400"
+                                    : hours < 5
+                                      ? "bg-sky-500/15 border-sky-500/35 text-sky-400"
+                                      : "bg-amber-500/15 border-amber-500/35 text-amber-400",
+                                )}
+                              >
+                                <Timer className="size-3 shrink-0" />
+                                <span>{fmtPlaytime(p.playtime)}</span>
+                              </div>
+
+                              {p.rank != null && p.rank > 0 ? (
+                                <Badge tone="muted" className="font-mono text-[10px] px-2 py-0.5">
+                                  Ранг {p.rank}
+                                </Badge>
+                              ) : null}
                             </div>
 
-                            <p className="truncate font-mono text-[11px] text-subtle mt-0.5 flex items-center gap-1.5">
+                            {/* Line 2: SteamID + Server + Map */}
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] text-subtle">
                               <button
                                 type="button"
                                 onClick={() => copySteamId(p.steamid)}
-                                className="hover:text-fg hover:underline inline-flex items-center gap-1"
+                                className="hover:text-fg hover:underline inline-flex items-center gap-1 shrink-0 font-mono"
                                 title="Нажмите, чтобы скопировать SteamID"
                               >
-                                {p.steamid}
+                                <span>{p.steamid}</span>
                                 <Copy className="size-2.5 opacity-60" />
                               </button>
-                              {p.server ? <span className="text-muted">&middot; {p.server}</span> : ""}
-                              {p.map ? <span className="text-accent font-semibold">({p.map})</span> : ""}
-                            </p>
+                              {p.server ? (
+                                <span className="text-muted inline-flex items-center gap-1">
+                                  <span className="text-subtle/50">&middot;</span>
+                                  <span className="text-fg/80">{p.server}</span>
+                                </span>
+                              ) : null}
+                              {p.map ? (
+                                <span className="text-accent font-semibold inline-flex items-center gap-1">
+                                  <span className="text-subtle/50">&middot;</span>
+                                  <span>({p.map})</span>
+                                </span>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
 
-                        {/* Badges & Stats */}
-                        <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-                          {/* Playtime badge */}
-                          <div
-                            className={cn(
-                              "inline-flex items-center gap-1.5 rounded-xl border px-3 py-1 text-xs font-bold shadow-sm",
-                              hours < 1
-                                ? "bg-emerald-500/15 border-emerald-500/35 text-emerald-400"
-                                : hours < 5
-                                  ? "bg-sky-500/15 border-sky-500/35 text-sky-400"
-                                  : "bg-amber-500/15 border-amber-500/35 text-amber-400",
-                            )}
-                          >
-                            <Timer className="size-3.5" />
-                            <span>{fmtPlaytime(p.playtime)}</span>
-                          </div>
-
+                        {/* Right: Badges & Stats */}
+                        <div className="flex items-center gap-2 shrink-0 self-start lg:self-center pt-1 lg:pt-0">
                           {/* KD & Kills */}
-                          <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-elevated/60 px-2.5 py-1 text-xs">
+                          <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-elevated/60 px-2.5 py-1 text-xs shrink-0">
                             <span
                               className={cn(
                                 "font-black font-mono",
@@ -576,18 +650,11 @@ export function SuspiciousView() {
                             </span>
                           </div>
 
-                          {/* Rank if available */}
-                          {p.rank != null && p.rank > 0 ? (
-                            <Badge tone="muted" className="font-mono text-[11px]">
-                              Ранг {p.rank}
-                            </Badge>
-                          ) : null}
-
                           {/* Profile Link */}
                           <Link
                             to="/player/$steamid"
                             params={{ steamid: p.steamid }}
-                            className="inline-flex h-8 items-center rounded-xl border border-border/80 bg-elevated px-3 text-xs font-bold text-muted hover:border-accent hover:text-fg transition-all"
+                            className="inline-flex h-8 items-center rounded-xl border border-border/80 bg-elevated px-3 text-xs font-bold text-muted hover:border-accent hover:text-fg hover:bg-elevated/80 transition-all shadow-sm shrink-0"
                           >
                             История
                           </Link>
@@ -598,7 +665,7 @@ export function SuspiciousView() {
                             target="_blank"
                             rel="noreferrer"
                             title="Профиль на FearProject"
-                            className="inline-flex size-8 items-center justify-center rounded-xl border border-border/80 bg-elevated text-muted hover:border-accent hover:text-fg transition-all"
+                            className="inline-flex size-8 items-center justify-center rounded-xl border border-border/80 bg-elevated text-muted hover:border-accent hover:text-fg hover:bg-elevated/80 transition-all shadow-sm shrink-0"
                           >
                             <ExternalLink className="size-3.5" />
                           </a>
@@ -609,7 +676,7 @@ export function SuspiciousView() {
                             target="_blank"
                             rel="noreferrer"
                             title="Профиль в Steam"
-                            className="inline-flex h-8 items-center gap-1 rounded-xl border border-border/80 bg-elevated px-2.5 text-xs font-bold text-muted hover:border-accent hover:text-fg transition-all"
+                            className="inline-flex h-8 items-center gap-1 rounded-xl border border-border/80 bg-elevated px-2.5 text-xs font-bold text-muted hover:border-accent hover:text-fg hover:bg-elevated/80 transition-all shadow-sm shrink-0"
                           >
                             <span className="text-[11px]">Steam</span>
                             <ExternalLink className="size-3" />
