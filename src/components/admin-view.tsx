@@ -286,9 +286,9 @@ export function AdminView({ me }: { me: StaffProfile }) {
                       onChange={(v) => void patch(u.userId, { ...u, canStats: v })}
                     />
                     <Toggle
-                      label="Активность"
-                      hint="Вкладка «Активность» с онлайном модераторов на серверах FearProject (привязана к статистике)"
-                      checked={u.isOwner || u.canActivity}
+                      label="Онлайн"
+                      hint="Вкладка «Онлайн» с онлайном модераторов на серверах FearProject (привязана к статистике)"
+                      checked={u.isOwner || u.canActivity || u.canStats}
                       disabled={locked || u.isOwner || u.isBanned}
                       onChange={(v) => void patch(u.userId, { ...u, canActivity: v })}
                     />

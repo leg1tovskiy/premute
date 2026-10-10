@@ -1,17 +1,17 @@
 import {
   BarChart3,
   Gamepad2,
+  Radio,
   Shield,
-  ShieldAlert,
   Trophy,
   Users,
   type LucideIcon,
 } from "lucide-react";
 import type { Caps } from "@/lib/types";
 
-export type TabId = "stats" | "tops" | "suspicious" | "mods" | "admin";
+export type TabId = "stats" | "online" | "tops" | "suspicious" | "mods" | "admin";
 
-export type TabPath = "/stats" | "/tops" | "/suspicious" | "/mods" | "/admin";
+export type TabPath = "/stats" | "/online" | "/tops" | "/suspicious" | "/mods" | "/admin";
 
 export type TabDef = {
   id: TabId;
@@ -24,6 +24,7 @@ export type TabDef = {
 
 export const TABS: TabDef[] = [
   { id: "stats", to: "/stats", label: "Статистика", desc: "Статистика модераторов", icon: BarChart3, cap: "canStats" },
+  { id: "online", to: "/online", label: "Онлайн", desc: "Онлайн модераторов на серверах", icon: Radio, cap: "canStats" },
   { id: "tops", to: "/tops", label: "Топы", desc: "Рейтинг модераторов", icon: Trophy, cap: "canGeneralStats" },
   { id: "suspicious", to: "/suspicious", label: "Игроки", desc: "Подозрительные и новореги", icon: Gamepad2, cap: "canSuspicious" },
   { id: "mods", to: "/mods", label: "Модераторы", desc: "Состав команды", icon: Users, cap: "canMods" },

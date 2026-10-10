@@ -445,7 +445,7 @@ export function ActivityView() {
               <Radio className="size-4.5 animate-pulse" />
             </span>
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-fg flex items-center gap-2">
-              Активность на серверах
+              Онлайн на серверах
               <span className="rounded-full bg-success/20 px-2.5 py-0.5 text-xs font-black text-success border border-success/30">
                 {totalCount} ОНЛАЙН
               </span>

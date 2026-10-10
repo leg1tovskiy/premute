@@ -15,6 +15,7 @@ import { Route as PanelIndexRouteImport } from './routes/_panel.index'
 import { Route as PanelSlugRouteImport } from './routes/_panel.$slug'
 import { Route as PanelAdminRouteImport } from './routes/_panel.admin'
 import { Route as PanelModsRouteImport } from './routes/_panel.mods'
+import { Route as PanelOnlineRouteImport } from './routes/_panel.online'
 import { Route as PanelStatsRouteImport } from './routes/_panel.stats'
 import { Route as PanelSuspiciousRouteImport } from './routes/_panel.suspicious'
 import { Route as PanelTopsRouteImport } from './routes/_panel.tops'
@@ -50,6 +51,11 @@ const PanelModsRoute = PanelModsRouteImport.update({
   path: '/mods',
   getParentRoute: () => PanelRoute,
 } as any)
+const PanelOnlineRoute = PanelOnlineRouteImport.update({
+  id: '/online',
+  path: '/online',
+  getParentRoute: () => PanelRoute,
+} as any)
 const PanelStatsRoute = PanelStatsRouteImport.update({
   id: '/stats',
   path: '/stats',
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/$slug': typeof PanelSlugRoute
   '/admin': typeof PanelAdminRoute
   '/mods': typeof PanelModsRoute
+  '/online': typeof PanelOnlineRoute
   '/stats': typeof PanelStatsRoute
   '/suspicious': typeof PanelSuspiciousRoute
   '/tops': typeof PanelTopsRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/$slug': typeof PanelSlugRoute
   '/admin': typeof PanelAdminRoute
   '/mods': typeof PanelModsRoute
+  '/online': typeof PanelOnlineRoute
   '/stats': typeof PanelStatsRoute
   '/suspicious': typeof PanelSuspiciousRoute
   '/tops': typeof PanelTopsRoute
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/_panel/$slug': typeof PanelSlugRoute
   '/_panel/admin': typeof PanelAdminRoute
   '/_panel/mods': typeof PanelModsRoute
+  '/_panel/online': typeof PanelOnlineRoute
   '/_panel/stats': typeof PanelStatsRoute
   '/_panel/suspicious': typeof PanelSuspiciousRoute
   '/_panel/tops': typeof PanelTopsRoute
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
     | '/$slug'
     | '/admin'
     | '/mods'
+    | '/online'
     | '/stats'
     | '/suspicious'
     | '/tops'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/$slug'
     | '/admin'
     | '/mods'
+    | '/online'
     | '/stats'
     | '/suspicious'
     | '/tops'
@@ -146,6 +157,7 @@ export interface FileRouteTypes {
     | '/_panel/$slug'
     | '/_panel/admin'
     | '/_panel/mods'
+    | '/_panel/online'
     | '/_panel/stats'
     | '/_panel/suspicious'
     | '/_panel/tops'
@@ -204,6 +216,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PanelModsRouteImport
       parentRoute: typeof PanelRoute
     }
+    '/_panel/online': {
+      id: '/_panel/online'
+      path: '/online'
+      fullPath: '/online'
+      preLoaderRoute: typeof PanelOnlineRouteImport
+      parentRoute: typeof PanelRoute
+    }
     '/_panel/stats': {
       id: '/_panel/stats'
       path: '/stats'
@@ -246,6 +265,7 @@ interface PanelRouteChildren {
   PanelSlugRoute: typeof PanelSlugRoute
   PanelAdminRoute: typeof PanelAdminRoute
   PanelModsRoute: typeof PanelModsRoute
+  PanelOnlineRoute: typeof PanelOnlineRoute
   PanelStatsRoute: typeof PanelStatsRoute
   PanelSuspiciousRoute: typeof PanelSuspiciousRoute
   PanelTopsRoute: typeof PanelTopsRoute
@@ -257,6 +277,7 @@ const PanelRouteChildren: PanelRouteChildren = {
   PanelSlugRoute: PanelSlugRoute,
   PanelAdminRoute: PanelAdminRoute,
   PanelModsRoute: PanelModsRoute,
+  PanelOnlineRoute: PanelOnlineRoute,
   PanelStatsRoute: PanelStatsRoute,
   PanelSuspiciousRoute: PanelSuspiciousRoute,
   PanelTopsRoute: PanelTopsRoute,

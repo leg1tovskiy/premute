@@ -84,8 +84,8 @@ export function computeCaps(
   const isSundayAccess = !permanentGeneralStats && canOwnStats && isSunday;
   const canGeneralStats = permanentGeneralStats || isSundayAccess;
   const canStats = canGeneralStats || canOwnStats;
-  // Вкладка "Активность" привязана к Статистике, если есть доступ и к "Активность"
-  const canActivity = canStats && (isOwner || flag(row.can_activity));
+  // Вкладка "Онлайн" привязана к Статистике: если модератор видит свою или общую стату, то доступен "Онлайн"
+  const canActivity = canStats || isOwner || flag(row.can_activity);
   const canSuspicious = isOwner || flag(row.can_suspicious);
   const canModeration = isOwner || flag(row.can_moderation);
   const canVoice = isOwner || flag(row.can_voice);
