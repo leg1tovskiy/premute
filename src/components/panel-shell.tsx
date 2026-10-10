@@ -128,8 +128,8 @@ export function PanelShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-dvh bg-bg text-fg">
       {/* ── Left Sidebar (Brand & Compact Tabs without empty space) ── */}
       <aside className="sticky top-0 hidden w-64 lg:w-72 shrink-0 flex-col gap-3 p-3 md:flex z-30 select-none self-start">
-        {/* Окошко 1: Бренд и статус серверов FEAR */}
-        <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3.5 shadow-sm space-y-3 shrink-0">
+        {/* Окошко 1: Бренд */}
+        <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3.5 shadow-sm shrink-0">
           <Link to="/" className="group flex items-center gap-3">
             <div className="relative">
               <img
@@ -147,43 +147,34 @@ export function PanelShell({ children }: { children: ReactNode }) {
               <p className="text-[11px] text-subtle">FearProject CS2</p>
             </div>
           </Link>
-
-          {/* Server Pulse Card */}
-          <div className="rounded-xl border border-border/60 bg-elevated/50 p-2.5 shadow-inner">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-xs font-semibold text-fg">
-                <span className="relative flex size-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-                  <span className="relative inline-flex size-2 rounded-full bg-success" />
-                </span>
-                Серверы FEAR
-              </span>
-              <span className="rounded bg-surface px-1.5 py-0.5 text-[10px] font-mono text-muted border border-border/50">Sub-tick</span>
-            </div>
-            <p className="mt-1 text-[11px] text-muted">Синхронизация активна</p>
-          </div>
         </div>
 
-        {/* Окошко 2: Вкладки навигации (компактные, без лишнего пустого пространства!) */}
-        <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3 shadow-sm shrink-0">
-          <div className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-subtle">
+        {/* Окошко 2: Вкладки навигации */}
+        <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-2.5 shadow-sm shrink-0">
+          <div className="px-2.5 pt-1 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-subtle">
             Основное
           </div>
-          <nav className="space-y-1.5" aria-label="Боковое меню">
+          <nav className="space-y-1" aria-label="Боковое меню">
             <Link
               to="/"
               className={cn(
-                "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200",
+                "group relative flex items-center gap-3 rounded-xl px-2.5 py-2 transition-all duration-150",
                 pathname === "/"
-                  ? "border border-accent/40 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent text-fg shadow-[0_0_15px_-4px_color-mix(in_oklab,var(--color-accent)_35%,transparent)] font-semibold"
-                  : "border border-transparent text-muted hover:border-border/60 hover:bg-elevated/60 hover:text-fg",
+                  ? "bg-elevated/90 text-fg font-semibold shadow-sm"
+                  : "text-muted hover:bg-elevated/40 hover:text-fg font-medium",
               )}
             >
-              <Home className={cn("size-4 transition-colors duration-200", pathname === "/" ? "text-accent" : "text-subtle group-hover:text-fg")} />
-              <span>Главная</span>
-              {pathname === "/" ? (
-                <span className="ml-auto size-1.5 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)] animate-in fade-in zoom-in-75 duration-200" />
-              ) : null}
+              <span
+                className={cn(
+                  "grid size-8 place-items-center rounded-xl transition-colors shrink-0",
+                  pathname === "/"
+                    ? "bg-surface text-fg shadow-sm"
+                    : "bg-surface/50 text-subtle group-hover:bg-surface group-hover:text-fg",
+                )}
+              >
+                <Home className="size-4" />
+              </span>
+              <span className="text-sm">Главная</span>
             </Link>
 
             {tabs.map((t) => {
@@ -194,17 +185,23 @@ export function PanelShell({ children }: { children: ReactNode }) {
                   key={t.id}
                   to={t.to}
                   className={cn(
-                    "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-200",
+                    "group relative flex items-center gap-3 rounded-xl px-2.5 py-2 transition-all duration-150",
                     isActive
-                      ? "border border-accent/40 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent text-fg shadow-[0_0_15px_-4px_color-mix(in_oklab,var(--color-accent)_35%,transparent)] font-semibold"
-                      : "border border-transparent text-muted hover:border-border/60 hover:bg-elevated/60 hover:text-fg",
+                      ? "bg-elevated/90 text-fg font-semibold shadow-sm"
+                      : "text-muted hover:bg-elevated/40 hover:text-fg font-medium",
                   )}
                 >
-                  <Icon className={cn("size-4 transition-colors duration-200", isActive ? "text-accent" : "text-subtle group-hover:text-fg")} />
-                  <span>{t.label}</span>
-                  {isActive ? (
-                    <span className="ml-auto size-1.5 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)] animate-in fade-in zoom-in-75 duration-200" />
-                  ) : null}
+                  <span
+                    className={cn(
+                      "grid size-8 place-items-center rounded-xl transition-colors shrink-0",
+                      isActive
+                        ? "bg-surface text-fg shadow-sm"
+                        : "bg-surface/50 text-subtle group-hover:bg-surface group-hover:text-fg",
+                    )}
+                  >
+                    <Icon className="size-4" />
+                  </span>
+                  <span className="text-sm">{t.label}</span>
                 </Link>
               );
             })}
@@ -360,9 +357,9 @@ export function PanelShell({ children }: { children: ReactNode }) {
             onClick={() => setMobileOpen(false)}
           />
           <div className="relative flex w-72 flex-col bg-bg p-3 shadow-2xl z-10 gap-3 justify-between overflow-y-auto">
-            {/* Карточка 1: Бренд и статус */}
+            {/* Карточка 1: Бренд */}
             <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3.5 shadow-sm">
-              <div className="flex items-center justify-between pb-3 border-b border-border/60">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <img src="/logo.png" alt="PremuteBOT" className="size-8 rounded-lg border border-border object-cover" />
                   <div>
@@ -378,41 +375,35 @@ export function PanelShell({ children }: { children: ReactNode }) {
                   <X className="size-4" />
                 </button>
               </div>
-
-              {/* Server Pulse Card */}
-              <div className="mt-3 rounded-xl border border-border/60 bg-elevated/50 p-2.5 shadow-inner">
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 text-xs font-semibold text-fg">
-                    <span className="relative flex size-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-                      <span className="relative inline-flex size-2 rounded-full bg-success" />
-                    </span>
-                    Серверы FEAR
-                  </span>
-                  <span className="rounded bg-surface px-1.5 py-0.5 text-[10px] font-mono text-muted border border-border/50">Sub-tick</span>
-                </div>
-                <p className="mt-1 text-[11px] text-muted">Синхронизация активна</p>
-              </div>
             </div>
 
             {/* Карточка 2: Вкладки */}
-            <div className="flex-1 rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3 shadow-sm">
-              <div className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-subtle">
+            <div className="flex-1 rounded-2xl border border-border/80 bg-surface/90 glass-panel p-2.5 shadow-sm">
+              <div className="px-2.5 pt-1 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-subtle">
                 Основное
               </div>
-              <nav className="space-y-1.5">
+              <nav className="space-y-1">
                 <Link
                   to="/"
                   onClick={() => setMobileOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-medium transition-all duration-200",
+                    "group flex items-center gap-3 rounded-xl px-2.5 py-2 transition-all duration-150",
                     pathname === "/"
-                      ? "border border-accent/40 bg-accent/15 text-accent font-semibold"
-                      : "text-muted hover:text-fg hover:bg-elevated/60",
+                      ? "bg-elevated/90 text-fg font-semibold shadow-sm"
+                      : "text-muted hover:bg-elevated/40 hover:text-fg font-medium",
                   )}
                 >
-                  <Home className="size-4" />
-                  Главная
+                  <span
+                    className={cn(
+                      "grid size-8 place-items-center rounded-xl transition-colors shrink-0",
+                      pathname === "/"
+                        ? "bg-surface text-fg shadow-sm"
+                        : "bg-surface/50 text-subtle group-hover:bg-surface group-hover:text-fg",
+                    )}
+                  >
+                    <Home className="size-4" />
+                  </span>
+                  <span className="text-sm">Главная</span>
                 </Link>
                 {tabs.map((t) => {
                   const Icon = t.icon;
@@ -423,14 +414,23 @@ export function PanelShell({ children }: { children: ReactNode }) {
                       to={t.to}
                       onClick={() => setMobileOpen(false)}
                       className={cn(
-                        "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-medium transition-all duration-200",
+                        "group flex items-center gap-3 rounded-xl px-2.5 py-2 transition-all duration-150",
                         isActive
-                          ? "border border-accent/40 bg-accent/15 text-accent font-semibold"
-                          : "text-muted hover:text-fg hover:bg-elevated/60",
+                          ? "bg-elevated/90 text-fg font-semibold shadow-sm"
+                          : "text-muted hover:bg-elevated/40 hover:text-fg font-medium",
                       )}
                     >
-                      <Icon className="size-4" />
-                      {t.label}
+                      <span
+                        className={cn(
+                          "grid size-8 place-items-center rounded-xl transition-colors shrink-0",
+                          isActive
+                            ? "bg-surface text-fg shadow-sm"
+                            : "bg-surface/50 text-subtle group-hover:bg-surface group-hover:text-fg",
+                        )}
+                      >
+                        <Icon className="size-4" />
+                      </span>
+                      <span className="text-sm">{t.label}</span>
                     </Link>
                   );
                 })}
