@@ -232,7 +232,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
                 {pageTitle}
               </h1>
               <p className="hidden text-[11px] text-muted sm:block">
-                Панель управления проектом FearProject
+                Панель для модераторов FearProject
               </p>
             </div>
           </div>
