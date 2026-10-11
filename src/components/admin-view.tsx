@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Download, ExternalLink, Loader2, Shield, ShieldCheck, SlidersHorizontal, Sparkles, Terminal, Trash2, User, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -23,8 +24,17 @@ export function AdminView({ me }: { me: StaffProfile }) {
   const [rows, setRows] = useState<StaffListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [backingUp, setBackingUp] = useState(false);
-  const [openManual, setOpenManual] = useState<Record<string, boolean>>({});
+  const [manualModalUserId, setManualModalUserId] = useState<string | null>(null);
   const meIsMainOwner = me.userId === ROOT_DISCORD_ID || me.discordId === ROOT_DISCORD_ID;
+
+  useEffect(() => {
+    if (!manualModalUserId) return;
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") setManualModalUserId(null);
+    }
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [manualModalUserId]);
 
   async function downloadBackup() {
     setBackingUp(true);
@@ -376,102 +386,20 @@ export function AdminView({ me }: { me: StaffProfile }) {
                     </div>
                   ) : null}
 
-                  {/* ── Ручная настройка прав (аккордеон) ────────────────────────── */}
-                  <div className="relative z-10 mt-2 rounded-2xl border border-border/60 bg-elevated/30 overflow-hidden transition-all">
-                    <button
-                      type="button"
-                      onClick={() => setOpenManual((prev) => ({ ...prev, [u.userId]: !prev[u.userId] }))}
-                      className="flex w-full items-center justify-between p-2.5 text-xs font-bold text-muted hover:text-fg hover:bg-elevated/50 transition-colors cursor-pointer select-none outline-none focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/50"
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <SlidersHorizontal className="size-3.5 text-muted" />
-                        Ручная настройка прав
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-subtle font-mono">
-                          {openManual[u.userId] ? "Скрыть" : "Настроить"}
-                        </span>
-                        <ChevronDown className={cn("size-3.5 transition-transform duration-200", openManual[u.userId] && "rotate-180")} />
-                      </div>
-                    </button>
-
-                    {openManual[u.userId] ? (
-                      (() => {
-                        const roleRank = u.roleRank ?? null;
-                        const isSeniorOrStaff = roleRank !== null && roleRank >= 3;
-                        const statsByRole = isSeniorOrStaff;
-                        const activityByRole = isSeniorOrStaff;
-                        const suspiciousByRole = roleRank !== null && roleRank >= 1;
-                        const modsByRole = isSeniorOrStaff;
-
-                        return (
-                          <div className="p-3 pt-1 border-t border-border/40 space-y-2 animate-in fade-in duration-200">
-                            <p className="text-[10px] text-subtle pb-1">
-                              Индивидуальное переопределение пунктов доступа:
-                            </p>
-
-                            <Toggle
-                              label="Полная статистика (все)"
-                              hint="Включено: доступ ко всей статистике и топам. Выключено: если указан SteamID — видит только свою личную статистику."
-                              checked={u.isOwner || statsByRole || u.canStats}
-                              disabled={locked || u.isOwner || u.isBanned || statsByRole}
-                              byRole={statsByRole}
-                              onChange={(v) => void patch(u.userId, { canStats: v })}
-                            />
-                            <Toggle
-                              label="Онлайн"
-                              hint="Вкладка «Онлайн» с онлайном модераторов на серверах FearProject"
-                              checked={u.isOwner || activityByRole || u.canActivity}
-                              disabled={locked || u.isOwner || u.isBanned || activityByRole}
-                              byRole={activityByRole}
-                              onChange={(v) => void patch(u.userId, { canActivity: v })}
-                            />
-                            <Toggle
-                              label="Игроки"
-                              hint="Вкладка «Игроки» (подозрительные аккаунты и новореги)"
-                              checked={u.isOwner || suspiciousByRole || u.canSuspicious}
-                              disabled={locked || u.isOwner || u.isBanned || suspiciousByRole}
-                              byRole={suspiciousByRole}
-                              onChange={(v) => void patch(u.userId, { canSuspicious: v })}
-                            />
-                            <Toggle
-                              label="Модераторы"
-                              hint="Вкладка «Модераторы» (состав команды FearProject)"
-                              checked={u.isOwner || modsByRole || u.canMods}
-                              disabled={locked || u.isOwner || u.isBanned || modsByRole}
-                              byRole={modsByRole}
-                              onChange={(v) => void patch(u.userId, { canMods: v })}
-                            />
-                        {me.caps.canGrantBotOwner ? (
-                          <Toggle
-                            label="Владелец бота"
-                            checked={u.isRoot || u.isBotOwner}
-                            disabled={locked || u.isRoot || u.isBanned}
-                            onChange={(v) => void patch(u.userId, { isBotOwner: v })}
-                          />
-                        ) : null}
-                        {me.caps.canGrantOwner ? (
-                          <Toggle
-                            label="Владелец сайта"
-                            checked={u.isOwner || u.isRoot}
-                            disabled={locked || u.isRoot || u.isBanned}
-                            onChange={(v) => void patch(u.userId, { isOwner: v })}
-                          />
-                        ) : null}
-                        {!isMainOwner(u) && !u.isRoot && u.userId !== me.userId ? (
-                          <Toggle
-                            label="Бан в панели"
-                            hint="Заблокировать доступ пользователя к панели управления"
-                            checked={Boolean(u.isBanned)}
-                            disabled={locked}
-                            onChange={(v) => void patch(u.userId, { isBanned: v })}
-                          />
-                        ) : null}
-                      </div>
-                    );
-                  })()
-                ) : null}
-                  </div>
+                  {/* ── Ручная настройка прав (кнопка модального окна) ── */}
+                  <button
+                    type="button"
+                    onClick={() => setManualModalUserId(u.userId)}
+                    className="relative z-10 mt-2 flex w-full items-center justify-between rounded-xl border border-border/70 bg-elevated/40 p-2.5 text-xs font-bold text-muted hover:text-fg hover:border-accent/40 hover:bg-elevated/70 transition-all cursor-pointer shadow-xs select-none"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <SlidersHorizontal className="size-3.5 text-accent" />
+                      Ручная настройка прав
+                    </span>
+                    <span className="text-[10px] text-accent font-semibold flex items-center gap-1">
+                      Настроить →
+                    </span>
+                  </button>
 
                   {/* Card Footer: Dates & Actions */}
                   <div className="relative z-10 mt-3 pt-2.5 border-t border-border/50 flex items-center justify-between text-[11px] text-subtle">
@@ -520,6 +448,142 @@ export function AdminView({ me }: { me: StaffProfile }) {
           </Button>
         </section>
       </AnimatedBlock>
+
+      {/* ── Модальное окно ручной настройки прав ── */}
+      {manualModalUserId && typeof document !== "undefined"
+        ? (() => {
+            const u = rows.find((r) => r.userId === manualModalUserId);
+            if (!u) return null;
+            const locked = u.isRoot && u.userId !== me.userId;
+            const handle = u.displayName || u.email || "Пользователь";
+            const roleRank = u.roleRank ?? null;
+            const isSeniorOrStaff = roleRank !== null && roleRank >= 3;
+            const statsByRole = isSeniorOrStaff;
+            const activityByRole = isSeniorOrStaff;
+            const suspiciousByRole = roleRank !== null && roleRank >= 1;
+            const modsByRole = isSeniorOrStaff;
+
+            return createPortal(
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+                {/* Затемненный фон */}
+                <div
+                  className="fixed inset-0 bg-black/75 backdrop-blur-md animate-page-enter"
+                  onClick={() => setManualModalUserId(null)}
+                  aria-hidden="true"
+                />
+
+                {/* Окно диалога */}
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Ручная настройка прав"
+                  className="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-border/90 bg-surface/98 p-5 text-fg shadow-2xl backdrop-blur-xl animate-page-enter"
+                >
+                  {/* Заголовок */}
+                  <div className="flex items-start justify-between border-b border-border/60 pb-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="grid size-10 place-items-center rounded-2xl border border-accent/30 bg-accent/15 text-accent shadow-sm">
+                        <SlidersHorizontal className="size-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-sm font-extrabold text-fg sm:text-base">
+                          Ручная настройка прав
+                        </h2>
+                        <p className="text-xs text-muted">
+                          {handle} {u.roleTitle ? `• ${u.roleTitle}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setManualModalUserId(null)}
+                      className="grid size-8 place-items-center rounded-xl border border-border/80 bg-elevated/70 text-subtle hover:text-fg hover:bg-elevated transition-colors cursor-pointer"
+                      aria-label="Закрыть"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+
+                  {/* Список переключателей */}
+                  <div className="overflow-y-auto py-4 space-y-2.5 max-h-[60vh] pr-1">
+                    <p className="text-[11px] text-subtle pb-1">
+                      Индивидуальное переопределение пунктов доступа:
+                    </p>
+
+                    <Toggle
+                      label="Полная статистика (все)"
+                      hint="Включено: доступ ко всей статистике и топам. Выключено: если указан SteamID — видит только свою личную статистику."
+                      checked={u.isOwner || statsByRole || u.canStats}
+                      disabled={locked || u.isOwner || u.isBanned || statsByRole}
+                      byRole={statsByRole}
+                      onChange={(v) => void patch(u.userId, { canStats: v })}
+                    />
+                    <Toggle
+                      label="Онлайн"
+                      hint="Вкладка «Онлайн» с онлайном модераторов на серверах FearProject"
+                      checked={u.isOwner || activityByRole || u.canActivity}
+                      disabled={locked || u.isOwner || u.isBanned || activityByRole}
+                      byRole={activityByRole}
+                      onChange={(v) => void patch(u.userId, { canActivity: v })}
+                    />
+                    <Toggle
+                      label="Игроки"
+                      hint="Вкладка «Игроки» (подозрительные аккаунты и новореги)"
+                      checked={u.isOwner || suspiciousByRole || u.canSuspicious}
+                      disabled={locked || u.isOwner || u.isBanned || suspiciousByRole}
+                      byRole={suspiciousByRole}
+                      onChange={(v) => void patch(u.userId, { canSuspicious: v })}
+                    />
+                    <Toggle
+                      label="Модераторы"
+                      hint="Вкладка «Модераторы» (состав команды FearProject)"
+                      checked={u.isOwner || modsByRole || u.canMods}
+                      disabled={locked || u.isOwner || u.isBanned || modsByRole}
+                      byRole={modsByRole}
+                      onChange={(v) => void patch(u.userId, { canMods: v })}
+                    />
+                    {me.caps.canGrantBotOwner ? (
+                      <Toggle
+                        label="Владелец бота"
+                        checked={u.isRoot || u.isBotOwner}
+                        disabled={locked || u.isRoot || u.isBanned}
+                        onChange={(v) => void patch(u.userId, { isBotOwner: v })}
+                      />
+                    ) : null}
+                    {me.caps.canGrantOwner ? (
+                      <Toggle
+                        label="Владелец сайта"
+                        checked={u.isOwner || u.isRoot}
+                        disabled={locked || u.isRoot || u.isBanned}
+                        onChange={(v) => void patch(u.userId, { isOwner: v })}
+                      />
+                    ) : null}
+                    {!isMainOwner(u) && !u.isRoot && u.userId !== me.userId ? (
+                      <Toggle
+                        label="Бан в панели"
+                        hint="Заблокировать доступ пользователя к панели управления"
+                        checked={Boolean(u.isBanned)}
+                        disabled={locked}
+                        onChange={(v) => void patch(u.userId, { isBanned: v })}
+                      />
+                    ) : null}
+                  </div>
+
+                  {/* Подвал модалки */}
+                  <div className="flex justify-end border-t border-border/60 pt-3.5">
+                    <Button
+                      onClick={() => setManualModalUserId(null)}
+                      className="rounded-xl px-4 py-2 font-bold"
+                    >
+                      Готово
+                    </Button>
+                  </div>
+                </div>
+              </div>,
+              document.body,
+            );
+          })()
+        : null}
     </div>
   );
 }
