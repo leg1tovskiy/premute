@@ -74,11 +74,10 @@ export const deleteStaffFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((d: { userId: string }) => d)
   .handler(async ({ context, data }): Promise<{ success: boolean }> => {
-    const { getStaff, deleteStaffUser, writeLog } = await import("./server/staff");
+    const { getStaff, deleteStaffUser } = await import("./server/staff");
     const me = await getStaff(context.userId);
     if (!me?.caps.canAdmin || me.isBanned) throw new Error("Недостаточно прав.");
     await deleteStaffUser(me, data.userId);
-    await writeLog(context.userId, "delete_user", data.userId);
     return { success: true };
   });
 
@@ -990,6 +989,23 @@ export const getActionLogsFn = createServerFn({ method: "POST" })
     }
     const { getSql } = await import("./db");
     const sql = await getSql();
+
+    const userNamesMap = new Map<string, string>();
+    try {
+      const staffRows = await sql<{
+        user_id: string;
+        display_name: string | null;
+        email: string | null;
+      }>`select user_id, display_name, email from staff`;
+      for (const s of staffRows) {
+        userNamesMap.set(s.user_id, s.display_name || s.email || s.user_id);
+      }
+    } catch {
+      // ignore
+    }
+
+    const { RANK_TITLE } = await import("./constants");
+
     const rows = await sql<{
       id: number;
       user_id: string;
@@ -1012,15 +1028,88 @@ export const getActionLogsFn = createServerFn({ method: "POST" })
       order by l.created_at desc
       limit ${data?.limit ?? 100}
     `;
-    return rows.map((r) => ({
-      id: r.id,
-      userId: r.user_id,
-      userName: r.display_name || r.user_id,
-      userAvatar: r.image,
-      action: r.action,
-      detail: r.detail,
-      createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at || ""),
-    }));
+
+    return rows.map((r) => {
+      let action = r.action;
+      let detail = r.detail || "";
+
+      // Если в detail записан сырой JSON
+      if (detail && detail.trim().startsWith("{") && detail.trim().endsWith("}")) {
+        try {
+          const parsed = JSON.parse(detail) as Record<string, unknown>;
+          const targetUserId = typeof parsed.userId === "string" ? parsed.userId : "";
+          const targetName = targetUserId
+            ? userNamesMap.get(targetUserId) || `пользователя #${targetUserId.slice(-4)}`
+            : "пользователя";
+
+          const changes: string[] = [];
+          if (parsed.canActivity !== undefined) {
+            changes.push(parsed.canActivity ? "выдана вкладка «Онлайн»" : "снята вкладка «Онлайн»");
+            if (action === "set_perms" || action === "default") action = "tab_change";
+          }
+          if (parsed.canMods !== undefined) {
+            changes.push(parsed.canMods ? "выдана вкладка «Модераторы»" : "снята вкладка «Модераторы»");
+            if (action === "set_perms" || action === "default") action = "tab_change";
+          }
+          if (parsed.canStats !== undefined) {
+            changes.push(parsed.canStats ? "выдана вкладка «Статистика»" : "снята вкладка «Статистика»");
+            if (action === "set_perms" || action === "default") action = "tab_change";
+          }
+          if (parsed.canSuspicious !== undefined) {
+            changes.push(parsed.canSuspicious ? "выдана вкладка «Игроки»" : "снята вкладка «Игроки»");
+            if (action === "set_perms" || action === "default") action = "tab_change";
+          }
+          if (parsed.roleRank !== undefined) {
+            const roleNum = typeof parsed.roleRank === "number" ? parsed.roleRank : null;
+            if (roleNum) {
+              const rTitle = RANK_TITLE[roleNum] || `Ранг ${roleNum}`;
+              changes.push(`назначена роль «${rTitle}»`);
+            } else {
+              changes.push("снята роль");
+            }
+            action = "role_change";
+          }
+          if (parsed.isOwner !== undefined) {
+            changes.push(parsed.isOwner ? "назначен «Владелец сайта»" : "сняты права «Владелец сайта»");
+            action = "role_change";
+          }
+          if (parsed.isBotOwner !== undefined) {
+            changes.push(parsed.isBotOwner ? "назначен «Владелец бота»" : "сняты права «Владелец бота»");
+            action = "role_change";
+          }
+          if (parsed.isBanned !== undefined) {
+            changes.push(parsed.isBanned ? "заблокирован доступ" : "разблокирован доступ");
+            action = "ban_change";
+          }
+          if (parsed.tag !== undefined) {
+            changes.push(parsed.tag ? `установлен тег «${parsed.tag}»` : "снят тег");
+            action = "tag_change";
+          }
+          if (parsed.steamid !== undefined) {
+            changes.push(parsed.steamid ? `привязан SteamID: ${parsed.steamid}` : "снят SteamID");
+            action = "steam_change";
+          }
+
+          if (changes.length > 0) {
+            detail = `${changes.join(", ")} для ${targetName}`;
+          }
+        } catch {
+          // ignore
+        }
+      } else if (action === "delete_user" && userNamesMap.has(detail)) {
+        detail = `Удален пользователь: ${userNamesMap.get(detail)}`;
+      }
+
+      return {
+        id: r.id,
+        userId: r.user_id,
+        userName: r.display_name || r.user_id,
+        userAvatar: r.image,
+        action,
+        detail,
+        createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at || ""),
+      };
+    });
   });
 
 export const clearActionLogsFn = createServerFn({ method: "POST" })

@@ -23,7 +23,79 @@ import { usePanel } from "@/lib/panel";
 import type { ActionLogItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-function getActionMeta(action: string): { title: string; badgeClass: string; icon: typeof Activity } {
+function formatLogDetail(detail: string): string {
+  if (!detail) return "—";
+  const trimmed = detail.trim();
+  if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+    try {
+      const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+      const changes: string[] = [];
+      if (parsed.canActivity !== undefined) {
+        changes.push(parsed.canActivity ? "выдана вкладка «Онлайн»" : "снята вкладка «Онлайн»");
+      }
+      if (parsed.canMods !== undefined) {
+        changes.push(parsed.canMods ? "выдана вкладка «Модераторы»" : "снята вкладка «Модераторы»");
+      }
+      if (parsed.canStats !== undefined) {
+        changes.push(parsed.canStats ? "выдана вкладка «Статистика»" : "снята вкладка «Статистика»");
+      }
+      if (parsed.canSuspicious !== undefined) {
+        changes.push(parsed.canSuspicious ? "выдана вкладка «Игроки»" : "снята вкладка «Игроки»");
+      }
+      if (parsed.roleRank !== undefined) {
+        const r = typeof parsed.roleRank === "number" ? parsed.roleRank : null;
+        changes.push(r ? `назначена роль (ранг ${r})` : "снята роль");
+      }
+      if (parsed.isOwner !== undefined) {
+        changes.push(parsed.isOwner ? "назначен «Владелец сайта»" : "сняты права «Владелец сайта»");
+      }
+      if (parsed.isBotOwner !== undefined) {
+        changes.push(parsed.isBotOwner ? "назначен «Владелец бота»" : "сняты права «Владелец бота»");
+      }
+      if (parsed.isBanned !== undefined) {
+        changes.push(parsed.isBanned ? "заблокирован доступ" : "разблокирован доступ");
+      }
+      if (parsed.tag !== undefined) {
+        changes.push(parsed.tag ? `установлен тег «${parsed.tag}»` : "снят тег");
+      }
+      if (parsed.steamid !== undefined) {
+        changes.push(parsed.steamid ? `привязан SteamID: ${parsed.steamid}` : "снят SteamID");
+      }
+      if (changes.length > 0) {
+        const target = typeof parsed.userId === "string" ? `пользователя #${parsed.userId.slice(-4)}` : "пользователя";
+        return `${changes.join(", ")} для ${target}`;
+      }
+    } catch {
+      return detail;
+    }
+  }
+  return detail;
+}
+
+function getActionMeta(action: string, detail?: string): { title: string; badgeClass: string; icon: typeof Activity } {
+  // Автоопределение из содержимого лога, если действие generic или set_perms
+  if (action === "set_perms" || action === "default") {
+    if (detail && /вкладк/i.test(detail)) {
+      return {
+        title: "Вкладки",
+        badgeClass: "bg-sky-500/15 text-sky-400 border border-sky-500/30",
+        icon: Layers,
+      };
+    }
+    if (detail && /(роль|ранг|владелец)/i.test(detail)) {
+      return {
+        title: "Смена роли",
+        badgeClass: "bg-purple-500/15 text-purple-400 border border-purple-500/30",
+        icon: Shield,
+      };
+    }
+    return {
+      title: "Права доступа",
+      badgeClass: "bg-indigo-500/15 text-indigo-400 border border-indigo-500/30",
+      icon: ShieldCheck,
+    };
+  }
+
   switch (action) {
     case "user_login":
       return {
@@ -73,7 +145,44 @@ function getActionMeta(action: string): { title: string; badgeClass: string; ico
         badgeClass: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
         icon: UserCheck,
       };
+    case "clear_all_dismissed":
+      return {
+        title: "Очистка игроков",
+        badgeClass: "bg-zinc-500/15 text-zinc-400 border border-zinc-500/30",
+        icon: Trash2,
+      };
+    case "mod_add":
+      return {
+        title: "Добавлен модер",
+        badgeClass: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
+        icon: UserPlus,
+      };
+    case "mod_edit":
+      return {
+        title: "Изменен модер",
+        badgeClass: "bg-blue-500/15 text-blue-400 border border-blue-500/30",
+        icon: Activity,
+      };
+    case "mod_del":
+      return {
+        title: "Удален модер",
+        badgeClass: "bg-rose-500/15 text-rose-400 border border-rose-500/30",
+        icon: UserMinus,
+      };
+    case "mod_backup":
+      return {
+        title: "Бэкап модера",
+        badgeClass: "bg-indigo-500/15 text-indigo-400 border border-indigo-500/30",
+        icon: Layers,
+      };
+    case "mod_backup_clear":
+      return {
+        title: "Сброс бэкапа",
+        badgeClass: "bg-zinc-500/15 text-zinc-400 border border-zinc-500/30",
+        icon: Trash2,
+      };
     case "bind_steam":
+    case "steam_change":
       return {
         title: "SteamID",
         badgeClass: "bg-blue-500/15 text-blue-400 border border-blue-500/30",
@@ -84,6 +193,12 @@ function getActionMeta(action: string): { title: string; badgeClass: string; ico
         title: "Discord",
         badgeClass: "bg-indigo-500/15 text-indigo-400 border border-indigo-500/30",
         icon: LinkIcon,
+      };
+    case "tag_change":
+      return {
+        title: "Тег",
+        badgeClass: "bg-amber-500/15 text-amber-400 border border-amber-500/30",
+        icon: Activity,
       };
     case "clear_logs":
       return {
@@ -281,7 +396,8 @@ export function SidebarActionLogs({ className }: { className?: string }) {
                 </div>
               ) : (
                 logs.map((log) => {
-                  const meta = getActionMeta(log.action);
+                  const displayDetail = formatLogDetail(log.detail);
+                  const meta = getActionMeta(log.action, displayDetail);
                   const Icon = meta.icon;
                   return (
                     <div
@@ -306,7 +422,7 @@ export function SidebarActionLogs({ className }: { className?: string }) {
 
                       {/* Строка 2: Описание действия */}
                       <p className="text-xs text-fg/95 leading-snug break-words">
-                        {log.detail}
+                        {displayDetail}
                       </p>
 
                       {/* Строка 3: Автор действия */}

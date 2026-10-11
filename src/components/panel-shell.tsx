@@ -334,9 +334,6 @@ export function PanelShell({ children }: { children: ReactNode }) {
           </button>
         </div>
 
-        {/* Окошко логов сайта (для Владельца сайта и Владельца бота) */}
-        <SidebarActionLogs />
-
         {/* Окошко 2: Панель управления */}
         <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3.5 shadow-sm space-y-2.5">
           <div className="px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-subtle">
@@ -359,6 +356,9 @@ export function PanelShell({ children }: { children: ReactNode }) {
             ) : null}
           </div>
         </div>
+
+        {/* Окошко логов сайта (для Владельца сайта и Владельца бота) - строго ПОД панелью управления */}
+        <SidebarActionLogs />
       </aside>
 
       {/* ── Mobile Drawer ───────────────────────────────────────────── */}
