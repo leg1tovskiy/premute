@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ModeratorsChart } from "@/components/stats-chart";
 import { DailyChart } from "@/components/daily-chart";
 import { downloadCsv } from "@/lib/csv";
 import { CardsSkeleton, PageHeaderSkeleton, Skeleton } from "@/components/skeletons";
@@ -701,12 +700,6 @@ export function StatsView() {
         </AnimatedBlock>
       ) : null}
 
-      {/* ── Top-10 Moderators Chart ─────────────────────────────────── */}
-      {!isOwnStatsOnly ? (
-        <AnimatedBlock delay={150}>
-          <ModeratorsChart mods={data.moderators} />
-        </AnimatedBlock>
-      ) : null}
 
       {/* ── Moderators Section Toolbar & Grid ────────────────────────── */}
       <AnimatedBlock delay={200}>
