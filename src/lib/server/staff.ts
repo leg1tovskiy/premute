@@ -173,6 +173,7 @@ type StaffRow = {
   can_logs: unknown;
   can_power: unknown;
   tag: string | null;
+  role_rank?: unknown;
   created_at: unknown;
   last_seen: unknown;
 };
@@ -193,7 +194,11 @@ function toProfile(
     effectiveSteamId = mySteamId;
   }
   const isBanned = flag(row.is_banned);
-  const caps = computeCaps(row, effectiveSteamId, rosterRank);
+  const effectiveRank =
+    row.role_rank != null && Number(row.role_rank) > 0
+      ? Number(row.role_rank)
+      : (rosterRank ?? null);
+  const caps = computeCaps(row, effectiveSteamId, effectiveRank);
 
   const displayName = fearName ||
     (row.display_name && !/^\d{17,20}$/.test(row.display_name) ? row.display_name : null) ||
@@ -221,8 +226,8 @@ function toProfile(
     canPower: flag(row.can_power) || caps.canPower,
     createdAt: iso(row.created_at),
     lastSeen: iso(row.last_seen),
-    roleRank: rosterRank ?? null,
-    roleTitle: rosterRank ? (RANK_TITLE[rosterRank] ?? "Модератор") : (caps.isOwner ? "Владелец" : null),
+    roleRank: effectiveRank,
+    roleTitle: effectiveRank ? (RANK_TITLE[effectiveRank] ?? "Модератор") : (caps.isOwner ? "Владелец" : null),
     caps,
   };
 }
@@ -288,6 +293,7 @@ export async function upsertStaff(
     return devStaffProfile();
   }
   const sql = await getSql();
+  await sql.query("alter table staff add column if not exists role_rank integer");
 
   // If user signed in via Discord OAuth, link discord_id from account table
   let oauthDiscordId: string | null = null;
@@ -380,6 +386,7 @@ export async function listStaff(): Promise<StaffListItem[]> {
   await sql.query("alter table staff add column if not exists is_banned boolean not null default false");
   await sql.query("alter table staff add column if not exists steamid text");
   await sql.query("alter table staff add column if not exists can_activity boolean not null default false");
+  await sql.query("alter table staff add column if not exists role_rank integer");
   const rows = await sql<StaffRow>`select * from staff order by is_root desc, is_owner desc, last_seen desc`;
   const { readRoster } = await import("./roster");
   const roster = await readRoster();
@@ -463,6 +470,7 @@ export async function updateStaffPermissions(
   await sql.query("alter table staff add column if not exists can_power boolean not null default false");
   await sql.query("alter table staff add column if not exists can_suspicious boolean not null default false");
   await sql.query("alter table staff add column if not exists can_activity boolean not null default false");
+  await sql.query("alter table staff add column if not exists role_rank integer");
 
   const targetRows = await sql<StaffRow>`select * from staff where user_id = ${targetUserId} limit 1`;
   if (!targetRows.length) throw new Error("Пользователь не найден.");
@@ -578,6 +586,11 @@ export async function updateStaffPermissions(
     }
   }
 
+  const rankUpdate =
+    patch.roleRank !== undefined
+      ? patch.roleRank
+      : (targetRows[0]?.role_rank != null ? Number(targetRows[0].role_rank) : null);
+
   await sql`
     update staff set
       can_stats = ${canStats},
@@ -588,7 +601,8 @@ export async function updateStaffPermissions(
       is_owner = ${isOwner},
       is_bot_owner = ${isBotOwner},
       tag = ${tag},
-      steamid = ${steamidUpdate}
+      steamid = ${steamidUpdate},
+      role_rank = ${rankUpdate}
     where user_id = ${targetUserId}
   `;
   const rows = await sql<StaffRow>`select * from staff where user_id = ${targetUserId} limit 1`;

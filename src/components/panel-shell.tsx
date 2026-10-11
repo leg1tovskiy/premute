@@ -86,6 +86,10 @@ export function PanelShell({ children }: { children: ReactNode }) {
   const tabs = allowedTabs(profile.caps);
   const [mobileOpen, setMobileOpen] = useState(false);
   const mskTime = useMskClock();
+  const roleLabel =
+    profile.roleTitle ||
+    (profile.roleRank ? (RANK_TITLE[profile.roleRank] ?? "Модератор") : null) ||
+    (profile.isOwner ? "Владелец" : "Модератор");
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -314,7 +318,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
               {profile.displayName || profile.tag || "Администратор"}
             </p>
             <p className="mt-0.5 truncate text-xs font-medium text-muted">
-              {profile.isOwner ? "Владелец" : "Модератор"}
+              {roleLabel}
             </p>
           </div>
 
@@ -466,7 +470,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
                   {profile.displayName || profile.tag || "Администратор"}
                 </p>
                 <p className="mt-0.5 truncate text-xs font-medium text-muted">
-                  {profile.isOwner ? "Владелец" : "Модератор"}
+                  {roleLabel}
                 </p>
               </div>
 

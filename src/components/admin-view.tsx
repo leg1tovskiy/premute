@@ -17,10 +17,12 @@ import { PageHeaderSkeleton, CardsSkeleton } from "@/components/skeletons";
 import { deleteStaffFn, exportBackupFn, listStaffFn, setStaffPerms } from "@/lib/fn";
 import { ROOT_DISCORD_ID, fearProfileUrl } from "@/lib/constants";
 import type { StaffListItem, StaffProfile } from "@/lib/types";
+import { usePanel } from "@/lib/panel";
 import { AnimatedBlock } from "@/components/animated-number";
 import { cn } from "@/lib/utils";
 
 export function AdminView({ me }: { me: StaffProfile }) {
+  const { setProfile } = usePanel();
   const [rows, setRows] = useState<StaffListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [backingUp, setBackingUp] = useState(false);
@@ -94,6 +96,23 @@ export function AdminView({ me }: { me: StaffProfile }) {
         },
       });
       setRows((prev) => prev.map((r) => (r.userId === userId ? updated : r)));
+      if (userId === me.userId) {
+        setProfile({
+          ...me,
+          ...updated,
+          roleRank: updated.roleRank,
+          roleTitle: updated.roleTitle,
+          caps: {
+            ...me.caps,
+            canStats: updated.canStats,
+            canActivity: updated.canActivity,
+            canSuspicious: updated.canSuspicious,
+            canMods: updated.canMods,
+            canGeneralStats: updated.canStats,
+            isOwner: updated.isOwner,
+          },
+        });
+      }
       toast.success("Данные успешно сохранены");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Ошибка при сохранении прав");

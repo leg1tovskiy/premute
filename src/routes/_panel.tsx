@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { LogOut, ShieldAlert } from "lucide-react";
 import { Toaster } from "sonner";
@@ -166,6 +166,11 @@ function PanelLayout() {
     import.meta.env.DEV ? LOCAL_DEV_PROFILE : getCachedProfile(),
   );
 
+  const updateProfile = useCallback((p: StaffProfile) => {
+    setProfile(p);
+    setCachedProfile(p);
+  }, []);
+
   useEffect(() => {
     if (!authUser) {
       if (import.meta.env.DEV) {
@@ -237,7 +242,7 @@ function PanelLayout() {
   if (currentProfile.caps.waiting) {
     return (
       <>
-        <WaitingView profile={currentProfile} onUpdate={setProfile} />
+        <WaitingView profile={currentProfile} onUpdate={updateProfile} />
         <Toaster
           theme={isDark ? "dark" : "light"}
           position="bottom-center"
@@ -248,7 +253,7 @@ function PanelLayout() {
   }
 
   return (
-    <PanelProvider profile={currentProfile} setProfile={setProfile}>
+    <PanelProvider profile={currentProfile} setProfile={updateProfile}>
       <PanelShell>
         <Outlet />
       </PanelShell>
