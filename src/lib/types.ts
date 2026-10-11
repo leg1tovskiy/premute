@@ -250,12 +250,22 @@ export type SuspiciousTicketsInfo = {
   count: number;
 };
 
+export type DismissedPlayer = {
+  steamid: string;
+  nickname?: string;
+  dismissedBy?: string;
+  dismissedByName?: string;
+  dismissedAt?: string;
+  reason?: string;
+};
+
 /** Ответ воркера на /suspicious: список подозрительных + диагностика тикетов. */
 export type SuspiciousPayload = {
   updatedAt: number | null;
   tickets: SuspiciousTicketsInfo | null;
   players: SuspiciousPlayer[];
   newcomers?: SuspiciousPlayer[];
+  dismissed?: DismissedPlayer[];
 };
 
 export type GuildMember = {

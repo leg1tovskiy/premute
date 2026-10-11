@@ -506,12 +506,132 @@ export const getSuspiciousFn = createServerFn({ method: "GET" })
       newcomers = players.filter((p) => p.playtime > 0 && p.playtime < 10 * 3600);
     }
 
+    const { getSql } = await import("./db");
+    const sql = await getSql();
+    await sql.query(`
+      create table if not exists suspicious_dismissed (
+        steamid text primary key,
+        nickname text,
+        dismissed_by text,
+        dismissed_by_name text,
+        dismissed_at timestamptz not null default now(),
+        reason text
+      )
+    `);
+
+    let dismissedList: Array<{
+      steamid: string;
+      nickname?: string;
+      dismissedBy?: string;
+      dismissedByName?: string;
+      dismissedAt?: string;
+      reason?: string;
+    }> = [];
+
+    try {
+      const rows = await sql.query<{
+        steamid: string;
+        nickname: string | null;
+        dismissed_by: string | null;
+        dismissed_by_name: string | null;
+        dismissed_at: string;
+        reason: string | null;
+      }>(`
+        select steamid, nickname, dismissed_by, dismissed_by_name, dismissed_at, reason
+        from suspicious_dismissed
+        where dismissed_at > now() - interval '48 hours'
+        order by dismissed_at desc
+      `);
+      dismissedList = rows.map((r) => ({
+        steamid: r.steamid,
+        nickname: r.nickname || undefined,
+        dismissedBy: r.dismissed_by || undefined,
+        dismissedByName: r.dismissed_by_name || undefined,
+        dismissedAt: String(r.dismissed_at),
+        reason: r.reason || undefined,
+      }));
+    } catch (e) {
+      console.error("[getSuspiciousFn] fetch dismissed error:", e);
+    }
+
+    const dismissedSet = new Set(dismissedList.map((d) => d.steamid));
+    const activePlayers = players.filter((p) => !dismissedSet.has(p.steamid));
+    const activeNewcomers = newcomers.filter((p) => !dismissedSet.has(p.steamid));
+
     return {
       updatedAt: data.updatedAt ?? null,
       tickets: data.tickets ?? null,
-      players,
-      newcomers,
+      players: activePlayers,
+      newcomers: activeNewcomers,
+      dismissed: dismissedList,
     };
+  });
+
+export const dismissSuspiciousPlayerFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { steamid: string; nickname?: string; reason?: string }) => d)
+  .handler(async ({ context, data }) => {
+    const { getStaff, writeLog } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.canSuspicious) throw new Error("Нет доступа.");
+
+    const { getSql } = await import("./db");
+    const sql = await getSql();
+    await sql.query(`
+      create table if not exists suspicious_dismissed (
+        steamid text primary key,
+        nickname text,
+        dismissed_by text,
+        dismissed_by_name text,
+        dismissed_at timestamptz not null default now(),
+        reason text
+      )
+    `);
+
+    const adminName = me.displayName || "Модератор";
+    await sql.query(
+      `insert into suspicious_dismissed (steamid, nickname, dismissed_by, dismissed_by_name, dismissed_at, reason)
+       values ($1, $2, $3, $4, now(), $5)
+       on conflict (steamid) do update set
+         nickname = coalesce(nullif($2, ''), suspicious_dismissed.nickname),
+         dismissed_by = excluded.dismissed_by,
+         dismissed_by_name = excluded.dismissed_by_name,
+         dismissed_at = now(),
+         reason = coalesce(excluded.reason, suspicious_dismissed.reason)`,
+      [data.steamid, data.nickname || "", context.userId, adminName, data.reason || null],
+    );
+
+    await writeLog(context.userId, "dismiss_suspicious", `${data.steamid} (${data.nickname || ""})`);
+    return { ok: true, steamid: data.steamid };
+  });
+
+export const restoreSuspiciousPlayerFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { steamid: string }) => d)
+  .handler(async ({ context, data }) => {
+    const { getStaff, writeLog } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.canSuspicious) throw new Error("Нет доступа.");
+
+    const { getSql } = await import("./db");
+    const sql = await getSql();
+    await sql.query(`delete from suspicious_dismissed where steamid = $1`, [data.steamid]);
+    await writeLog(context.userId, "restore_suspicious", data.steamid);
+    return { ok: true, steamid: data.steamid };
+  });
+
+export const clearDismissedPlayersFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    const { getStaff, writeLog } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me?.caps.canSuspicious) throw new Error("Нет доступа.");
+
+    const { getSql } = await import("./db");
+    const sql = await getSql();
+    await sql.query(`delete from suspicious_dismissed`);
+    await writeLog(context.userId, "clear_all_dismissed", "all");
+    return { ok: true };
   });
 
 export const getSystemStatusFn = createServerFn({ method: "GET" })
