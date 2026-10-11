@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowUpDown,
+  Ban,
+  Check,
   CheckCheck,
   CheckCircle2,
   Copy,
@@ -18,6 +20,7 @@ import {
   Shield,
   ShieldAlert,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   TicketCheck,
   Timer,
@@ -126,6 +129,41 @@ function getKdSeverity(kd?: number | null): "extreme" | "high" | "normal" {
   return "normal";
 }
 
+function isPlayerKdSuspicious(p: SuspiciousPlayer): boolean {
+  if (typeof p.kd === "number" && p.kd >= 2.0) return true;
+  if (p.source === "online") return true;
+  const str = `${p.reason || ""} ${(p.reasons || []).join(" ")}`.toLowerCase();
+  return /(k\/?d|к\/?д|стат|аномал|kills|deaths)/i.test(str);
+}
+
+type FilterCriterion = "csgo" | "chat" | "kd";
+
+const FILTER_ITEMS: Array<{
+  id: FilterCriterion;
+  label: string;
+  sublabel: string;
+  icon: typeof Gamepad2;
+}> = [
+  {
+    id: "csgo",
+    label: "CSGO",
+    sublabel: "Сервер CS:GO",
+    icon: Gamepad2,
+  },
+  {
+    id: "chat",
+    label: "Чат",
+    sublabel: "Токсичность / спам",
+    icon: MessageSquareWarning,
+  },
+  {
+    id: "kd",
+    label: "Подозреваемые",
+    sublabel: "Отображаются из-за K/D",
+    icon: Flame,
+  },
+];
+
 function fmtPlaytime(sec: number) {
   const h = Math.floor(sec / 3600);
   const m = Math.round((sec % 3600) / 60);
@@ -232,6 +270,71 @@ export function SuspiciousView() {
   const players = data?.players ?? [];
   const rawNewcomers = data?.newcomers ?? [];
   const dismissed = data?.dismissed ?? [];
+
+  // Фильтрация: 2 столбика «Учитывать» и «Исключать»
+  const [includeFilters, setIncludeFilters] = useState<FilterCriterion[]>([]);
+  const [excludeFilters, setExcludeFilters] = useState<FilterCriterion[]>([]);
+
+  function toggleInclude(criterion: FilterCriterion) {
+    setIncludeFilters((prev) => {
+      if (prev.includes(criterion)) {
+        return prev.filter((c) => c !== criterion);
+      }
+      setExcludeFilters((ex) => ex.filter((c) => c !== criterion));
+      return [...prev, criterion];
+    });
+  }
+
+  function toggleExclude(criterion: FilterCriterion) {
+    setExcludeFilters((prev) => {
+      if (prev.includes(criterion)) {
+        return prev.filter((c) => c !== criterion);
+      }
+      setIncludeFilters((inc) => inc.filter((c) => c !== criterion));
+      return [...prev, criterion];
+    });
+  }
+
+  function resetFilters() {
+    setIncludeFilters([]);
+    setExcludeFilters([]);
+  }
+
+  const criterionCounts = useMemo(() => {
+    let csgo = 0;
+    let chat = 0;
+    let kd = 0;
+    for (const p of players) {
+      if (isCsgoServer(p.server)) csgo++;
+      if (isToxicityOrSpam(p.reason, p.reasons)) chat++;
+      if (isPlayerKdSuspicious(p)) kd++;
+    }
+    return { csgo, chat, kd };
+  }, [players]);
+
+  const filteredPlayers = useMemo(() => {
+    return players.filter((p) => {
+      const isCsgo = isCsgoServer(p.server);
+      const isChat = isToxicityOrSpam(p.reason, p.reasons);
+      const isKd = isPlayerKdSuspicious(p);
+
+      // 1. Исключать: если хотя бы один активный критерий исключения совпадает с игроком — скрываем
+      if (excludeFilters.includes("csgo") && isCsgo) return false;
+      if (excludeFilters.includes("chat") && isChat) return false;
+      if (excludeFilters.includes("kd") && isKd) return false;
+
+      // 2. Учитывать: если заданы критерии включения, игрок обязан подходить хотя бы под один из них
+      if (includeFilters.length > 0) {
+        const matched =
+          (includeFilters.includes("csgo") && isCsgo) ||
+          (includeFilters.includes("chat") && isChat) ||
+          (includeFilters.includes("kd") && isKd);
+        if (!matched) return false;
+      }
+
+      return true;
+    });
+  }, [players, includeFilters, excludeFilters]);
 
   async function handleDismiss(player: SuspiciousPlayer, reason: DismissReason) {
     const sid = player.steamid;
@@ -607,6 +710,193 @@ export function SuspiciousView() {
             </AnimatedBlock>
           ) : null}
 
+          {/* ── 2-Column Filters: Исключать / Учитывать ────────────── */}
+          <AnimatedBlock delay={90}>
+            <div className="rounded-3xl border border-border/80 bg-surface/90 glass-panel p-4 sm:p-5 shadow-sm space-y-3.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="grid size-7 place-items-center rounded-xl bg-accent/10 border border-accent/20 text-accent">
+                    <SlidersHorizontal className="size-3.5" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-fg">Фильтры</span>
+                    <span className="text-[11px] text-muted">
+                      (показано <strong className="text-fg font-mono">{filteredPlayers.length}</strong> из{" "}
+                      <span className="font-mono">{players.length}</span>)
+                    </span>
+                  </div>
+                </div>
+
+                {(includeFilters.length > 0 || excludeFilters.length > 0) && (
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-border/70 bg-elevated px-2.5 py-1 text-[11px] font-bold text-muted hover:text-fg hover:border-accent transition-all cursor-pointer"
+                  >
+                    <RotateCcw className="size-3" />
+                    <span>Сбросить</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                {/* Столбик 1: Исключать */}
+                <div className="space-y-2 rounded-2xl border border-red-500/25 bg-red-500/[0.04] p-3 sm:p-3.5">
+                  <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center gap-1.5">
+                      <Ban className="size-3.5 text-red-400" />
+                      <span className="text-xs font-black uppercase tracking-wider text-red-400">
+                        Исключать
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-subtle">скрывать из радара</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {FILTER_ITEMS.map((item) => {
+                      const Icon = item.icon;
+                      const active = excludeFilters.includes(item.id);
+                      const count = criterionCounts[item.id];
+
+                      return (
+                        <button
+                          key={`exclude-${item.id}`}
+                          type="button"
+                          onClick={() => toggleExclude(item.id)}
+                          className={cn(
+                            "group flex items-center justify-between gap-2.5 rounded-xl px-3 py-2 text-left transition-all border cursor-pointer",
+                            active
+                              ? "border-red-500 bg-red-500/25 text-red-100 shadow-[0_0_12px_rgba(239,68,68,0.35)]"
+                              : "border-border/60 bg-elevated/40 text-muted hover:bg-elevated hover:text-fg hover:border-red-500/50",
+                          )}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div
+                              className={cn(
+                                "grid size-7 shrink-0 place-items-center rounded-lg transition-all",
+                                active
+                                  ? "bg-red-500 text-white shadow-sm"
+                                  : "bg-surface text-subtle border border-border/60 group-hover:text-red-400 group-hover:border-red-500/40",
+                              )}
+                            >
+                              <Icon className="size-3.5" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className={cn("block text-xs font-bold truncate", active ? "text-red-100" : "text-fg")}>
+                                {item.label}
+                              </span>
+                              <span className="block text-[10px] text-subtle truncate">{item.sublabel}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span
+                              className={cn(
+                                "font-mono text-[11px] font-bold px-1.5 py-0.5 rounded-md",
+                                active
+                                  ? "bg-red-500/30 text-red-200 border border-red-500/40"
+                                  : "bg-surface text-subtle border border-border/60",
+                              )}
+                            >
+                              {count}
+                            </span>
+                            <div
+                              className={cn(
+                                "size-4 rounded-md border grid place-items-center transition-all",
+                                active
+                                  ? "border-red-500 bg-red-500 text-white"
+                                  : "border-border/80 bg-surface/80 text-transparent group-hover:border-red-500/40",
+                              )}
+                            >
+                              <Ban className="size-2.5" />
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Столбик 2: Учитывать */}
+                <div className="space-y-2 rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.04] p-3 sm:p-3.5">
+                  <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center gap-1.5">
+                      <Check className="size-3.5 text-emerald-400" />
+                      <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+                        Учитывать
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-subtle">оставлять только их</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {FILTER_ITEMS.map((item) => {
+                      const Icon = item.icon;
+                      const active = includeFilters.includes(item.id);
+                      const count = criterionCounts[item.id];
+
+                      return (
+                        <button
+                          key={`include-${item.id}`}
+                          type="button"
+                          onClick={() => toggleInclude(item.id)}
+                          className={cn(
+                            "group flex items-center justify-between gap-2.5 rounded-xl px-3 py-2 text-left transition-all border cursor-pointer",
+                            active
+                              ? "border-emerald-500 bg-emerald-500/25 text-emerald-100 shadow-[0_0_12px_rgba(16,185,129,0.35)]"
+                              : "border-border/60 bg-elevated/40 text-muted hover:bg-elevated hover:text-fg hover:border-emerald-500/50",
+                          )}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div
+                              className={cn(
+                                "grid size-7 shrink-0 place-items-center rounded-lg transition-all",
+                                active
+                                  ? "bg-emerald-500 text-white shadow-sm"
+                                  : "bg-surface text-subtle border border-border/60 group-hover:text-emerald-400 group-hover:border-emerald-500/40",
+                              )}
+                            >
+                              <Icon className="size-3.5" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className={cn("block text-xs font-bold truncate", active ? "text-emerald-100" : "text-fg")}>
+                                {item.label}
+                              </span>
+                              <span className="block text-[10px] text-subtle truncate">{item.sublabel}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span
+                              className={cn(
+                                "font-mono text-[11px] font-bold px-1.5 py-0.5 rounded-md",
+                                active
+                                  ? "bg-emerald-500/30 text-emerald-200 border border-emerald-500/40"
+                                  : "bg-surface text-subtle border border-border/60",
+                              )}
+                            >
+                              {count}
+                            </span>
+                            <div
+                              className={cn(
+                                "size-4 rounded-md border grid place-items-center transition-all",
+                                active
+                                  ? "border-emerald-500 bg-emerald-500 text-white"
+                                  : "border-border/80 bg-surface/80 text-transparent group-hover:border-emerald-500/40",
+                              )}
+                            >
+                              <Check className="size-2.5" />
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </AnimatedBlock>
+
           <AnimatedBlock delay={100}>
             {players.length === 0 ? (
               <div className="rounded-3xl border border-border/80 bg-surface/90 glass-panel px-6 py-16 text-center shadow-sm">
@@ -621,9 +911,27 @@ export function SuspiciousView() {
                   Радар проверяет серверы каждые 30 секунд. Игроки не в сети в списке не отображаются.
                 </p>
               </div>
+            ) : filteredPlayers.length === 0 ? (
+              <div className="rounded-3xl border border-border/80 bg-surface/90 glass-panel px-6 py-14 text-center shadow-sm">
+                <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-warn/15 border border-warn/30 text-warn shadow-lg shadow-warn/10">
+                  <SlidersHorizontal className="size-6" />
+                </div>
+                <p className="mt-3 text-sm font-extrabold text-fg">Нет игроков, подходящих под выбранные фильтры</p>
+                <p className="mt-1 text-xs text-muted">
+                  Все {players.length} игроков были отфильтрованы. Попробуйте отключить один из фильтров.
+                </p>
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-accent/40 bg-accent/15 px-3 py-1.5 text-xs font-bold text-accent hover:bg-accent/25 transition-all cursor-pointer"
+                >
+                  <RotateCcw className="size-3.5" />
+                  <span>Сбросить фильтры</span>
+                </button>
+              </div>
             ) : (
               <ul className="divide-y divide-border/60 overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel shadow-sm">
-                {players.map((p) => {
+                {filteredPlayers.map((p) => {
                   const displayName = getPlayerDisplayName(p.nickname, p.steamid);
                   const initial = getPlayerInitial(p.nickname);
                   const csgo = isCsgoServer(p.server);
