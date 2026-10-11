@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware } from "@/lib/auth/middleware";
 import type {
+  ActionLogItem,
   ActivityPayload,
   BackupsPayload,
   DailyPoint,
@@ -117,7 +118,6 @@ export const setStaffPerms = createServerFn({ method: "POST" })
       steamid: data.steamid,
       roleRank: data.roleRank,
     });
-    await writeLog(context.userId, "set_perms", JSON.stringify(data));
     return updated;
   });
 
@@ -978,4 +978,64 @@ export const requestBotCodeFn = createServerFn({ method: "POST" })
     const { requestDiscordBotCode } = await import("./server/bot-auth");
     return requestDiscordBotCode(data.discordIdOrTag);
   });
+
+export const getActionLogsFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { limit?: number } | undefined) => d ?? {})
+  .handler(async ({ context, data }): Promise<ActionLogItem[]> => {
+    const { getStaff } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me || (!me.isOwner && !me.isBotOwner && !me.isRoot)) {
+      throw new Error("Доступно только владельцам сайта и бота.");
+    }
+    const { getSql } = await import("./db");
+    const sql = await getSql();
+    const rows = await sql<{
+      id: number;
+      user_id: string;
+      action: string;
+      detail: string;
+      created_at: unknown;
+      display_name: string | null;
+      image: string | null;
+    }>`
+      select
+        l.id,
+        l.user_id,
+        l.action,
+        l.detail,
+        l.created_at,
+        s.display_name,
+        s.image
+      from action_log l
+      left join staff s on s.user_id = l.user_id
+      order by l.created_at desc
+      limit ${data?.limit ?? 100}
+    `;
+    return rows.map((r) => ({
+      id: r.id,
+      userId: r.user_id,
+      userName: r.display_name || r.user_id,
+      userAvatar: r.image,
+      action: r.action,
+      detail: r.detail,
+      createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at || ""),
+    }));
+  });
+
+export const clearActionLogsFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    const { getStaff, writeLog } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me || (!me.isOwner && !me.isBotOwner && !me.isRoot)) {
+      throw new Error("Доступно только владельцам сайта и бота.");
+    }
+    const { getSql } = await import("./db");
+    const sql = await getSql();
+    await sql`delete from action_log`;
+    await writeLog(context.userId, "clear_logs", "Логи сайта были очищены");
+    return { ok: true };
+  });
+
 

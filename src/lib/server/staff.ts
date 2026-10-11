@@ -334,7 +334,15 @@ export async function upsertStaff(
         now()
       )
     `;
+    const name = profile.displayName || profile.email || userId;
+    await writeLog(userId, "new_user", `Новая регистрация на сайте: ${name}`);
   } else {
+    const prevSeen = existing[0]?.last_seen ? new Date(existing[0].last_seen as string).getTime() : 0;
+    if (Date.now() - prevSeen > 20 * 60 * 1000) {
+      const name = profile.displayName || existing[0]?.display_name || profile.email || userId;
+      await writeLog(userId, "user_login", `Авторизация на сайте: ${name}`);
+    }
+
     await sql`
       update staff set
         display_name = coalesce(${profile.displayName ?? null}, display_name),
@@ -651,6 +659,67 @@ export async function updateStaffPermissions(
       console.error("[staff] sync owners:", e instanceof Error ? e.message : e);
     }
   }
+
+  const targetName = target.displayName || target.email || targetUserId;
+
+  // Логирование изменений ролей
+  if (patch.roleRank !== undefined && patch.roleRank !== target.roleRank) {
+    if (patch.roleRank === null) {
+      await writeLog(actor.userId, "role_change", `Снята роль у пользователя ${targetName}`);
+    } else {
+      const newRole = RANK_TITLE[patch.roleRank] || `Ранг ${patch.roleRank}`;
+      const oldRole = target.roleRank ? (RANK_TITLE[target.roleRank] || `Ранг ${target.roleRank}`) : "без роли";
+      await writeLog(actor.userId, "role_change", `Назначена роль «${newRole}» для ${targetName} (было: «${oldRole}»)`);
+    }
+  }
+
+  // Логирование владельца
+  if (patch.isOwner !== undefined && patch.isOwner !== target.isOwner) {
+    if (patch.isOwner) {
+      await writeLog(actor.userId, "role_change", `Назначен «Владелец сайта» для ${targetName}`);
+    } else {
+      await writeLog(actor.userId, "role_change", `Сняты права «Владелец сайта» у ${targetName}`);
+    }
+  }
+
+  // Логирование владельца бота
+  if (patch.isBotOwner !== undefined && patch.isBotOwner !== target.isBotOwner) {
+    await writeLog(actor.userId, "role_change", `${patch.isBotOwner ? "Выдана" : "Снята"} роль «Владелец бота» для ${targetName}`);
+  }
+
+  // Логирование изменения доп. вкладок
+  const tabChanges: string[] = [];
+  if (patch.canStats !== undefined && Boolean(patch.canStats) !== Boolean(target.canStats)) {
+    tabChanges.push(`Статистика: ${patch.canStats ? "выдана" : "снята"}`);
+  }
+  if (patch.canActivity !== undefined && Boolean(patch.canActivity) !== Boolean(target.canActivity)) {
+    tabChanges.push(`Онлайн: ${patch.canActivity ? "выдана" : "снята"}`);
+  }
+  if (patch.canSuspicious !== undefined && Boolean(patch.canSuspicious) !== Boolean(target.canSuspicious)) {
+    tabChanges.push(`Игроки: ${patch.canSuspicious ? "выдана" : "снята"}`);
+  }
+  if (patch.canMods !== undefined && Boolean(patch.canMods) !== Boolean(target.canMods)) {
+    tabChanges.push(`Модераторы: ${patch.canMods ? "выдана" : "снята"}`);
+  }
+  if (tabChanges.length > 0) {
+    await writeLog(actor.userId, "tab_change", `Изменение вкладок для ${targetName}: ${tabChanges.join(", ")}`);
+  }
+
+  // Логирование бана
+  if (patch.isBanned !== undefined && patch.isBanned !== target.isBanned) {
+    await writeLog(actor.userId, "ban_change", `${patch.isBanned ? "Заблокирован доступ" : "Разблокирован доступ"} для ${targetName}`);
+  }
+
+  // Логирование тега
+  if (patch.tag !== undefined && patch.tag !== target.tag) {
+    await writeLog(actor.userId, "tag_change", `Установлен тег ${patch.tag ? `«${patch.tag}»` : "снят"} для ${targetName}`);
+  }
+
+  // Логирование steamid
+  if (patch.steamid !== undefined && steamidUpdate !== (target.mySteamId || "none")) {
+    await writeLog(actor.userId, "steam_change", `SteamID для ${targetName}: ${steamidUpdate !== "none" ? steamidUpdate : "снят"}`);
+  }
+
   const isExplicitlyCleared = rows[0]?.steamid === "none" || rows[0]?.steamid === "null";
   const { readRoster } = await import("./roster");
   const roster = await readRoster();
@@ -672,6 +741,9 @@ export async function deleteStaffUser(actor: StaffProfile, targetUserId: string)
   if (isMainOwner || target.isRoot) {
     throw new Error("Нельзя удалить владельца.");
   }
+
+  const targetName = target.displayName || target.email || targetUserId;
+  await writeLog(actor.userId, "delete_user", `Удален пользователь с сайта: ${targetName}`);
 
   if (target.discordId) {
     try {
@@ -780,7 +852,7 @@ export async function selfBindSteamId(userId: string, rawSteamId: string): Promi
     } catch {}
   }
 
-  await writeLog(userId, "self_bind_steamid", sid);
+  await writeLog(userId, "bind_steam", `Привязан SteamID: ${sid}${fearName ? ` (${fearName})` : ""}`);
 
   const updated = await getStaff(userId);
   if (!updated) throw new Error("Не удалось обновить профиль.");
@@ -788,11 +860,15 @@ export async function selfBindSteamId(userId: string, rawSteamId: string): Promi
 }
 
 export async function writeLog(userId: string, action: string, detail: string) {
-  const sql = await getSql();
-  await sql`
-    insert into action_log (user_id, action, detail)
-    values (${userId}, ${action}, ${detail.slice(0, 1800)})
-  `;
+  try {
+    const sql = await getSql();
+    await sql`
+      insert into action_log (user_id, action, detail)
+      values (${userId}, ${action}, ${detail.slice(0, 1800)})
+    `;
+  } catch (e) {
+    console.error("[writeLog] error:", e);
+  }
 }
 
 type ClaimRow = {

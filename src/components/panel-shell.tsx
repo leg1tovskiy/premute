@@ -53,6 +53,7 @@ import { getServersFn, getStatsFn, getRecentPunishmentsFn, type LivePunishmentIt
 import type { StatsPayload } from "@/lib/types";
 import { RANK_SHORT, RANK_TITLE } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
+import { SidebarActionLogs } from "@/components/sidebar-action-logs";
 import { AnimatedBlock, AnimatedNumber } from "@/components/animated-number";
 import { cn } from "@/lib/utils";
 
@@ -333,6 +334,9 @@ export function PanelShell({ children }: { children: ReactNode }) {
           </button>
         </div>
 
+        {/* Окошко логов сайта (для Владельца сайта и Владельца бота) */}
+        <SidebarActionLogs />
+
         {/* Окошко 2: Панель управления */}
         <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3.5 shadow-sm space-y-2.5">
           <div className="px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-subtle">
@@ -484,6 +488,8 @@ export function PanelShell({ children }: { children: ReactNode }) {
                 <span>Выйти</span>
               </button>
             </div>
+
+            <SidebarActionLogs />
           </div>
         </div>
       ) : null}

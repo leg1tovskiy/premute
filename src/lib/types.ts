@@ -50,6 +50,16 @@ export type StaffProfile = {
 
 export type StaffListItem = Omit<StaffProfile, "caps">;
 
+export type ActionLogItem = {
+  id: number;
+  userId: string;
+  userName: string | null;
+  userAvatar: string | null;
+  action: string;
+  detail: string;
+  createdAt: string;
+};
+
 export type RosterMod = {
   steamid: string;
   name: string;
