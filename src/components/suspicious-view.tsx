@@ -118,8 +118,11 @@ function isCsgoServer(server?: string | null): boolean {
   return /(?:cs:?go|cs\s*go)/i.test(server);
 }
 
-function isHighKd(kd?: number | null): boolean {
-  return typeof kd === "number" && kd > 4;
+function getKdSeverity(kd?: number | null): "extreme" | "high" | "normal" {
+  if (typeof kd !== "number") return "normal";
+  if (kd > 4) return "extreme";
+  if (kd >= 2) return "high";
+  return "normal";
 }
 
 function fmtPlaytime(sec: number) {
@@ -561,16 +564,20 @@ export function SuspiciousView() {
             <span className="text-[11px] font-bold text-muted uppercase tracking-wider mr-1">
               Маркеры нарушений:
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-lg border-2 border-emerald-500 bg-emerald-500/15 px-2.5 py-0.5 font-bold text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.2)] text-[11px]">
-              <Gamepad2 className="size-3 text-emerald-400" />
+            <span className="inline-flex items-center gap-1.5 rounded-lg border-2 border-emerald-400 bg-emerald-500/25 px-2.5 py-0.5 font-bold text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.45)] text-[11px]">
+              <Gamepad2 className="size-3 text-emerald-300" />
               <span>Сервер CS:GO (Зеленый)</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-lg border-2 border-amber-400 bg-amber-400/20 px-2.5 py-0.5 font-bold text-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.25)] text-[11px]">
-              <MessageSquareWarning className="size-3 text-amber-400" />
+            <span className="inline-flex items-center gap-1.5 rounded-lg border-2 border-amber-400 bg-amber-400/25 px-2.5 py-0.5 font-bold text-amber-200 shadow-[0_0_12px_rgba(251,191,36,0.45)] text-[11px]">
+              <MessageSquareWarning className="size-3 text-amber-300" />
               <span>Токсичность / Спам (Желтый)</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-lg border-2 border-red-500 bg-red-500/25 px-2.5 py-0.5 font-bold text-red-300 animate-pulse-red shadow-[0_0_10px_rgba(239,68,68,0.3)] text-[11px]">
-              <Flame className="size-3 text-red-400" />
+            <span className="inline-flex items-center gap-1.5 rounded-lg border-2 border-red-500 bg-red-500/20 px-2.5 py-0.5 font-bold text-red-200 shadow-[0_0_12px_rgba(239,68,68,0.45)] text-[11px]">
+              <span className="size-2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
+              <span>K/D &ge; 2.0 (Красная обводка)</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-lg border-2 border-red-500 bg-red-500/30 px-2.5 py-0.5 font-bold text-red-100 animate-pulse-red shadow-[0_0_16px_rgba(239,68,68,0.65)] text-[11px]">
+              <Flame className="size-3 text-red-400 animate-pulse" />
               <span>K/D &gt; 4.0 (Красная пульсация)</span>
             </span>
           </div>
@@ -617,20 +624,22 @@ export function SuspiciousView() {
                   const initial = getPlayerInitial(p.nickname);
                   const csgo = isCsgoServer(p.server);
                   const tox = isToxicityOrSpam(p.reason, p.reasons);
-                  const highKd = isHighKd(p.kd);
+                  const kdSeverity = getKdSeverity(p.kd);
 
                   return (
                     <li
                       key={p.steamid}
                       className={cn(
                         "flex flex-col gap-3.5 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between sm:px-6 transition-all hover:bg-elevated/40",
-                        highKd
-                          ? "border-l-4 border-l-red-500 bg-red-500/[0.04]"
-                          : tox
-                            ? "border-l-4 border-l-amber-400 bg-amber-400/[0.03]"
-                            : csgo
-                              ? "border-l-4 border-l-emerald-500 bg-emerald-500/[0.03]"
-                              : "border-l-4 border-l-transparent",
+                        kdSeverity === "extreme"
+                          ? "border-l-4 border-l-red-500 bg-red-500/[0.08]"
+                          : kdSeverity === "high"
+                            ? "border-l-4 border-l-red-500 bg-red-500/[0.05]"
+                            : tox
+                              ? "border-l-4 border-l-amber-400 bg-amber-400/[0.05]"
+                              : csgo
+                                ? "border-l-4 border-l-emerald-400 bg-emerald-500/[0.05]"
+                                : "border-l-4 border-l-transparent",
                       )}
                     >
                       {/* Left: Avatar + Details */}
@@ -642,26 +651,30 @@ export function SuspiciousView() {
                               alt=""
                               className={cn(
                                 "size-11 shrink-0 rounded-2xl object-cover shadow-md transition-all",
-                                highKd
-                                  ? "border-2 border-red-500 animate-pulse-red"
-                                  : tox
-                                    ? "border-2 border-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.3)]"
-                                    : csgo
-                                      ? "border-2 border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
-                                      : "border-2 border-border/80",
+                                kdSeverity === "extreme"
+                                  ? "border-2 border-red-500 animate-pulse-red shadow-[0_0_16px_rgba(239,68,68,0.7)]"
+                                  : kdSeverity === "high"
+                                    ? "border-2 border-red-500 shadow-[0_0_12px_rgba(239,68,68,0.55)]"
+                                    : tox
+                                      ? "border-2 border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.55)]"
+                                      : csgo
+                                        ? "border-2 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.55)]"
+                                        : "border-2 border-border/80",
                               )}
                             />
                           ) : (
                             <span
                               className={cn(
                                 "grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-surface to-elevated text-sm font-black text-fg shadow-md transition-all",
-                                highKd
-                                  ? "border-2 border-red-500 animate-pulse-red"
-                                  : tox
-                                    ? "border-2 border-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.3)]"
-                                    : csgo
-                                      ? "border-2 border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
-                                      : "border-2 border-border/80",
+                                kdSeverity === "extreme"
+                                  ? "border-2 border-red-500 animate-pulse-red shadow-[0_0_16px_rgba(239,68,68,0.7)]"
+                                  : kdSeverity === "high"
+                                    ? "border-2 border-red-500 shadow-[0_0_12px_rgba(239,68,68,0.55)]"
+                                    : tox
+                                      ? "border-2 border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.55)]"
+                                      : csgo
+                                        ? "border-2 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.55)]"
+                                        : "border-2 border-border/80",
                               )}
                             >
                               {initial}
@@ -686,8 +699,8 @@ export function SuspiciousView() {
                             </span>
 
                             {csgo ? (
-                              <span className="inline-flex shrink-0 items-center gap-1 rounded-md border-2 border-emerald-500 bg-emerald-500/20 px-2 py-0.5 font-mono text-[10px] font-black text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
-                                <Gamepad2 className="size-3 text-emerald-400" />
+                              <span className="inline-flex shrink-0 items-center gap-1 rounded-md border-2 border-emerald-400 bg-emerald-500/25 px-2 py-0.5 font-mono text-[10px] font-black text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.45)]">
+                                <Gamepad2 className="size-3 text-emerald-300" />
                                 CS:GO
                               </span>
                             ) : null}
@@ -698,8 +711,8 @@ export function SuspiciousView() {
 
                             {p.reason ? (
                               tox ? (
-                                <span className="inline-flex shrink-0 items-center gap-1 rounded-md border-2 border-amber-400 bg-amber-400/20 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.3)]">
-                                  <MessageSquareWarning className="size-3 shrink-0 text-amber-400" />
+                                <span className="inline-flex shrink-0 items-center gap-1 rounded-md border-2 border-amber-400 bg-amber-400/25 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-200 shadow-[0_0_12px_rgba(251,191,36,0.45)]">
+                                  <MessageSquareWarning className="size-3 shrink-0 text-amber-300" />
                                   <span>{p.reason}</span>
                                 </span>
                               ) : (
@@ -730,8 +743,8 @@ export function SuspiciousView() {
                             </button>
                             {p.server ? (
                               csgo ? (
-                                <span className="inline-flex items-center gap-1 rounded-md border-2 border-emerald-500 bg-emerald-500/15 px-1.5 py-0.5 font-bold text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.25)]">
-                                  <Gamepad2 className="size-3 text-emerald-400 shrink-0" />
+                                <span className="inline-flex items-center gap-1 rounded-md border-2 border-emerald-400 bg-emerald-500/20 px-1.5 py-0.5 font-bold text-emerald-200 shadow-[0_0_10px_rgba(16,185,129,0.35)]">
+                                  <Gamepad2 className="size-3 text-emerald-300 shrink-0" />
                                   <span>{p.server}</span>
                                 </span>
                               ) : (
@@ -757,25 +770,31 @@ export function SuspiciousView() {
                           <div
                             className={cn(
                               "flex items-center gap-2 rounded-xl px-2.5 py-1 text-xs shrink-0 transition-all",
-                              highKd
-                                ? "border-2 border-red-500 bg-red-500/25 animate-pulse-red text-red-200 shadow-[0_0_14px_rgba(239,68,68,0.4)]"
-                                : "border border-border/60 bg-elevated/60",
+                              kdSeverity === "extreme"
+                                ? "border-2 border-red-500 bg-red-500/30 animate-pulse-red text-red-100 shadow-[0_0_16px_rgba(239,68,68,0.65)]"
+                                : kdSeverity === "high"
+                                  ? "border-2 border-red-500 bg-red-500/20 text-red-200 shadow-[0_0_12px_rgba(239,68,68,0.45)]"
+                                  : "border border-border/60 bg-elevated/60",
                             )}
                           >
                             <span
                               className={cn(
                                 "font-black font-mono flex items-center gap-1",
-                                highKd ? "text-red-300" : "text-danger",
+                                kdSeverity === "extreme"
+                                  ? "text-red-200"
+                                  : kdSeverity === "high"
+                                    ? "text-red-300"
+                                    : "text-danger",
                               )}
                             >
-                              {highKd ? <Flame className="size-3 text-red-400 animate-pulse" /> : null}
+                              {kdSeverity === "extreme" ? <Flame className="size-3 text-red-400 animate-pulse" /> : null}
                               KD {p.kd.toFixed(2)}
                             </span>
-                            <span className={cn("flex items-center gap-1", highKd ? "text-red-200/80" : "text-muted")}>
+                            <span className={cn("flex items-center gap-1", kdSeverity !== "normal" ? "text-red-200/90" : "text-muted")}>
                               <Timer className="size-3 shrink-0" />
                               {fmtPlaytime(p.playtime)}
                             </span>
-                            <span className={cn("font-mono", highKd ? "text-red-300/70" : "text-subtle")}>
+                            <span className={cn("font-mono", kdSeverity !== "normal" ? "text-red-200/80" : "text-subtle")}>
                               ({p.kills}/{p.deaths})
                             </span>
                           </div>
@@ -894,18 +913,20 @@ export function SuspiciousView() {
                     const displayName = getPlayerDisplayName(p.nickname, p.steamid);
                     const initial = getPlayerInitial(p.nickname);
                     const csgo = isCsgoServer(p.server);
-                    const highKd = isHighKd(p.kd);
+                    const kdSeverity = getKdSeverity(p.kd);
 
                     return (
                       <li
                         key={p.steamid}
                         className={cn(
                           "flex flex-col gap-3.5 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between sm:px-6 transition-all hover:bg-elevated/40",
-                          highKd
-                            ? "border-l-4 border-l-red-500 bg-red-500/[0.04]"
-                            : csgo
-                              ? "border-l-4 border-l-emerald-500 bg-emerald-500/[0.03]"
-                              : "border-l-4 border-l-transparent",
+                          kdSeverity === "extreme"
+                            ? "border-l-4 border-l-red-500 bg-red-500/[0.08]"
+                            : kdSeverity === "high"
+                              ? "border-l-4 border-l-red-500 bg-red-500/[0.05]"
+                              : csgo
+                                ? "border-l-4 border-l-emerald-400 bg-emerald-500/[0.05]"
+                                : "border-l-4 border-l-transparent",
                         )}
                       >
                         {/* Left: Avatar & Player Info */}
@@ -917,22 +938,26 @@ export function SuspiciousView() {
                                 alt=""
                                 className={cn(
                                   "size-11 shrink-0 rounded-2xl object-cover shadow-md transition-all",
-                                  highKd
-                                    ? "border-2 border-red-500 animate-pulse-red"
-                                    : csgo
-                                      ? "border-2 border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
-                                      : "border-2 border-border/80",
+                                  kdSeverity === "extreme"
+                                    ? "border-2 border-red-500 animate-pulse-red shadow-[0_0_16px_rgba(239,68,68,0.7)]"
+                                    : kdSeverity === "high"
+                                      ? "border-2 border-red-500 shadow-[0_0_12px_rgba(239,68,68,0.55)]"
+                                      : csgo
+                                        ? "border-2 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.55)]"
+                                        : "border-2 border-border/80",
                                 )}
                               />
                             ) : (
                               <span
                                 className={cn(
                                   "grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-tr from-surface to-elevated text-sm font-black text-fg shadow-md transition-all",
-                                  highKd
-                                    ? "border-2 border-red-500 animate-pulse-red"
-                                    : csgo
-                                      ? "border-2 border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
-                                      : "border-2 border-border/80",
+                                  kdSeverity === "extreme"
+                                    ? "border-2 border-red-500 animate-pulse-red shadow-[0_0_16px_rgba(239,68,68,0.7)]"
+                                    : kdSeverity === "high"
+                                      ? "border-2 border-red-500 shadow-[0_0_12px_rgba(239,68,68,0.55)]"
+                                      : csgo
+                                        ? "border-2 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.55)]"
+                                        : "border-2 border-border/80",
                                 )}
                               >
                                 {initial}
@@ -957,8 +982,8 @@ export function SuspiciousView() {
                               </span>
 
                               {csgo ? (
-                                <span className="inline-flex shrink-0 items-center gap-1 rounded-md border-2 border-emerald-500 bg-emerald-500/20 px-2 py-0.5 font-mono text-[10px] font-black text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
-                                  <Gamepad2 className="size-3 text-emerald-400" />
+                                <span className="inline-flex shrink-0 items-center gap-1 rounded-md border-2 border-emerald-400 bg-emerald-500/25 px-2 py-0.5 font-mono text-[10px] font-black text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.45)]">
+                                  <Gamepad2 className="size-3 text-emerald-300" />
                                   CS:GO
                                 </span>
                               ) : null}
@@ -998,8 +1023,8 @@ export function SuspiciousView() {
                               </button>
                               {p.server ? (
                                 csgo ? (
-                                  <span className="inline-flex items-center gap-1 rounded-md border-2 border-emerald-500 bg-emerald-500/15 px-1.5 py-0.5 font-bold text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.25)]">
-                                    <Gamepad2 className="size-3 text-emerald-400 shrink-0" />
+                                  <span className="inline-flex items-center gap-1 rounded-md border-2 border-emerald-400 bg-emerald-500/20 px-1.5 py-0.5 font-bold text-emerald-200 shadow-[0_0_10px_rgba(16,185,129,0.35)]">
+                                    <Gamepad2 className="size-3 text-emerald-300 shrink-0" />
                                     <span>{p.server}</span>
                                   </span>
                                 ) : (
@@ -1025,27 +1050,29 @@ export function SuspiciousView() {
                           <div
                             className={cn(
                               "flex items-center gap-2 rounded-xl px-2.5 py-1 text-xs shrink-0 transition-all",
-                              highKd
-                                ? "border-2 border-red-500 bg-red-500/25 animate-pulse-red text-red-200 shadow-[0_0_14px_rgba(239,68,68,0.4)]"
-                                : "border border-border/60 bg-elevated/60",
+                              kdSeverity === "extreme"
+                                ? "border-2 border-red-500 bg-red-500/30 animate-pulse-red text-red-100 shadow-[0_0_16px_rgba(239,68,68,0.65)]"
+                                : kdSeverity === "high"
+                                  ? "border-2 border-red-500 bg-red-500/20 text-red-200 shadow-[0_0_12px_rgba(239,68,68,0.45)]"
+                                  : "border border-border/60 bg-elevated/60",
                             )}
                           >
                             <span
                               className={cn(
                                 "font-black font-mono flex items-center gap-1",
-                                highKd
-                                  ? "text-red-300"
-                                  : p.kd >= 2
-                                    ? "text-danger"
+                                kdSeverity === "extreme"
+                                  ? "text-red-200"
+                                  : kdSeverity === "high"
+                                    ? "text-red-300"
                                     : p.kd >= 1
                                       ? "text-fg"
                                       : "text-subtle",
                               )}
                             >
-                              {highKd ? <Flame className="size-3 text-red-400 animate-pulse" /> : null}
+                              {kdSeverity === "extreme" ? <Flame className="size-3 text-red-400 animate-pulse" /> : null}
                               KD {p.kd.toFixed(2)}
                             </span>
-                            <span className={cn("font-mono", highKd ? "text-red-300/70" : "text-subtle")}>
+                            <span className={cn("font-mono", kdSeverity !== "normal" ? "text-red-200/80" : "text-subtle")}>
                               ({p.kills}/{p.deaths})
                             </span>
                           </div>
