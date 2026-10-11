@@ -14,6 +14,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PageHeaderSkeleton, RowsSkeleton } from "@/components/skeletons";
 import { deleteModFn, getBackupsFn, listModsFn, setBackupFn, unsetBackupFn, upsertModFn } from "@/lib/fn";
 import { RANK_TITLE } from "@/lib/constants";
@@ -212,20 +219,23 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
           </div>
           <div>
             <Label htmlFor="mod-rank">Ранг</Label>
-            <select
-              id="mod-rank"
-              value={form.rank}
-              onChange={(e) => setForm((f) => ({ ...f, rank: Number(e.target.value) }))}
-              className="mt-1.5 flex h-11 w-full rounded-xl border border-border/80 bg-elevated/70 px-3 text-sm text-fg"
+            <Select
+              value={String(form.rank)}
+              onValueChange={(val) => setForm((f) => ({ ...f, rank: Number(val) }))}
             >
-              {(ranks.length ? ranks : Object.keys(RANK_TITLE).map((n) => ({ rank: Number(n), title: RANK_TITLE[Number(n)] }))).map(
-                (r) => (
-                  <option key={r.rank} value={r.rank}>
-                    {r.rank}. {r.title}
-                  </option>
-                ),
-              )}
-            </select>
+              <SelectTrigger id="mod-rank" className="mt-1.5 h-11 text-sm bg-elevated/70">
+                <SelectValue placeholder="Выберите ранг" />
+              </SelectTrigger>
+              <SelectContent>
+                {(ranks.length ? ranks : Object.keys(RANK_TITLE).map((n) => ({ rank: Number(n), title: RANK_TITLE[Number(n)] }))).map(
+                  (r) => (
+                    <SelectItem key={r.rank} value={String(r.rank)}>
+                      {r.rank}. {r.title}
+                    </SelectItem>
+                  ),
+                )}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="mod-discord">Discord</Label>
@@ -280,19 +290,23 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
                       </div>
                       <div>
                         <Label>Ранг</Label>
-                        <select
-                          value={draft.rank}
-                          onChange={(e) => setDraft((d) => ({ ...d, rank: Number(e.target.value) }))}
-                          className="mt-1.5 flex h-11 w-full rounded-sm border border-border bg-elevated px-3 text-sm text-fg"
+                        <Select
+                          value={String(draft.rank)}
+                          onValueChange={(val) => setDraft((d) => ({ ...d, rank: Number(val) }))}
                         >
-                          {(ranks.length ? ranks : [1, 2, 3, 4, 5].map((n) => ({ rank: n, title: RANK_TITLE[n] }))).map(
-                            (r) => (
-                              <option key={r.rank} value={r.rank}>
-                                {r.title}
-                              </option>
-                            ),
-                          )}
-                        </select>
+                          <SelectTrigger className="mt-1.5 h-11 text-sm bg-elevated">
+                            <SelectValue placeholder="Ранг" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(ranks.length ? ranks : [1, 2, 3, 4, 5].map((n) => ({ rank: n, title: RANK_TITLE[n] }))).map(
+                              (r) => (
+                                <SelectItem key={r.rank} value={String(r.rank)}>
+                                  {r.title}
+                                </SelectItem>
+                              ),
+                            )}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
                         <Label>Discord</Label>

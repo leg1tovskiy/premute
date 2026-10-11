@@ -27,6 +27,13 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getActivityFn } from "@/lib/fn";
 import { RANK_SHORT, fearProfileUrl } from "@/lib/constants";
 import type { ActivityPayload, OnlineModerator } from "@/lib/types";
@@ -568,35 +575,33 @@ export function ActivityView() {
 
             {/* Filter by Server dropdown */}
             {uniqueServers.length > 0 ? (
-              <div className="relative">
-                <select
-                  value={serverFilter}
-                  onChange={(e) => setServerFilter(e.target.value)}
-                  className="h-9.5 rounded-xl border border-border/70 bg-elevated/70 px-3 text-xs font-medium text-fg outline-none focus:border-accent cursor-pointer"
-                >
-                  <option value="all">Все серверы ({uniqueServers.length})</option>
+              <Select value={serverFilter} onValueChange={setServerFilter}>
+                <SelectTrigger className="w-[190px] sm:w-[220px]">
+                  <SelectValue placeholder="Все серверы" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все серверы ({uniqueServers.length})</SelectItem>
                   {uniqueServers.map((srv) => (
-                    <option key={srv} value={srv}>
+                    <SelectItem key={srv} value={srv}>
                       {srv}
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
-              </div>
+                </SelectContent>
+              </Select>
             ) : null}
 
             {/* Sort Dropdown */}
-            <div className="relative">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="h-9.5 rounded-xl border border-border/70 bg-elevated/70 px-3 text-xs font-medium text-fg outline-none focus:border-accent cursor-pointer"
-              >
-                <option value="duration">Время на сервере ↓</option>
-                <option value="kills">Убийства (Kills) ↓</option>
-                <option value="ping">Пинг (лучший) ↑</option>
-                <option value="name">По имени (А-Я)</option>
-              </select>
-            </div>
+            <Select value={sortBy} onValueChange={(val) => setSortBy(val as any)}>
+              <SelectTrigger className="w-[180px] sm:w-[200px]">
+                <SelectValue placeholder="Сортировка" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="duration">Время на сервере ↓</SelectItem>
+                <SelectItem value="kills">Убийства (Kills) ↓</SelectItem>
+                <SelectItem value="ping">Пинг (лучший) ↑</SelectItem>
+                <SelectItem value="name">По имени (А-Я)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </AnimatedBlock>

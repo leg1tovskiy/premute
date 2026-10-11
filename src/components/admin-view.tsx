@@ -5,6 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PageHeaderSkeleton, CardsSkeleton } from "@/components/skeletons";
 import { deleteStaffFn, exportBackupFn, listStaffFn, setStaffPerms } from "@/lib/fn";
 import { ROOT_DISCORD_ID, fearProfileUrl } from "@/lib/constants";
@@ -336,7 +343,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
                       </div>
 
                       <div className="relative">
-                        <select
+                        <Select
                           value={
                             u.isRoot
                               ? "root"
@@ -347,20 +354,24 @@ export function AdminView({ me }: { me: StaffProfile }) {
                               : "none"
                           }
                           disabled={locked || u.isRoot || u.isBanned}
-                          onChange={(e) => handleRoleChange(u, e.target.value)}
-                          className="w-full h-8.5 rounded-xl border border-border/80 bg-surface/90 px-3 text-xs font-semibold text-fg shadow-sm focus:border-accent focus:outline-none disabled:opacity-50 transition-colors cursor-pointer"
+                          onValueChange={(val) => handleRoleChange(u, val)}
                         >
-                          <option value="none">Без роли (доступ закрыт)</option>
-                          <option value="1">Мл. Модератор (только своя стата + Игроки)</option>
-                          <option value="2">Модератор (только своя стата + Игроки)</option>
-                          <option value="3">Ст. Модератор (все вкладки)</option>
-                          <option value="4">Ст. Администратор (все вкладки)</option>
-                          <option value="5">Стафф (все вкладки)</option>
-                          {me.caps.canGrantOwner ? (
-                            <option value="owner">Владелец сайта (все вкладки + админка)</option>
-                          ) : null}
-                          {u.isRoot ? <option value="root" disabled>Корневой владелец (ROOT)</option> : null}
-                        </select>
+                          <SelectTrigger className="w-full h-8.5 bg-surface/90 text-xs font-semibold">
+                            <SelectValue placeholder="Выберите роль" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Без роли (доступ закрыт)</SelectItem>
+                            <SelectItem value="1">Мл. Модератор (только своя стата + Игроки)</SelectItem>
+                            <SelectItem value="2">Модератор (только своя стата + Игроки)</SelectItem>
+                            <SelectItem value="3">Ст. Модератор (все вкладки)</SelectItem>
+                            <SelectItem value="4">Ст. Администратор (все вкладки)</SelectItem>
+                            <SelectItem value="5">Стафф (все вкладки)</SelectItem>
+                            {me.caps.canGrantOwner ? (
+                              <SelectItem value="owner">Владелец сайта (все вкладки + админка)</SelectItem>
+                            ) : null}
+                            {u.isRoot ? <SelectItem value="root" disabled>Корневой владелец (ROOT)</SelectItem> : null}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   ) : null}

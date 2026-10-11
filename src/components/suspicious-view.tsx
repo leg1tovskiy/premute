@@ -23,6 +23,13 @@ import {
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PageHeaderSkeleton, RowsSkeleton } from "@/components/skeletons";
 import { getSuspiciousFn } from "@/lib/fn";
 import { fearProfileUrl } from "@/lib/constants";
@@ -501,16 +508,20 @@ export function SuspiciousView() {
                   <ArrowUpDown className="size-3.5 text-accent" />
                   Сортировка:
                 </span>
-                <select
+                <Select
                   value={newcomersSort}
-                  onChange={(e) => setNewcomersSort(e.target.value as NewcomersSort)}
-                  className="h-9.5 rounded-xl border border-border/80 bg-elevated/80 px-3 text-xs font-bold text-fg focus:outline-none focus:border-accent transition-all"
+                  onValueChange={(val) => setNewcomersSort(val as NewcomersSort)}
                 >
-                  <option value="time_asc">Меньше времени (сначала новые)</option>
-                  <option value="time_desc">Больше времени (&lt; 10ч)</option>
-                  <option value="kd_desc">По K/D (выше)</option>
-                  <option value="kills_desc">По убийствам</option>
-                </select>
+                  <SelectTrigger className="w-[230px] font-bold">
+                    <SelectValue placeholder="Сортировка" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="time_asc">Меньше времени (сначала новые)</SelectItem>
+                    <SelectItem value="time_desc">Больше времени (&lt; 10ч)</SelectItem>
+                    <SelectItem value="kd_desc">По K/D (выше)</SelectItem>
+                    <SelectItem value="kills_desc">По убийствам</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </AnimatedBlock>
