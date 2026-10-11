@@ -93,7 +93,9 @@ export function computeCaps(
     permanentGeneralStats = false;
   }
 
-  const isSundayAccess = !permanentGeneralStats && canOwnStats && isSunday && !isModOrJunior;
+  // В воскресенье всем модераторам (включая Мл. Модераторов и Модераторов) открывается общая статистика до 23:59 МСК
+  const hasStaffRole = canOwnStats || Boolean(rosterRank) || isModOrJunior || flag(row.can_suspicious) || flag(row.can_activity);
+  const isSundayAccess = !permanentGeneralStats && hasStaffRole && isSunday;
   const canGeneralStats = permanentGeneralStats || isSundayAccess;
   const canStats = canGeneralStats || canOwnStats;
 

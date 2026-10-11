@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowUpDown,
+  Calendar,
   ChevronRight,
   Clock3,
   Copy,
@@ -119,6 +120,13 @@ function ModeratorCard({
   const monthDone = monthTarget != null && monthTarget > 0 && m.total >= monthTarget;
   const progressPercent = monthTarget ? Math.min(Math.round((m.total / monthTarget) * 100), 100) : 0;
   const actualRatio = monthTarget ? Math.round((m.total / monthTarget) * 100) : null;
+
+  const weekTarget = m.norma?.week ?? null;
+  const weekTotal = m.weekTotal ?? 0;
+  const weekDone = weekTarget != null && weekTarget > 0 && weekTotal >= weekTarget;
+  const weekProgressPercent = weekTarget ? Math.min(Math.round((weekTotal / weekTarget) * 100), 100) : 0;
+  const weekRatio = weekTarget ? Math.round((weekTotal / weekTarget) * 100) : null;
+  const weekRemaining = weekTarget ? Math.max(0, weekTarget - weekTotal) : 0;
   const rankProps = m.rank ? getRankBadgeProps(m.rank) : null;
 
   function copySteamId(id: string) {
@@ -133,7 +141,7 @@ function ModeratorCard({
   return (
     <article className="group relative flex min-w-0 flex-col overflow-hidden rounded-3xl border border-border/80 bg-surface/90 glass-panel p-5 shadow-lg transition-all hover:scale-[1.015] hover:border-accent/50 hover:shadow-2xl hover:shadow-accent/10">
       {/* Subtle top ambient glow */}
-      {monthDone ? (
+      {monthDone || weekDone ? (
         <div className="absolute -top-12 left-1/2 -translate-x-1/2 size-36 rounded-full bg-accent/15 blur-2xl pointer-events-none" />
       ) : null}
 
@@ -203,10 +211,10 @@ function ModeratorCard({
         <PresenceBadge info={info} lastOnline={m.lastOnline} />
       </div>
 
-      {/* 4 Cyber Stat Chips */}
-      <div className="relative z-10 mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {/* 5 Cyber Stat Chips */}
+      <div className="relative z-10 mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
         {/* Баны */}
-        <div className="rounded-2xl border border-danger/25 bg-danger/10 p-3 text-center transition-all hover:bg-danger/15">
+        <div className="rounded-2xl border border-danger/25 bg-danger/10 p-2.5 text-center transition-all hover:bg-danger/15">
           <p className="text-2xl font-black tabular-nums text-danger">
             <AnimatedNumber value={m.bans ?? 0} />
           </p>
@@ -216,7 +224,7 @@ function ModeratorCard({
         </div>
 
         {/* Муты */}
-        <div className="rounded-2xl border border-warn/25 bg-warn/10 p-3 text-center transition-all hover:bg-warn/15">
+        <div className="rounded-2xl border border-warn/25 bg-warn/10 p-2.5 text-center transition-all hover:bg-warn/15">
           <p className="text-2xl font-black tabular-nums text-warn">
             <AnimatedNumber value={m.mutes ?? 0} />
           </p>
@@ -225,16 +233,31 @@ function ModeratorCard({
           </p>
         </div>
 
+        {/* За неделю */}
+        <div className={cn(
+          "rounded-2xl border p-2.5 text-center shadow-inner transition-all",
+          weekDone
+            ? "border-success/30 bg-success/15 hover:bg-success/20"
+            : "border-accent/30 bg-accent/15 hover:bg-accent/20"
+        )}>
+          <p className={cn("text-2xl font-black tabular-nums", weekDone ? "text-success" : "text-accent")}>
+            <AnimatedNumber value={weekTotal} />
+          </p>
+          <p className={cn("mt-1 text-[11px] font-semibold flex items-center justify-center gap-1", weekDone ? "text-success" : "text-accent/90")}>
+            <Calendar className="size-3" /> Неделя
+          </p>
+        </div>
+
         {/* Всего за месяц */}
-        <div className="rounded-2xl border border-accent/30 bg-accent/15 p-3 text-center shadow-inner transition-all hover:bg-accent/20">
-          <p className="text-2xl font-black tabular-nums text-accent">
+        <div className="rounded-2xl border border-border/80 bg-elevated/70 p-2.5 text-center shadow-inner transition-all hover:bg-elevated">
+          <p className="text-2xl font-black tabular-nums text-fg">
             <AnimatedNumber value={m.total} />
           </p>
-          <p className="mt-1 text-[11px] font-semibold text-accent/90">Всего мес.</p>
+          <p className="mt-1 text-[11px] font-semibold text-muted">Месяц</p>
         </div>
 
         {/* Снято */}
-        <div className="rounded-2xl border border-success/25 bg-success/10 p-3 text-center transition-all hover:bg-success/15">
+        <div className="rounded-2xl border border-success/25 bg-success/10 p-2.5 text-center transition-all hover:bg-success/15">
           <p className="text-2xl font-black tabular-nums text-success">
             <AnimatedNumber value={m.removed ?? 0} />
           </p>
@@ -244,36 +267,83 @@ function ModeratorCard({
         </div>
       </div>
 
-      {/* High-Tech Norma Progress Bar */}
-      <div className="relative z-10 mt-3.5 rounded-2xl border border-border/70 bg-elevated/50 p-3.5">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
-            Норма месяца
-          </span>
-          <span className="font-mono tabular-nums text-xs">
-            <span className={cn("font-extrabold", monthDone ? "text-success" : "text-fg")}>
-              <AnimatedNumber value={m.total} />
-            </span>{" "}
-            <span className="text-subtle">/ {monthTarget ?? "—"}</span>
-            {actualRatio != null ? (
-              <span className={cn("ml-1.5 font-bold", monthDone ? "text-success" : "text-subtle")}>
-                (<AnimatedNumber value={actualRatio} suffix="%" />)
+      {/* High-Tech Norma Progress Bars */}
+      <div className="relative z-10 mt-3.5 space-y-3 rounded-2xl border border-border/70 bg-elevated/50 p-3.5">
+        {/* Weekly Norm Track */}
+        {weekTarget != null && weekTarget > 0 ? (
+          <div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
+                <Calendar className="size-3 text-accent" />
+                Норма недели
+                <span className="rounded bg-accent/15 px-1 py-0.2 text-[9px] font-mono text-accent">вс 23:59</span>
               </span>
-            ) : null}
-          </span>
-        </div>
+              <span className="font-mono tabular-nums text-xs">
+                <span className={cn("font-extrabold", weekDone ? "text-success" : "text-fg")}>
+                  <AnimatedNumber value={weekTotal} />
+                </span>{" "}
+                <span className="text-subtle">/ {weekTarget}</span>
+                {weekRatio != null ? (
+                  <span className={cn("ml-1.5 font-bold", weekDone ? "text-success" : "text-subtle")}>
+                    (<AnimatedNumber value={weekRatio} suffix="%" />)
+                  </span>
+                ) : null}
+                {weekDone ? <span className="ml-1 text-success font-black">✓</span> : null}
+              </span>
+            </div>
 
-        {/* Track */}
-        <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-surface border border-border/50">
-          <div
-            className={cn(
-              "h-full rounded-full transition-all duration-500",
-              monthDone
-                ? "bg-gradient-to-r from-accent to-success shadow-[0_0_8px_var(--color-success)]"
-                : "bg-accent/70",
-            )}
-            style={{ width: `${progressPercent}%` }}
-          />
+            {/* Track */}
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface border border-border/50">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  weekDone
+                    ? "bg-gradient-to-r from-accent to-success shadow-[0_0_8px_var(--color-success)]"
+                    : "bg-accent/80",
+                )}
+                style={{ width: `${weekProgressPercent}%` }}
+              />
+            </div>
+            {!weekDone ? (
+              <p className="mt-1 text-right text-[10px] text-muted font-mono">
+                осталось {weekRemaining} до сброса
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* Monthly Norm Track */}
+        <div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
+              Норма месяца
+            </span>
+            <span className="font-mono tabular-nums text-xs">
+              <span className={cn("font-extrabold", monthDone ? "text-success" : "text-fg")}>
+                <AnimatedNumber value={m.total} />
+              </span>{" "}
+              <span className="text-subtle">/ {monthTarget ?? "—"}</span>
+              {actualRatio != null ? (
+                <span className={cn("ml-1.5 font-bold", monthDone ? "text-success" : "text-subtle")}>
+                  (<AnimatedNumber value={actualRatio} suffix="%" />)
+                </span>
+              ) : null}
+              {monthDone ? <span className="ml-1 text-success font-black">✓</span> : null}
+            </span>
+          </div>
+
+          {/* Track */}
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface border border-border/50">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all duration-500",
+                monthDone
+                  ? "bg-gradient-to-r from-accent to-success shadow-[0_0_8px_var(--color-success)]"
+                  : "bg-accent/70",
+              )}
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
         </div>
       </div>
 
@@ -312,7 +382,7 @@ export function StatsView() {
   // Filter & Search states
   const [search, setSearch] = useState("");
   const [rankFilter, setRankFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"total" | "bans" | "mutes" | "norma">("total");
+  const [sortBy, setSortBy] = useState<"total" | "bans" | "mutes" | "norma" | "norma_week">("total");
 
   async function load(refresh = false, silent = false) {
     if (!silent) {
@@ -401,10 +471,17 @@ export function StatsView() {
     list.sort((a, b) => {
       if (sortBy === "bans") return (b.bans ?? 0) - (a.bans ?? 0);
       if (sortBy === "mutes") return (b.mutes ?? 0) - (a.mutes ?? 0);
+      if (sortBy === "norma_week") {
+        const aNorma = a.norma?.week ? (a.weekTotal ?? 0) / a.norma.week : 0;
+        const bNorma = b.norma?.week ? (b.weekTotal ?? 0) / b.norma.week : 0;
+        if (bNorma !== aNorma) return bNorma - aNorma;
+        return (b.weekTotal ?? 0) - (a.weekTotal ?? 0);
+      }
       if (sortBy === "norma") {
         const aNorma = a.norma?.month ? a.total / a.norma.month : 0;
         const bNorma = b.norma?.month ? b.total / b.norma.month : 0;
-        return bNorma - aNorma;
+        if (bNorma !== aNorma) return bNorma - aNorma;
+        return b.total - a.total;
       }
       return b.total - a.total;
     });
@@ -486,16 +563,18 @@ export function StatsView() {
 
   function exportCsv() {
     downloadCsv(`stats-${payload.month}.csv`, [
-      ["Ник", "SteamID", "Ранг", "Баны", "Муты", "Всего", "Снято", "Норма месяц", "Прошлый месяц", "Лучший месяц", "Лучший итог"],
+      ["Ник", "SteamID", "Ранг", "Баны", "Муты", "Всего неделя", "Норма неделя", "Всего месяц", "Норма месяц", "Снято", "Прошлый месяц", "Лучший месяц", "Лучший итог"],
       ...payload.moderators.map((m) => [
         m.name,
         m.steamid,
         m.rank ?? "",
         m.bans ?? "",
         m.mutes ?? "",
+        m.weekTotal ?? 0,
+        m.norma?.week ?? "",
         m.total,
-        m.removed,
         m.norma?.month ?? "",
+        m.removed,
         m.prevTotal ?? "",
         m.best?.month ?? "",
         m.best?.total ?? "",
@@ -734,13 +813,23 @@ export function StatsView() {
               </button>
               <button
                 type="button"
+                onClick={() => setSortBy("norma_week")}
+                className={cn(
+                  "rounded-lg px-2.5 py-1 font-medium transition-all",
+                  sortBy === "norma_week" ? "bg-accent/20 text-accent font-bold" : "text-muted hover:text-fg",
+                )}
+              >
+                Норма нед.
+              </button>
+              <button
+                type="button"
                 onClick={() => setSortBy("norma")}
                 className={cn(
                   "rounded-lg px-2.5 py-1 font-medium transition-all",
                   sortBy === "norma" ? "bg-accent/20 text-accent font-bold" : "text-muted hover:text-fg",
                 )}
               >
-                Норма
+                Норма мес.
               </button>
             </div>
           </div>

@@ -325,7 +325,10 @@ export function TopsView() {
         return aErr - bErr || b.total - a.total;
       })[0];
 
-    return { topBan, topMute, topNorma, topClean };
+    // Weekly Leader
+    const topWeek = [...mods].sort((a, b) => (b.weekTotal ?? 0) - (a.weekTotal ?? 0))[0];
+
+    return { topBan, topMute, topNorma, topClean, topWeek };
   }, [data?.moderators]);
 
   // Full Leaderboard list (filtered and sorted)
@@ -952,7 +955,28 @@ export function TopsView() {
             <Zap className="size-4 text-accent" />
             Особые номинации и достижения сезона
           </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {/* Weekly Leader */}
+            {nominations.topWeek && (nominations.topWeek.weekTotal ?? 0) > 0 ? (
+              <div className="flex items-center gap-3.5 rounded-2xl border border-accent/40 bg-gradient-to-br from-accent/15 to-surface/90 glass-panel p-4 shadow-sm transition-all hover:scale-[1.01]">
+                <ModAvatar
+                  avatar={nominations.topWeek.avatar}
+                  name={nominations.topWeek.name}
+                  size="md"
+                  info={online[nominations.topWeek.steamid]}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-accent flex items-center gap-1">
+                    <Flame className="size-3.5" /> Лидер недели
+                  </p>
+                  <p className="font-bold text-fg truncate text-sm mt-0.5">{nominations.topWeek.name}</p>
+                  <p className="text-xs text-muted">
+                    <span className="font-black text-accent">{nominations.topWeek.weekTotal}</span> за неделю
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
             {/* Most bans */}
             {nominations.topBan ? (
               <div className="flex items-center gap-3.5 rounded-2xl border border-danger/30 bg-gradient-to-br from-danger/10 to-surface/90 glass-panel p-4 shadow-sm transition-all hover:scale-[1.01]">
@@ -1105,6 +1129,7 @@ export function TopsView() {
                 <th className="px-5 py-3.5 w-16">Ранг</th>
                 <th className="px-5 py-3.5">Модератор</th>
                 <th className="px-5 py-3.5">Должность</th>
+                <th className="px-5 py-3.5">Норма нед.</th>
                 <th className="px-5 py-3.5">Норма мес.</th>
                 <th className="px-5 py-3.5 text-center">Баны</th>
                 <th className="px-5 py-3.5 text-center">Муты</th>
@@ -1121,6 +1146,10 @@ export function TopsView() {
                 const monthTarget = m.norma?.month ?? null;
                 const monthDone = monthTarget != null && monthTarget > 0 && m.total >= monthTarget;
                 const progressPct = monthTarget ? Math.min(Math.round((m.total / monthTarget) * 100), 100) : 0;
+
+                const weekTarget = m.norma?.week ?? null;
+                const weekDone = weekTarget != null && weekTarget > 0 && (m.weekTotal ?? 0) >= weekTarget;
+                const weekProgressPct = weekTarget ? Math.min(Math.round(((m.weekTotal ?? 0) / weekTarget) * 100), 100) : 0;
 
                 return (
                   <tr
@@ -1174,6 +1203,29 @@ export function TopsView() {
                       <span className="rounded-md bg-elevated px-2 py-0.5 text-[10px] font-bold text-muted border border-border/80">
                         {RANK_SHORT[rankOf(m)] ?? "мод"}
                       </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {weekTarget ? (
+                        <div className="w-24 space-y-1">
+                          <div className="flex items-center justify-between text-[10px] font-mono">
+                            <span className={cn(weekDone ? "text-success font-bold" : "text-muted")}>
+                              {m.weekTotal ?? 0}/{weekTarget}
+                            </span>
+                            <span className="text-subtle">{Math.round(((m.weekTotal ?? 0) / weekTarget) * 100)}%</span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-elevated overflow-hidden border border-border/40">
+                            <div
+                              className={cn(
+                                "h-full rounded-full transition-all",
+                                weekDone ? "bg-success" : "bg-accent/70",
+                              )}
+                              style={{ width: `${weekProgressPct}%` }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] font-mono text-subtle">—</span>
+                      )}
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="w-28 space-y-1">

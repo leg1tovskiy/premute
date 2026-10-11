@@ -296,9 +296,13 @@ function NormaRadialGauge({
 function PaceForecastCard({
   total,
   target,
+  weekTotal = 0,
+  weekTarget = null,
 }: {
   total: number;
   target: number | null;
+  weekTotal?: number;
+  weekTarget?: number | null;
 }) {
   const now = new Date();
   const mskDayStr = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Moscow", day: "numeric" }).format(now);
@@ -316,8 +320,13 @@ function PaceForecastCard({
   const remainingActions = target ? Math.max(0, target - total) : 0;
   const neededPace = daysRemaining > 0 && target && !isDone ? (remainingActions / daysRemaining).toFixed(1) : "0";
 
+  const hasWeekNorma = weekTarget != null && weekTarget > 0;
+  const weekDone = hasWeekNorma && weekTotal >= weekTarget;
+  const weekRatio = hasWeekNorma ? Math.round((weekTotal / weekTarget) * 100) : null;
+  const weekRemaining = hasWeekNorma ? Math.max(0, weekTarget - weekTotal) : 0;
+
   return (
-    <div className="rounded-2xl border border-border/80 bg-surface/80 p-4 space-y-3 glass-panel">
+    <div className="rounded-2xl border border-border/80 bg-surface/80 p-4 space-y-3.5 glass-panel">
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold text-fg flex items-center gap-1.5">
           <Zap className="size-3.5 text-accent" />
@@ -351,6 +360,52 @@ function PaceForecastCard({
           <p className="text-[10px] text-muted leading-tight">до итогов</p>
         </div>
       </div>
+
+      {hasWeekNorma ? (
+        <div className="rounded-xl border border-border/70 bg-elevated/50 p-2.5 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-fg flex items-center gap-1.5">
+              <Calendar className="size-3 text-accent" />
+              Еженедельная норма
+            </span>
+            <span
+              className={cn(
+                "rounded px-1.5 py-0.5 text-[10px] font-mono font-bold uppercase border",
+                weekDone
+                  ? "bg-success/15 text-success border-success/30"
+                  : "bg-accent/15 text-accent border-accent/30",
+              )}
+            >
+              {weekDone ? "Закрыта 🎉" : `Осталось ${weekRemaining}`}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] font-mono text-muted">
+            <span>
+              {weekTotal} / {weekTarget} действий
+            </span>
+            <span className={cn("font-bold", weekDone ? "text-success" : "text-fg")}>
+              {weekRatio}%
+            </span>
+          </div>
+
+          <div className="h-2 w-full overflow-hidden rounded-full bg-surface border border-border/50">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all duration-500",
+                weekDone
+                  ? "bg-gradient-to-r from-accent to-success shadow-[0_0_8px_var(--color-success)]"
+                  : "bg-accent",
+              )}
+              style={{ width: `${Math.min(weekRatio || 0, 100)}%` }}
+            />
+          </div>
+
+          <p className="text-[10px] text-muted leading-tight">
+            Сброс нормы происходит каждое воскресенье в 23:59 по МСК.
+          </p>
+        </div>
+      ) : null}
 
       <p className="text-[11px] text-muted leading-relaxed">
         {isDone
@@ -468,6 +523,10 @@ function DiscordShareModal({
   const rankText = (rank && RANK_SHORT[rank]) || "МОДЕРАТОР";
   const target = m.norma?.month ?? 150;
   const pct = target ? Math.round((m.total / target) * 100) : 100;
+  const weekTarget = m.norma?.week ?? null;
+  const weekLine = weekTarget
+    ? `\n📅 За неделю: ${m.weekTotal ?? 0} / ${weekTarget} (${Math.round(((m.weekTotal ?? 0) / weekTarget) * 100)}%)`
+    : "";
 
   const discordMarkdown = `📊 **Отчёт модератора ${handle} | FearProject CS2**
 📅 Период: ${monthName}
@@ -475,7 +534,7 @@ function DiscordShareModal({
 ───────────────────────
 🔨 Банов выдано: ${m.bans ?? 0}
 🔇 Мутов выдано: ${m.mutes ?? 0}
-⚡ Всего действий: ${m.total}
+⚡ Всего действий: ${m.total}${weekLine}
 🎯 Норма месяца: ${m.total} / ${target} (${pct}%)
 🔓 Снято решений: ${m.removed ?? 0}
 ───────────────────────
@@ -731,6 +790,12 @@ export function ModDetailsView({
   const monthDone = monthTarget != null && monthTarget > 0 && m.total >= monthTarget;
   const actualRatio = monthTarget ? Math.round((m.total / monthTarget) * 100) : null;
 
+  const weekTarget = m.norma?.week ?? null;
+  const weekTotal = m.weekTotal ?? 0;
+  const weekDone = weekTarget != null && weekTarget > 0 && weekTotal >= weekTarget;
+  const weekRatio = weekTarget ? Math.round((weekTotal / weekTarget) * 100) : null;
+  const weekRemaining = weekTarget ? Math.max(0, weekTarget - weekTotal) : 0;
+
   function copySteamId(id: string) {
     try {
       void navigator.clipboard.writeText(id);
@@ -828,37 +893,58 @@ export function ModDetailsView({
             </div>
           </div>
 
-          {/* Norma Radial Gauge Widget */}
-          <div className="flex items-center gap-5 rounded-2xl border border-border/70 bg-surface/80 p-4 shadow-sm">
-            <NormaRadialGauge current={m.total} target={monthTarget} size={96} />
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Норма месяца</p>
-              <p className={cn("text-lg font-black font-mono", monthDone ? "text-success" : "text-fg")}>
-                <AnimatedNumber value={m.total} /> <span className="text-xs text-muted font-normal">/ {monthTarget ?? "—"}</span>
-              </p>
-              <p className="text-[11px] text-muted font-mono">
-                {actualRatio != null ? (
-                  <>
-                    <AnimatedNumber value={actualRatio} suffix="%" /> от плана
-                  </>
-                ) : (
-                  "цель не задана"
-                )}
-              </p>
-              <button
-                type="button"
-                onClick={() => setShareOpen(true)}
-                className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-accent hover:underline cursor-pointer"
-              >
-                <Share2 className="size-3" />
-                Поделиться
-              </button>
+          {/* Norma Radial Gauge Widgets */}
+          <div className="flex flex-wrap items-center gap-4">
+            {weekTarget != null && weekTarget > 0 ? (
+              <div className="flex items-center gap-3.5 rounded-2xl border border-border/70 bg-surface/80 p-3.5 shadow-sm">
+                <NormaRadialGauge current={weekTotal} target={weekTarget} size={84} />
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Норма недели</p>
+                    <span className="rounded bg-accent/15 px-1.5 py-0.2 text-[9px] font-mono font-bold text-accent border border-accent/20">вс 23:59</span>
+                  </div>
+                  <p className={cn("text-base font-black font-mono", weekDone ? "text-success" : "text-fg")}>
+                    <AnimatedNumber value={weekTotal} /> <span className="text-xs text-muted font-normal">/ {weekTarget}</span>
+                  </p>
+                  <p className="text-[11px] text-muted font-mono">
+                    <span className={cn("font-bold", weekDone ? "text-success" : "text-fg")}>{weekRatio}%</span>{" "}
+                    {weekDone ? "выполнено 🎉" : `(ост. ${weekRemaining})`}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="flex items-center gap-3.5 rounded-2xl border border-border/70 bg-surface/80 p-3.5 shadow-sm">
+              <NormaRadialGauge current={m.total} target={monthTarget} size={84} />
+              <div className="space-y-0.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Норма месяца</p>
+                <p className={cn("text-base font-black font-mono", monthDone ? "text-success" : "text-fg")}>
+                  <AnimatedNumber value={m.total} /> <span className="text-xs text-muted font-normal">/ {monthTarget ?? "—"}</span>
+                </p>
+                <p className="text-[11px] text-muted font-mono">
+                  {actualRatio != null ? (
+                    <>
+                      <AnimatedNumber value={actualRatio} suffix="%" /> от плана
+                    </>
+                  ) : (
+                    "цель не задана"
+                  )}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShareOpen(true)}
+                  className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-bold text-accent hover:underline cursor-pointer"
+                >
+                  <Share2 className="size-3" />
+                  Поделиться
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* 4 Cyber Metric Chips */}
-        <div className="relative z-10 mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {/* 5 Cyber Metric Chips */}
+        <div className="relative z-10 mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
           <div className="rounded-2xl border border-danger/25 bg-danger/10 p-3.5 text-center transition-all hover:bg-danger/15 shadow-sm">
             <p className="text-3xl font-black tabular-nums text-danger">
               <AnimatedNumber value={m.bans ?? 0} />
@@ -877,11 +963,35 @@ export function ModDetailsView({
             </p>
           </div>
 
-          <div className="rounded-2xl border border-accent/30 bg-accent/15 p-3.5 text-center shadow-inner transition-all hover:bg-accent/20">
-            <p className="text-3xl font-black tabular-nums text-accent">
+          <div className={cn(
+            "rounded-2xl border p-3.5 text-center shadow-inner transition-all",
+            weekDone
+              ? "border-success/30 bg-success/15 hover:bg-success/20"
+              : "border-accent/30 bg-accent/15 hover:bg-accent/20"
+          )}>
+            <p className={cn("text-3xl font-black tabular-nums", weekDone ? "text-success" : "text-accent")}>
+              <AnimatedNumber value={weekTotal} />
+            </p>
+            <p className={cn("mt-1 text-xs font-bold flex items-center justify-center gap-1", weekDone ? "text-success" : "text-accent")}>
+              <Calendar className="size-3.5" /> За неделю
+            </p>
+            {weekTarget ? (
+              <p className="mt-0.5 text-[10px] text-muted font-mono">
+                {weekDone ? "норма закрыта 🎉" : `норма: ${weekTarget} (ост. ${weekRemaining})`}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="rounded-2xl border border-border/80 bg-elevated/70 p-3.5 text-center shadow-inner transition-all hover:bg-elevated">
+            <p className="text-3xl font-black tabular-nums text-fg">
               <AnimatedNumber value={m.total} />
             </p>
-            <p className="mt-1 text-xs font-bold text-accent">Всего за месяц</p>
+            <p className="mt-1 text-xs font-bold text-muted">Всего за месяц</p>
+            {monthTarget ? (
+              <p className="mt-0.5 text-[10px] text-muted font-mono">
+                {monthDone ? "норма закрыта 🎉" : `цель: ${monthTarget}`}
+              </p>
+            ) : null}
           </div>
 
           <div className="rounded-2xl border border-success/25 bg-success/10 p-3.5 text-center transition-all hover:bg-success/15 shadow-sm">
@@ -899,7 +1009,7 @@ export function ModDetailsView({
       {/* ── Bento Grid: Smart Pace & Month Heatmap ───────────────────── */}
       <AnimatedBlock delay={100}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <PaceForecastCard total={m.total} target={monthTarget} />
+          <PaceForecastCard total={m.total} target={monthTarget} weekTotal={weekTotal} weekTarget={weekTarget} />
           <MonthActivityHeatmap records={data.records} />
         </div>
       </AnimatedBlock>
