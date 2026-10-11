@@ -452,3 +452,23 @@ body[data-scroll-locked] {
   right: 0px !important;
 }
 
+/* ==========================================================================
+   High KD Alert Pulsing Glow (KD > 4)
+   ========================================================================== */
+@keyframes pulseRedGlow {
+  0%, 100% {
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.4), inset 0 0 3px rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.75);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.75), inset 0 0 8px rgba(239, 68, 68, 0.35);
+    border-color: rgba(239, 68, 68, 1);
+    transform: scale(1.02);
+  }
+}
+
+.animate-pulse-red {
+  animation: pulseRedGlow 1.8s ease-in-out infinite;
+}
+
