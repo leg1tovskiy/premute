@@ -257,23 +257,53 @@ export function SidebarActionLogs({ className }: { className?: string }) {
     }
   }
 
-  // При первом открытии загружаем логи
+  // Загружаем логи сразу при монтировании (в тихом фоновом режиме)
+  useEffect(() => {
+    if (!canViewLogs) return;
+    void fetchLogs(true);
+  }, [canViewLogs]);
+
+  // Мгновенная реакция на события действий в системе и фокус окна
+  useEffect(() => {
+    if (!canViewLogs) return;
+    const handleUpdate = () => {
+      void fetchLogs(true);
+    };
+    const handleFocus = () => {
+      if (document.visibilityState === "visible") {
+        void fetchLogs(true);
+      }
+    };
+    window.addEventListener("action-log-updated", handleUpdate);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleFocus);
+    return () => {
+      window.removeEventListener("action-log-updated", handleUpdate);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleFocus);
+    };
+  }, [canViewLogs]);
+
+  // Быстрое фоновое обновление в реальном времени: каждые 3 сек при развернутом блоке, каждые 8 сек при свернутом
+  useEffect(() => {
+    if (!canViewLogs) return;
+    const intervalMs = expanded ? 3000 : 8000;
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void fetchLogs(true);
+      }
+    }, intervalMs);
+    return () => clearInterval(interval);
+  }, [canViewLogs, expanded]);
+
+  // Переключение раскрытия блока
   function handleToggle() {
     const next = !expanded;
     setExpanded(next);
-    if (next && !hasLoaded) {
-      void fetchLogs();
+    if (next) {
+      void fetchLogs(!hasLoaded ? false : true);
     }
   }
-
-  // Автообновление логов каждые 20 секунд пока блок развернут
-  useEffect(() => {
-    if (!canViewLogs || !expanded) return;
-    const interval = setInterval(() => {
-      void fetchLogs(true);
-    }, 20000);
-    return () => clearInterval(interval);
-  }, [canViewLogs, expanded]);
 
   async function handleClear() {
     if (!window.confirm("Вы действительно хотите полностью очистить журнал логов?")) {

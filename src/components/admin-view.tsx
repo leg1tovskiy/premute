@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { PageHeaderSkeleton, CardsSkeleton } from "@/components/skeletons";
 import { deleteStaffFn, exportBackupFn, listStaffFn, setStaffPerms } from "@/lib/fn";
+import { notifyActionLogUpdated } from "@/lib/action-log-events";
 import { ROOT_DISCORD_ID, fearProfileUrl } from "@/lib/constants";
 import type { StaffListItem, StaffProfile } from "@/lib/types";
 import { usePanel } from "@/lib/panel";
@@ -113,6 +114,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
           },
         });
       }
+      notifyActionLogUpdated();
       toast.success("Данные успешно сохранены");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Ошибка при сохранении прав");
@@ -160,6 +162,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
     try {
       await deleteStaffFn({ data: { userId: u.userId } });
       setRows((prev) => prev.filter((r) => r.userId !== u.userId));
+      notifyActionLogUpdated();
       toast.success(`Аккаунт ${name} успешно удалён`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Не удалось удалить аккаунт");

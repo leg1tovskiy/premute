@@ -53,6 +53,7 @@ import {
   getSuspiciousFn,
   restoreSuspiciousPlayerFn,
 } from "@/lib/fn";
+import { notifyActionLogUpdated } from "@/lib/action-log-events";
 import { fearProfileUrl } from "@/lib/constants";
 import type { DismissedPlayer, SuspiciousPayload, SuspiciousPlayer, SuspiciousSource } from "@/lib/types";
 import { AnimatedBlock, AnimatedNumber } from "@/components/animated-number";
@@ -265,6 +266,7 @@ export function SuspiciousView() {
           reason,
         },
       });
+      notifyActionLogUpdated();
       toast.success(`Игрок ${name} убран (${reason})`, {
         description: `Причина: ${reason}. Игрок перемещён в раздел «Рассмотренные».`,
         action: {
@@ -292,6 +294,7 @@ export function SuspiciousView() {
 
     try {
       await restoreSuspiciousPlayerFn({ data: { steamid } });
+      notifyActionLogUpdated();
       toast.success("Игрок возвращен в активный радар");
       void load(true);
     } catch {
@@ -305,6 +308,7 @@ export function SuspiciousView() {
     setData((prev) => (prev ? { ...prev, dismissed: [] } : prev));
     try {
       await clearDismissedPlayersFn();
+      notifyActionLogUpdated();
       toast.success("Список рассмотренных игроков очищен");
     } catch {
       toast.error("Не удалось очистить список");

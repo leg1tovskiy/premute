@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { PageHeaderSkeleton, RowsSkeleton } from "@/components/skeletons";
 import { deleteModFn, getBackupsFn, listModsFn, setBackupFn, unsetBackupFn, upsertModFn } from "@/lib/fn";
+import { notifyActionLogUpdated } from "@/lib/action-log-events";
 import { RANK_TITLE } from "@/lib/constants";
 import type { BackupsPayload, BackupEntry, RosterMod, RosterRank } from "@/lib/types";
 import { AnimatedBlock, AnimatedNumber } from "@/components/animated-number";
@@ -113,6 +114,7 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
       setMods(next.moderators);
       if (next.ranks.length) setRanks(next.ranks);
       setForm(emptyForm);
+      notifyActionLogUpdated();
       if (next.recounting) {
         setRecounting(true);
         toast.success("Добавлен. Бот пересчитывает статистику всех модераторов.");
@@ -140,6 +142,7 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
       });
       setMods(next.moderators);
       setEditing(null);
+      notifyActionLogUpdated();
       toast.success("Сохранено");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Не сохранено");
@@ -153,6 +156,7 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
     try {
       const next = await deleteModFn({ data: { steamid: m.steamid } });
       setMods(next.moderators);
+      notifyActionLogUpdated();
       toast.success(`${m.name} убран`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Не удалён");
@@ -489,6 +493,7 @@ function BackupForm({
           : { steamid, total: (tN ?? 0) as number };
       const next = await setBackupFn({ data: payload });
       onSaved(next);
+      notifyActionLogUpdated();
       if (bN != null && mN != null) {
         setTotal(String(bN + mN));
       } else {
@@ -513,6 +518,7 @@ function BackupForm({
       setMutes("");
       setTotal("");
       onSaved(next);
+      notifyActionLogUpdated();
       toast.success("Бэкап сброшен");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Не сброшен");
