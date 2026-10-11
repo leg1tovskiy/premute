@@ -185,7 +185,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
             Пользователей с активным доступом пока нет.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
             {rows.map((u) => {
               const locked = u.isRoot && u.userId !== me.userId;
               const handle = u.displayName || u.email || "Без имени";
@@ -381,7 +381,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
                     <button
                       type="button"
                       onClick={() => setOpenManual((prev) => ({ ...prev, [u.userId]: !prev[u.userId] }))}
-                      className="flex w-full items-center justify-between p-2.5 text-xs font-bold text-muted hover:text-fg hover:bg-elevated/50 transition-colors cursor-pointer select-none"
+                      className="flex w-full items-center justify-between p-2.5 text-xs font-bold text-muted hover:text-fg hover:bg-elevated/50 transition-colors cursor-pointer select-none outline-none focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/50"
                     >
                       <span className="flex items-center gap-1.5">
                         <SlidersHorizontal className="size-3.5 text-muted" />
