@@ -68,7 +68,6 @@ export type DismissReason = "Наказан" | "Нарушений не обна
 
 export const DISMISS_REASONS: Array<{
   id: DismissReason;
-  num: number;
   title: string;
   subtitle: string;
   description: string;
@@ -78,7 +77,6 @@ export const DISMISS_REASONS: Array<{
 }> = [
   {
     id: "Наказан",
-    num: 1,
     title: "Наказан",
     subtitle: "Бан или мут за нарушение",
     description: "Игрок понёс наказание на сервере (заблокирован чат/микрофон или выдан бан).",
@@ -88,7 +86,6 @@ export const DISMISS_REASONS: Array<{
   },
   {
     id: "Нарушений не обнаружено",
-    num: 2,
     title: "Нарушений не обнаружено",
     subtitle: "Игрок чист / ложная жалоба",
     description: "Подозрения проверены и не подтвердились, игрок не нарушает правила проекта.",
@@ -98,7 +95,6 @@ export const DISMISS_REASONS: Array<{
   },
   {
     id: "Покинул сервер",
-    num: 3,
     title: "Покинул сервер",
     subtitle: "Отключился от сервера",
     description: "Игрок вышел из игры, дальнейший надзор на данный момент не требуется.",
@@ -1170,17 +1166,17 @@ export function SuspiciousView() {
                           {d.reason === "Наказан" ? (
                             <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-red-500/15 border border-red-500/35 px-2.5 py-0.5 font-mono text-[10px] font-black text-red-400 shadow-[0_0_8px_rgba(239,68,68,0.2)]">
                               <Gavel className="size-3" />
-                              1) НАКАЗАН
+                              НАКАЗАН
                             </span>
                           ) : d.reason === "Нарушений не обнаружено" ? (
                             <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-sky-500/15 border border-sky-500/35 px-2.5 py-0.5 font-mono text-[10px] font-black text-sky-400 shadow-[0_0_8px_rgba(14,165,233,0.2)]">
                               <ShieldCheck className="size-3" />
-                              2) НАРУШЕНИЙ НЕ ОБНАРУЖЕНО
+                              НАРУШЕНИЙ НЕ ОБНАРУЖЕНО
                             </span>
                           ) : d.reason === "Покинул сервер" ? (
                             <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-amber-500/15 border border-amber-500/35 px-2.5 py-0.5 font-mono text-[10px] font-black text-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.2)]">
                               <LogOut className="size-3" />
-                              3) ПОКИНУЛ СЕРВЕР
+                              ПОКИНУЛ СЕРВЕР
                             </span>
                           ) : (
                             <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 font-mono text-[10px] font-bold text-emerald-400">
@@ -1327,9 +1323,8 @@ export function SuspiciousView() {
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-extrabold text-fg group-hover:text-accent transition-colors flex items-center gap-1.5">
-                        <span className="font-mono text-xs opacity-60">#{r.num}</span>
-                        <span>{r.title}</span>
+                      <span className="text-sm font-extrabold text-fg group-hover:text-accent transition-colors">
+                        {r.title}
                       </span>
                       <span className="inline-flex items-center text-[10px] font-mono font-bold text-muted group-hover:text-accent transition-colors uppercase">
                         Выбрать &rarr;
