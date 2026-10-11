@@ -429,3 +429,26 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ==========================================================================
+   Radix UI / react-remove-scroll Zero Layout Shift Fix
+   Neutralizes scrollbar removal & margin-right compensation on body when
+   opening dropdowns (Select) or modals.
+   ========================================================================== */
+html body[data-scroll-locked],
+html[data-theme] body[data-scroll-locked],
+body[data-scroll-locked] {
+  margin-right: 0px !important;
+  padding-right: 0px !important;
+  overflow: visible !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+.with-scroll-bars-hidden,
+.right-scroll-bar-position,
+.width-before-scroll-bar {
+  margin-right: 0px !important;
+  padding-right: 0px !important;
+  right: 0px !important;
+}
+
