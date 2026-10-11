@@ -8,7 +8,9 @@ import {
   ExternalLink,
   Flame,
   Gamepad2,
+  Gavel,
   Loader2,
+  LogOut,
   MessageSquareWarning,
   RefreshCw,
   RotateCcw,
@@ -22,13 +24,21 @@ import {
   Trash2,
   TriangleAlert,
   UserCheck,
+  UserMinus,
   UserPlus,
   Users,
+  X,
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -53,6 +63,50 @@ const SOURCE_BADGES: Record<SuspiciousSource, { label: string; tone: "muted" | "
   ticket: { label: "Тикет", tone: "warn" },
   report: { label: "Жалоба в игре", tone: "danger" },
 };
+
+export type DismissReason = "Наказан" | "Нарушений не обнаружено" | "Покинул сервер";
+
+export const DISMISS_REASONS: Array<{
+  id: DismissReason;
+  num: number;
+  title: string;
+  subtitle: string;
+  description: string;
+  icon: typeof Gavel;
+  colorClass: string;
+  borderClass: string;
+}> = [
+  {
+    id: "Наказан",
+    num: 1,
+    title: "Наказан",
+    subtitle: "Бан или мут за нарушение",
+    description: "Игрок понёс наказание на сервере (заблокирован чат/микрофон или выдан бан).",
+    icon: Gavel,
+    colorClass: "text-red-400 bg-red-500/15 border-red-500/35",
+    borderClass: "hover:border-red-500/70 hover:bg-red-500/10 focus:ring-red-500/40",
+  },
+  {
+    id: "Нарушений не обнаружено",
+    num: 2,
+    title: "Нарушений не обнаружено",
+    subtitle: "Игрок чист / ложная жалоба",
+    description: "Подозрения проверены и не подтвердились, игрок не нарушает правила проекта.",
+    icon: ShieldCheck,
+    colorClass: "text-sky-400 bg-sky-500/15 border-sky-500/35",
+    borderClass: "hover:border-sky-500/70 hover:bg-sky-500/10 focus:ring-sky-500/40",
+  },
+  {
+    id: "Покинул сервер",
+    num: 3,
+    title: "Покинул сервер",
+    subtitle: "Отключился от сервера",
+    description: "Игрок вышел из игры, дальнейший надзор на данный момент не требуется.",
+    icon: LogOut,
+    colorClass: "text-amber-400 bg-amber-500/15 border-amber-500/35",
+    borderClass: "hover:border-amber-500/70 hover:bg-amber-500/10 focus:ring-amber-500/40",
+  },
+];
 
 function isToxicityOrSpam(reason?: string | null, reasons?: string[]): boolean {
   const parts: string[] = [];
@@ -144,6 +198,10 @@ export function SuspiciousView() {
   const [newcomersSort, setNewcomersSort] = useState<NewcomersSort>("time_asc");
   const [visibleCount, setVisibleCount] = useState(50);
 
+  // Модалка подтверждения с выбором причины
+  const [dismissTarget, setDismissTarget] = useState<SuspiciousPlayer | null>(null);
+  const [dismissing, setDismissing] = useState(false);
+
   async function load(silent = false) {
     if (silent) setRefreshing(true);
     else setLoading(true);
@@ -175,9 +233,10 @@ export function SuspiciousView() {
   const rawNewcomers = data?.newcomers ?? [];
   const dismissed = data?.dismissed ?? [];
 
-  async function handleDismiss(player: SuspiciousPlayer) {
+  async function handleDismiss(player: SuspiciousPlayer, reason: DismissReason) {
     const sid = player.steamid;
     const name = getPlayerDisplayName(player.nickname, sid);
+    setDismissing(true);
 
     // Optimistic UI update
     setData((prev) => {
@@ -192,7 +251,7 @@ export function SuspiciousView() {
             nickname: player.nickname,
             dismissedByName: "Вы",
             dismissedAt: new Date().toISOString(),
-            reason: player.reason || (player.reasons && player.reasons.length > 0 ? player.reasons[0] : undefined),
+            reason,
           },
           ...(prev.dismissed ?? []).filter((d) => d.steamid !== sid),
         ],
@@ -204,11 +263,11 @@ export function SuspiciousView() {
         data: {
           steamid: sid,
           nickname: player.nickname,
-          reason: player.reason || undefined,
+          reason,
         },
       });
-      toast.success(`Игрок ${name} убран из списка`, {
-        description: "Нарушение отработано. Игрок перемещён в раздел «Рассмотренные».",
+      toast.success(`Игрок ${name} убран (${reason})`, {
+        description: `Причина: ${reason}. Игрок перемещён в раздел «Рассмотренные».`,
         action: {
           label: "Вернуть",
           onClick: () => void handleRestore(sid),
@@ -217,6 +276,9 @@ export function SuspiciousView() {
     } catch {
       toast.error("Не удалось убрать игрока на сервере");
       void load(true);
+    } finally {
+      setDismissing(false);
+      setDismissTarget(null);
     }
   }
 
@@ -725,9 +787,9 @@ export function SuspiciousView() {
 
                         <button
                           type="button"
-                          onClick={() => void handleDismiss(p)}
+                          onClick={() => setDismissTarget(p)}
                           className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-2.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500/25 hover:border-emerald-500 transition-all shadow-sm shrink-0"
-                          title="Игрок наказан — убрать из радара"
+                          title="Убрать игрока из радара с выбором причины"
                         >
                           <CheckCircle2 className="size-3.5" />
                           <span>Убрать</span>
@@ -995,9 +1057,9 @@ export function SuspiciousView() {
                           {/* Action: Dismiss */}
                           <button
                             type="button"
-                            onClick={() => void handleDismiss(p)}
+                            onClick={() => setDismissTarget(p)}
                             className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-2.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500/25 hover:border-emerald-500 transition-all shadow-sm shrink-0"
-                            title="Игрок проверен / наказан — убрать из радара"
+                            title="Убрать игрока из радара с выбором причины"
                           >
                             <CheckCircle2 className="size-3.5" />
                             <span>Убрать</span>
@@ -1105,16 +1167,27 @@ export function SuspiciousView() {
                             {getPlayerDisplayName(d.nickname, d.steamid)}
                           </span>
 
-                          <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-400">
-                            <CheckCircle2 className="size-3" />
-                            НАКАЗАН / РАССМОТРЕН
-                          </span>
-
-                          {d.reason ? (
-                            <Badge tone="muted" className="font-bold text-[10px] px-2 py-0.5">
-                              {d.reason}
-                            </Badge>
-                          ) : null}
+                          {d.reason === "Наказан" ? (
+                            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-red-500/15 border border-red-500/35 px-2.5 py-0.5 font-mono text-[10px] font-black text-red-400 shadow-[0_0_8px_rgba(239,68,68,0.2)]">
+                              <Gavel className="size-3" />
+                              1) НАКАЗАН
+                            </span>
+                          ) : d.reason === "Нарушений не обнаружено" ? (
+                            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-sky-500/15 border border-sky-500/35 px-2.5 py-0.5 font-mono text-[10px] font-black text-sky-400 shadow-[0_0_8px_rgba(14,165,233,0.2)]">
+                              <ShieldCheck className="size-3" />
+                              2) НАРУШЕНИЙ НЕ ОБНАРУЖЕНО
+                            </span>
+                          ) : d.reason === "Покинул сервер" ? (
+                            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-amber-500/15 border border-amber-500/35 px-2.5 py-0.5 font-mono text-[10px] font-black text-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.2)]">
+                              <LogOut className="size-3" />
+                              3) ПОКИНУЛ СЕРВЕР
+                            </span>
+                          ) : (
+                            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 font-mono text-[10px] font-bold text-emerald-400">
+                              <CheckCircle2 className="size-3" />
+                              {d.reason ? d.reason : "РАССМОТРЕН"}
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] text-subtle">
@@ -1193,6 +1266,103 @@ export function SuspiciousView() {
           </span>
         </p>
       </AnimatedBlock>
+
+      {/* ── Dialog Modal: Reason Selection for Dismissing Player ──── */}
+      <AlertDialog
+        open={Boolean(dismissTarget)}
+        onOpenChange={(open) => {
+          if (!open && !dismissing) setDismissTarget(null);
+        }}
+      >
+        <AlertDialogContent className="w-[min(94vw,32rem)] max-w-lg rounded-3xl border border-border/90 bg-surface/95 p-5 sm:p-6 glass-panel shadow-2xl backdrop-blur-xl">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="grid size-10 place-items-center rounded-2xl bg-danger/15 border border-danger/30 text-danger shadow-md shadow-danger/10">
+                <UserMinus className="size-5" />
+              </div>
+              <div>
+                <AlertDialogTitle className="text-base sm:text-lg font-black text-fg">
+                  Убрать игрока из списка
+                </AlertDialogTitle>
+                <p className="text-xs font-mono text-muted">
+                  {dismissTarget ? getPlayerDisplayName(dismissTarget.nickname, dismissTarget.steamid) : ""}
+                  {dismissTarget?.steamid ? ` · ${dismissTarget.steamid}` : ""}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDismissTarget(null)}
+              disabled={dismissing}
+              className="rounded-xl p-1.5 text-muted hover:bg-elevated hover:text-fg transition-all"
+              title="Закрыть"
+            >
+              <X className="size-4.5" />
+            </button>
+          </div>
+
+          <AlertDialogDescription className="mt-3 text-xs text-muted leading-relaxed">
+            Укажите причину, по которой данный аккаунт убирается из активного мониторинга:
+          </AlertDialogDescription>
+
+          <div className="mt-4 grid gap-2.5">
+            {DISMISS_REASONS.map((r) => {
+              const Icon = r.icon;
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  disabled={dismissing}
+                  onClick={() => {
+                    if (dismissTarget) void handleDismiss(dismissTarget, r.id);
+                  }}
+                  className={cn(
+                    "group relative flex items-start gap-3.5 rounded-2xl border border-border/80 bg-elevated/50 p-3.5 text-left transition-all hover:scale-[1.01] hover:bg-elevated hover:shadow-lg focus:outline-none focus:ring-2 disabled:opacity-50",
+                    r.borderClass,
+                  )}
+                >
+                  <div className={cn("grid size-9 shrink-0 place-items-center rounded-xl border shadow-sm", r.colorClass)}>
+                    <Icon className="size-4.5" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-extrabold text-fg group-hover:text-accent transition-colors flex items-center gap-1.5">
+                        <span className="font-mono text-xs opacity-60">#{r.num}</span>
+                        <span>{r.title}</span>
+                      </span>
+                      <span className="inline-flex items-center text-[10px] font-mono font-bold text-muted group-hover:text-accent transition-colors uppercase">
+                        Выбрать &rarr;
+                      </span>
+                    </div>
+                    <p className="text-xs font-semibold text-fg/75 mt-0.5">
+                      {r.subtitle}
+                    </p>
+                    <p className="text-[11px] text-muted leading-snug mt-0.5">
+                      {r.description}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-5 flex items-center justify-between pt-2 border-t border-border/60">
+            <span className="text-[11px] font-mono text-subtle">
+              Игрок будет перемещён в раздел «Рассмотренные»
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={dismissing}
+              onClick={() => setDismissTarget(null)}
+              className="rounded-xl px-4 text-xs font-bold"
+            >
+              Отмена
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
