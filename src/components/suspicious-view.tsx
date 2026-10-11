@@ -121,7 +121,7 @@ function isCsgoServer(server?: string | null): boolean {
 
 function getKdSeverity(kd?: number | null): "extreme" | "high" | "normal" {
   if (typeof kd !== "number") return "normal";
-  if (kd > 4) return "extreme";
+  if (kd >= 4) return "extreme";
   if (kd >= 2) return "high";
   return "normal";
 }
@@ -582,7 +582,7 @@ export function SuspiciousView() {
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-lg border-2 border-red-500 bg-red-500/30 px-2.5 py-0.5 font-bold text-red-100 animate-pulse-red shadow-[0_0_16px_rgba(239,68,68,0.65)] text-[11px]">
               <Flame className="size-3 text-red-400 animate-pulse" />
-              <span>K/D &gt; 4.0 (Красная пульсация)</span>
+              <span>K/D &ge; 4.0 (Красная пульсация)</span>
             </span>
           </div>
         </AnimatedBlock>
