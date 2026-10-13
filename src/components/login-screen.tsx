@@ -59,7 +59,7 @@ export function LoginScreen() {
           </span>
           <div>
             <p className="text-xs font-black uppercase tracking-[0.25em] text-accent">PremuteBOT</p>
-            <p className="text-xs font-semibold text-muted">Панель управления FEAR</p>
+            <p className="text-xs font-semibold text-muted">Панель для модераторов FearProject</p>
           </div>
         </div>
 
