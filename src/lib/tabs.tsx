@@ -4,14 +4,15 @@ import {
   Radio,
   Shield,
   Trophy,
+  User,
   Users,
   type LucideIcon,
 } from "lucide-react";
 import type { Caps } from "@/lib/types";
 
-export type TabId = "stats" | "online" | "tops" | "suspicious" | "mods" | "admin";
+export type TabId = "mystats" | "stats" | "online" | "tops" | "suspicious" | "mods" | "admin";
 
-export type TabPath = "/stats" | "/online" | "/tops" | "/suspicious" | "/mods" | "/admin";
+export type TabPath = "/mystats" | "/stats" | "/online" | "/tops" | "/suspicious" | "/mods" | "/admin";
 
 export type TabDef = {
   id: TabId;
@@ -23,7 +24,8 @@ export type TabDef = {
 };
 
 export const TABS: TabDef[] = [
-  { id: "stats", to: "/stats", label: "Статистика", desc: "Статистика модераторов", icon: BarChart3, cap: "canStats" },
+  { id: "mystats", to: "/mystats", label: "Моя статистика", desc: "Личные показатели и наказания", icon: User, cap: "canOwnStats" },
+  { id: "stats", to: "/stats", label: "Статистика", desc: "Общая статистика модераторов", icon: BarChart3, cap: "canGeneralStats" },
   { id: "online", to: "/online", label: "Онлайн", desc: "Онлайн модераторов на серверах", icon: Radio, cap: "canActivity" },
   { id: "tops", to: "/tops", label: "Топы", desc: "Рейтинг модераторов", icon: Trophy, cap: "canGeneralStats" },
   { id: "suspicious", to: "/suspicious", label: "Игроки", desc: "Подозрительные и новореги", icon: Gamepad2, cap: "canSuspicious" },

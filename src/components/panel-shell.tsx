@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
   ArrowRight,
   Award,
   BarChart3,
+  Camera,
   Check,
   CheckCircle2,
   ChevronRight,
@@ -34,6 +35,7 @@ import {
   TrendingUp,
   Trophy,
   Unlock,
+  Upload,
   User,
   Users,
   VolumeX,
@@ -49,7 +51,7 @@ import { StatusIndicator } from "@/components/status-indicator";
 import { Skeleton } from "@/components/skeletons";
 import { allowedTabs } from "@/lib/tabs";
 import { usePanel } from "@/lib/panel";
-import { getServersFn, getStatsFn, getRecentPunishmentsFn, type LivePunishmentItem } from "@/lib/fn";
+import { getServersFn, getStatsFn, getRecentPunishmentsFn, updateMyAvatarFn, type LivePunishmentItem } from "@/lib/fn";
 import type { StatsPayload } from "@/lib/types";
 import { RANK_SHORT, RANK_TITLE } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
@@ -78,8 +80,203 @@ function useMskClock() {
   return time;
 }
 
+function ChangeAvatarModal({
+  currentImage,
+  onClose,
+  onSaved,
+}: {
+  currentImage: string | null;
+  onClose: () => void;
+  onSaved: (newImage: string | null) => void;
+}) {
+  const [url, setUrl] = useState(currentImage || "");
+  const [preview, setPreview] = useState(currentImage || "");
+  const [busy, setBusy] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Файл слишком большой (максимум 5 МБ)");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const src = ev.target?.result as string;
+      if (!src) return;
+
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxDim = 256;
+        let w = img.width;
+        let h = img.height;
+        if (w > h) {
+          if (w > maxDim) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          }
+        } else {
+          if (h > maxDim) {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, w, h);
+          const resizedData = canvas.toDataURL("image/jpeg", 0.85);
+          setPreview(resizedData);
+          setUrl(resizedData);
+        } else {
+          setPreview(src);
+          setUrl(src);
+        }
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function handleSave() {
+    setBusy(true);
+    try {
+      const finalImage = preview.trim() || null;
+      const updated = await updateMyAvatarFn({ data: { image: finalImage } });
+      onSaved(updated.image ?? null);
+      toast.success("Аватарка успешно обновлена!");
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.message || "Не удалось обновить аватарку");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRemove() {
+    setBusy(true);
+    try {
+      const updated = await updateMyAvatarFn({ data: { image: null } });
+      onSaved(null);
+      toast.success("Аватарка удалена");
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.message || "Не удалось удалить аватарку");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-sm rounded-3xl border border-border/80 bg-surface/95 p-6 shadow-2xl glass-panel space-y-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-black text-fg flex items-center gap-2">
+            <Camera className="size-4.5 text-accent" />
+            Смена аватарки
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl p-1.5 text-muted hover:bg-elevated hover:text-fg transition-colors cursor-pointer"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        {/* Preview */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative size-24 overflow-hidden rounded-3xl border-2 border-accent/40 shadow-xl bg-elevated">
+            {preview ? (
+              <img src={preview} alt="Предпросмотр" className="size-full object-cover" />
+            ) : (
+              <div className="grid size-full place-items-center text-xl font-bold text-muted">
+                ?
+              </div>
+            )}
+          </div>
+          <span className="text-[11px] text-muted">Предпросмотр нового аватара</span>
+        </div>
+
+        {/* File upload button */}
+        <div className="space-y-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-border/80 bg-elevated/80 py-2.5 px-3 text-xs font-bold text-fg hover:border-accent hover:text-accent transition-all cursor-pointer shadow-sm"
+          >
+            <Upload className="size-4" />
+            Выбрать файл с устройства
+          </button>
+        </div>
+
+        {/* Or enter URL */}
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-bold text-muted">Или укажите прямую ссылку на фото:</label>
+          <input
+            type="url"
+            placeholder="https://example.com/avatar.jpg"
+            value={url.startsWith("data:") ? "" : url}
+            onChange={(e) => {
+              setUrl(e.target.value);
+              setPreview(e.target.value);
+            }}
+            className="h-10 w-full rounded-xl border border-border/80 bg-elevated/60 px-3 text-xs text-fg focus:border-accent outline-none"
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 pt-2">
+          {currentImage ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={handleRemove}
+              className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-xs font-bold text-danger hover:bg-danger/20 transition-colors cursor-pointer"
+            >
+              Удалить
+            </button>
+          ) : null}
+
+          <div className="flex-1" />
+
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onClose}
+            className="rounded-xl border border-border px-4 py-2 text-xs font-bold text-muted hover:text-fg transition-colors cursor-pointer"
+          >
+            Отмена
+          </button>
+
+          <button
+            type="button"
+            disabled={busy || (!preview && !currentImage)}
+            onClick={handleSave}
+            className="rounded-xl bg-accent px-5 py-2 text-xs font-bold text-accent-fg shadow-md shadow-accent/20 hover:brightness-110 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+          >
+            {busy ? "Сохранение..." : "Сохранить"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PanelShell({ children }: { children: ReactNode }) {
-  const { profile } = usePanel();
+  const { profile, setProfile } = usePanel();
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const location = useRouterState({ select: (s) => s.location });
   const pathname = location.pathname;
   const navigate = useNavigate();
@@ -299,20 +496,28 @@ export function PanelShell({ children }: { children: ReactNode }) {
       <aside className="sticky top-0 hidden w-64 lg:w-72 shrink-0 flex-col gap-3 p-3 xl:flex z-30 select-none self-start">
         {/* Окошко 1: Профиль (как на Фото 1/2) */}
         <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-4 text-center shadow-sm">
-          <div className="relative mx-auto size-16">
+          <button
+            type="button"
+            onClick={() => setAvatarModalOpen(true)}
+            className="group relative mx-auto block size-16 cursor-pointer focus:outline-none"
+            title="Нажмите, чтобы сменить аватарку"
+          >
             {profile.image ? (
               <img
                 src={profile.image}
                 alt=""
-                className="size-16 rounded-2xl border border-border/80 object-cover shadow-sm"
+                className="size-16 rounded-2xl border border-border/80 object-cover shadow-sm transition-all group-hover:brightness-75 group-hover:ring-2 group-hover:ring-accent"
               />
             ) : (
-              <div className="grid size-16 place-items-center rounded-2xl border border-border/80 bg-gradient-to-tr from-accent/30 to-elevated text-base font-bold text-fg shadow-sm">
+              <div className="grid size-16 place-items-center rounded-2xl border border-border/80 bg-gradient-to-tr from-accent/30 to-elevated text-base font-bold text-fg shadow-sm transition-all group-hover:brightness-75 group-hover:ring-2 group-hover:ring-accent">
                 {(profile.displayName || profile.tag || "U")[0].toUpperCase()}
               </div>
             )}
+            <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Camera className="size-5 text-white drop-shadow" />
+            </div>
             <span className="absolute -bottom-1 -right-1 size-3.5 rounded-full border-2 border-surface bg-success shadow-sm" />
-          </div>
+          </button>
 
           <div className="mt-2.5">
             <p className="truncate text-sm font-extrabold text-fg">
@@ -454,20 +659,28 @@ export function PanelShell({ children }: { children: ReactNode }) {
 
             {/* Карточка 3: Профиль как на Фото 2 */}
             <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-4 text-center shadow-sm">
-              <div className="relative mx-auto size-16">
+              <button
+                type="button"
+                onClick={() => setAvatarModalOpen(true)}
+                className="group relative mx-auto block size-16 cursor-pointer focus:outline-none"
+                title="Нажмите, чтобы сменить аватарку"
+              >
                 {profile.image ? (
                   <img
                     src={profile.image}
                     alt=""
-                    className="size-16 rounded-2xl border border-border/80 object-cover shadow-sm"
+                    className="size-16 rounded-2xl border border-border/80 object-cover shadow-sm transition-all group-hover:brightness-75 group-hover:ring-2 group-hover:ring-accent"
                   />
                 ) : (
-                  <div className="grid size-16 place-items-center rounded-2xl border border-border/80 bg-gradient-to-tr from-accent/30 to-elevated text-base font-bold text-fg shadow-sm">
+                  <div className="grid size-16 place-items-center rounded-2xl border border-border/80 bg-gradient-to-tr from-accent/30 to-elevated text-base font-bold text-fg shadow-sm transition-all group-hover:brightness-75 group-hover:ring-2 group-hover:ring-accent">
                     {(profile.displayName || profile.tag || "U")[0].toUpperCase()}
                   </div>
                 )}
+                <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Camera className="size-5 text-white drop-shadow" />
+                </div>
                 <span className="absolute -bottom-1 -right-1 size-3.5 rounded-full border-2 border-surface bg-success shadow-sm" />
-              </div>
+              </button>
 
               <div className="mt-2.5">
                 <p className="truncate text-sm font-extrabold text-fg">
@@ -492,6 +705,14 @@ export function PanelShell({ children }: { children: ReactNode }) {
             <SidebarActionLogs />
           </div>
         </div>
+      ) : null}
+
+      {avatarModalOpen ? (
+        <ChangeAvatarModal
+          currentImage={profile.image}
+          onClose={() => setAvatarModalOpen(false)}
+          onSaved={(newImg) => setProfile({ ...profile, image: newImg })}
+        />
       ) : null}
     </div>
   );

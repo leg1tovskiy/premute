@@ -1,6 +1,25 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Download, ExternalLink, Loader2, Shield, ShieldCheck, SlidersHorizontal, Sparkles, Terminal, Trash2, User, Users, X } from "lucide-react";
+import {
+  ChevronDown,
+  Download,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Loader2,
+  Plus,
+  Shield,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  Terminal,
+  Trash2,
+  User,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +33,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageHeaderSkeleton, CardsSkeleton } from "@/components/skeletons";
-import { deleteStaffFn, exportBackupFn, listStaffFn, setStaffPerms } from "@/lib/fn";
+import {
+  createStaffUserFn,
+  deleteStaffFn,
+  exportBackupFn,
+  listStaffFn,
+  setStaffPerms,
+  updateStaffPasswordFn,
+} from "@/lib/fn";
 import { notifyActionLogUpdated } from "@/lib/action-log-events";
 import { ROOT_DISCORD_ID, fearProfileUrl } from "@/lib/constants";
 import type { StaffListItem, StaffProfile } from "@/lib/types";
@@ -28,7 +54,10 @@ export function AdminView({ me }: { me: StaffProfile }) {
   const [loading, setLoading] = useState(true);
   const [backingUp, setBackingUp] = useState(false);
   const [manualModalUserId, setManualModalUserId] = useState<string | null>(null);
+  const [createUserOpen, setCreateUserOpen] = useState(false);
+  const [changePasswordUser, setChangePasswordUser] = useState<StaffListItem | null>(null);
   const meIsMainOwner = me.userId === ROOT_DISCORD_ID || me.discordId === ROOT_DISCORD_ID;
+  const canCreate = me.isOwner || me.isBotOwner || me.isRoot;
 
   useEffect(() => {
     if (!manualModalUserId) return;
@@ -192,20 +221,35 @@ export function AdminView({ me }: { me: StaffProfile }) {
       {/* ── Admin Header Banner ────────────────────────────────────── */}
       <AnimatedBlock delay={0}>
         <div className="relative overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-r from-surface via-surface/95 to-elevated/70 p-6 sm:p-7 shadow-2xl glass-panel cyber-border-glow">
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-accent/20 border border-accent/40 px-3 py-0.5 text-xs font-black uppercase tracking-wider text-accent">
-                СИСТЕМА БЕЗОПАСНОСТИ &middot; ACL
-              </span>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-accent/20 border border-accent/40 px-3 py-0.5 text-xs font-black uppercase tracking-wider text-accent">
+                  СИСТЕМА БЕЗОПАСНОСТИ &middot; ACL
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black text-fg flex items-center gap-2.5">
+                Управление правами доступа
+                <Shield className="size-6 text-accent" />
+              </h1>
+              <p className="max-w-3xl text-xs sm:text-sm text-muted leading-relaxed">
+                Гибкая настройка ролей и прав администраторов и модераторов. Управление доступом к статистике,
+                онлайну на серверах, списку игроков, составу команды и правам владельцев.
+              </p>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-fg flex items-center gap-2.5">
-              Управление правами доступа
-              <Shield className="size-6 text-accent" />
-            </h1>
-            <p className="max-w-3xl text-xs sm:text-sm text-muted leading-relaxed">
-              Гибкая настройка ролей и прав администраторов и модераторов. Управление доступом к статистике,
-              онлайну на серверах, списку игроков, составу команды и правам владельцев.
-            </p>
+
+            {canCreate ? (
+              <div className="shrink-0">
+                <Button
+                  type="button"
+                  onClick={() => setCreateUserOpen(true)}
+                  className="h-11 gap-2 rounded-2xl bg-accent hover:bg-accent/90 text-accent-fg font-black text-xs shadow-lg shadow-accent/25 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                >
+                  <UserPlus className="size-4" />
+                  Создать профиль
+                </Button>
+              </div>
+            ) : null}
           </div>
         </div>
       </AnimatedBlock>
@@ -270,6 +314,11 @@ export function AdminView({ me }: { me: StaffProfile }) {
                         <p className="truncate font-extrabold text-sm text-fg" title={handle}>
                           {handle}
                         </p>
+                        {u.username ? (
+                          <span className="font-mono text-xs font-bold text-accent">
+                            @{u.username}
+                          </span>
+                        ) : null}
                       </div>
 
                       <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -429,17 +478,32 @@ export function AdminView({ me }: { me: StaffProfile }) {
                       {u.createdAt ? `Рег: ${new Date(u.createdAt).toLocaleDateString("ru-RU")}` : ""}
                     </span>
 
-                    {!isMainOwner(u) && !u.isRoot && u.userId !== me.userId ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 rounded-lg text-xs font-bold text-danger hover:bg-danger/10 hover:text-danger"
-                        onClick={() => handleDelete(u)}
-                      >
-                        <Trash2 className="mr-1 size-3" />
-                        Удалить
-                      </Button>
-                    ) : null}
+                    <div className="flex items-center gap-1.5">
+                      {canCreate && !locked ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 rounded-lg text-xs font-bold text-muted hover:text-accent hover:bg-accent/10"
+                          onClick={() => setChangePasswordUser(u)}
+                          title="Сменить пароль"
+                        >
+                          <KeyRound className="mr-1 size-3 text-accent" />
+                          Пароль
+                        </Button>
+                      ) : null}
+
+                      {!isMainOwner(u) && !u.isRoot && u.userId !== me.userId ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 rounded-lg text-xs font-bold text-danger hover:bg-danger/10 hover:text-danger"
+                          onClick={() => handleDelete(u)}
+                        >
+                          <Trash2 className="mr-1 size-3" />
+                          Удалить
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
                 </article>
               );
@@ -606,6 +670,21 @@ export function AdminView({ me }: { me: StaffProfile }) {
             );
           })()
         : null}
+
+      {createUserOpen ? (
+        <CreateUserModal
+          actor={me}
+          onClose={() => setCreateUserOpen(false)}
+          onCreated={(newUser) => setRows((prev) => [newUser, ...prev])}
+        />
+      ) : null}
+
+      {changePasswordUser ? (
+        <ChangePasswordModal
+          user={changePasswordUser}
+          onClose={() => setChangePasswordUser(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -784,3 +863,357 @@ function Toggle({
     </label>
   );
 }
+
+function CreateUserModal({
+  actor,
+  onClose,
+  onCreated,
+}: {
+  actor: StaffProfile;
+  onClose: () => void;
+  onCreated: (newUser: StaffListItem) => void;
+}) {
+  const [displayName, setDisplayName] = useState("");
+  const [steamid, setSteamid] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [roleRank, setRoleRank] = useState<string>("none");
+  const [canStats, setCanStats] = useState(false);
+  const [canActivity, setCanActivity] = useState(false);
+  const [canSuspicious, setCanSuspicious] = useState(true);
+  const [canMods, setCanMods] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [isBotOwner, setIsBotOwner] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  function handleRolePresetChange(val: string) {
+    setRoleRank(val);
+    if (val === "owner") {
+      setIsOwner(true);
+      setIsBotOwner(false);
+      setCanStats(true);
+      setCanActivity(true);
+      setCanSuspicious(true);
+      setCanMods(true);
+    } else if (val === "bot_owner") {
+      setIsOwner(true);
+      setIsBotOwner(true);
+      setCanStats(true);
+      setCanActivity(true);
+      setCanSuspicious(true);
+      setCanMods(true);
+    } else if (val === "none") {
+      setIsOwner(false);
+      setIsBotOwner(false);
+      setCanStats(false);
+      setCanActivity(false);
+      setCanSuspicious(false);
+      setCanMods(false);
+    } else {
+      const rank = Number(val);
+      setIsOwner(false);
+      setIsBotOwner(false);
+      const isSenior = rank >= 3;
+      setCanStats(isSenior);
+      setCanActivity(isSenior);
+      setCanSuspicious(true);
+      setCanMods(isSenior);
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const cleanNick = displayName.trim();
+    const cleanLogin = username.trim().toLowerCase();
+    const cleanPass = password.trim();
+    const cleanSid = steamid.trim().replace(/\D/g, "");
+
+    if (!cleanNick) {
+      toast.error("Укажите НИК");
+      return;
+    }
+    if (!cleanLogin || cleanLogin.length < 3) {
+      toast.error("Логин должен быть от 3 символов");
+      return;
+    }
+    if (!cleanPass || cleanPass.length < 4) {
+      toast.error("Пароль должен быть от 4 символов");
+      return;
+    }
+    if (cleanSid && cleanSid.length !== 17) {
+      toast.error("SteamID64 должен содержать ровно 17 цифр");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const numericRank = !isNaN(Number(roleRank)) && Number(roleRank) > 0 ? Number(roleRank) : null;
+      const created = await createStaffUserFn({
+        data: {
+          displayName: cleanNick,
+          steamid: cleanSid || null,
+          username: cleanLogin,
+          password: cleanPass,
+          roleRank: numericRank,
+          canStats: isOwner || canStats,
+          canActivity: isOwner || canActivity,
+          canSuspicious: isOwner || canSuspicious,
+          canMods: isOwner || canMods,
+          isOwner,
+          isBotOwner,
+        },
+      });
+
+      notifyActionLogUpdated();
+      toast.success(`Профиль ${cleanNick} (@${cleanLogin}) успешно создан!`);
+      onCreated(created);
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.message || "Ошибка создания профиля");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      <div className="relative my-8 w-full max-w-lg rounded-3xl border border-border/80 bg-surface/95 p-6 shadow-2xl glass-panel space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="grid size-10 place-items-center rounded-2xl bg-accent/20 border border-accent/40 text-accent">
+              <UserPlus className="size-5" />
+            </span>
+            <div>
+              <h2 className="text-lg font-black text-fg">Создать новый профиль</h2>
+              <p className="text-xs text-muted">Создание учётной записи с логином, паролем и правами</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl p-1.5 text-muted hover:bg-elevated hover:text-fg transition-colors cursor-pointer"
+          >
+            <X className="size-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-fg">НИК *</label>
+              <Input
+                placeholder="minilyyy"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                required
+                className="h-10 rounded-xl bg-elevated/70 text-xs focus:border-accent"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-fg">SteamID64 (17 цифр)</label>
+              <Input
+                placeholder="76561198..."
+                value={steamid}
+                onChange={(e) => setSteamid(e.target.value)}
+                className="h-10 rounded-xl bg-elevated/70 text-xs font-mono focus:border-accent"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-fg">Логин (для входа) *</label>
+              <Input
+                placeholder="логин"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                autoCapitalize="none"
+                className="h-10 rounded-xl bg-elevated/70 text-xs font-mono focus:border-accent"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-fg">Пароль *</label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-10 rounded-xl bg-elevated/70 pr-9 text-xs focus:border-accent"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-fg cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Роль */}
+          <div className="space-y-1 pt-1">
+            <label className="text-xs font-bold text-fg">Роль (пресет прав)</label>
+            <Select value={roleRank} onValueChange={handleRolePresetChange}>
+              <SelectTrigger className="h-10 rounded-xl bg-elevated/70 text-xs">
+                <SelectValue placeholder="Выберите роль" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Без роли (настраивается вручную)</SelectItem>
+                <SelectItem value="1">Мл. Модератор (Ранг 1: своя стата, игроки)</SelectItem>
+                <SelectItem value="2">Модератор (Ранг 2: своя стата, игроки)</SelectItem>
+                <SelectItem value="3">Ст. Модератор (Ранг 3: вся стата, онлайн, игроки, модераторы)</SelectItem>
+                <SelectItem value="4">Ст. Администратор (Ранг 4: полный доступ без админки)</SelectItem>
+                <SelectItem value="5">Стафф (Ранг 5: высший ранг состава)</SelectItem>
+                <SelectItem value="owner">Владелец сайта</SelectItem>
+                {actor.isRoot || actor.isBotOwner ? (
+                  <SelectItem value="bot_owner">Владелец бота и сайта</SelectItem>
+                ) : null}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Переключатели прав */}
+          <div className="rounded-2xl border border-border/70 bg-elevated/40 p-3.5 space-y-2.5">
+            <p className="text-[11px] font-bold text-muted uppercase tracking-wider">Индивидуальные права доступа</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <label className="flex items-center justify-between rounded-xl border border-border/60 bg-surface/60 p-2 cursor-pointer">
+                <span>Общая стата</span>
+                <Switch checked={isOwner || canStats} onCheckedChange={setCanStats} disabled={isOwner} />
+              </label>
+              <label className="flex items-center justify-between rounded-xl border border-border/60 bg-surface/60 p-2 cursor-pointer">
+                <span>Онлайн серверов</span>
+                <Switch checked={isOwner || canActivity} onCheckedChange={setCanActivity} disabled={isOwner} />
+              </label>
+              <label className="flex items-center justify-between rounded-xl border border-border/60 bg-surface/60 p-2 cursor-pointer">
+                <span>Игроки</span>
+                <Switch checked={isOwner || canSuspicious} onCheckedChange={setCanSuspicious} disabled={isOwner} />
+              </label>
+              <label className="flex items-center justify-between rounded-xl border border-border/60 bg-surface/60 p-2 cursor-pointer">
+                <span>Модераторы</span>
+                <Switch checked={isOwner || canMods} onCheckedChange={setCanMods} disabled={isOwner} />
+              </label>
+              <label className="flex items-center justify-between rounded-xl border border-border/60 bg-surface/60 p-2 cursor-pointer">
+                <span className="font-bold text-accent">Владелец сайта</span>
+                <Switch checked={isOwner} onCheckedChange={setIsOwner} />
+              </label>
+              {actor.isRoot || actor.isBotOwner ? (
+                <label className="flex items-center justify-between rounded-xl border border-border/60 bg-surface/60 p-2 cursor-pointer">
+                  <span className="font-bold text-danger">Владелец бота</span>
+                  <Switch checked={isBotOwner} onCheckedChange={setIsBotOwner} />
+                </label>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Кнопки */}
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={busy} className="rounded-xl">
+              Отмена
+            </Button>
+            <Button
+              type="submit"
+              disabled={busy}
+              className="rounded-xl bg-accent hover:bg-accent/90 text-accent-fg font-bold"
+            >
+              {busy ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <Plus className="size-4 mr-1.5" />}
+              Создать профиль
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function ChangePasswordModal({
+  user,
+  onClose,
+}: {
+  user: StaffListItem;
+  onClose: () => void;
+}) {
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const cleanPass = password.trim();
+    if (!cleanPass || cleanPass.length < 4) {
+      toast.error("Пароль должен содержать минимум 4 символа");
+      return;
+    }
+    setBusy(true);
+    try {
+      await updateStaffPasswordFn({
+        data: {
+          userId: user.userId,
+          password: cleanPass,
+        },
+      });
+      toast.success(`Пароль для @${user.username || user.displayName} успешно изменён!`);
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.message || "Не удалось сменить пароль");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-sm rounded-3xl border border-border/80 bg-surface/95 p-6 shadow-2xl glass-panel space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-black text-fg flex items-center gap-2">
+            <KeyRound className="size-4.5 text-accent" />
+            Смена пароля
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl p-1.5 text-muted hover:bg-elevated hover:text-fg transition-colors cursor-pointer"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <p className="text-xs text-muted">
+          Новый пароль для пользователя <span className="font-bold text-fg">@{user.username || user.displayName}</span>:
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            type="text"
+            placeholder="Новый пароль"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoFocus
+            className="h-10 rounded-xl bg-elevated/70 text-xs font-mono focus:border-accent"
+          />
+
+          <div className="flex items-center justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={busy} className="rounded-xl text-xs">
+              Отмена
+            </Button>
+            <Button
+              type="submit"
+              disabled={busy || !password.trim()}
+              className="rounded-xl bg-accent hover:bg-accent/90 text-accent-fg font-bold text-xs"
+            >
+              {busy ? "Сохранение..." : "Сменить пароль"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+

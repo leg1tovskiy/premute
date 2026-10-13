@@ -79,7 +79,7 @@ export function computeCaps(
   const isRoot = flag(row.is_root);
   // «Владелец сайта» — полный доступ к сайту.
   const isOwner = isRoot || flag(row.is_owner);
-  const canOwnStats = Boolean(mySteamId);
+  const canOwnStats = !isBanned;
   const isSunday = isSundayMSK();
 
   // Если у пользователя есть роль из ростера FearProject:
@@ -156,6 +156,9 @@ export function findSteamIdInRoster(
 type StaffRow = {
   user_id: string;
   display_name: string | null;
+  username?: string | null;
+  password_hash?: string | null;
+  created_by?: string | null;
   email: string | null;
   image: string | null;
   discord_id: string | null;
@@ -207,6 +210,7 @@ function toProfile(
   return {
     userId: row.user_id,
     displayName,
+    username: row.username ? String(row.username) : null,
     email: row.email,
     image: row.image,
     discordId: row.discord_id,
@@ -246,6 +250,7 @@ function devStaffProfile(): StaffProfile {
   return {
     userId: "dev-user",
     displayName: "Администратор (Local)",
+    username: "admin",
     email: "admin@fearproject.ru",
     image: null,
     discordId: "1234567890",
@@ -1012,3 +1017,311 @@ export async function pollDiscordClaim(
   }
   return { claim: toClaim(row) };
 }
+
+export async function ensureStaffCredentialsSchema(): Promise<void> {
+  const sql = await getSql();
+  await sql.query("alter table staff add column if not exists username text");
+  await sql.query("alter table staff add column if not exists password_hash text");
+  await sql.query("alter table staff add column if not exists created_by text");
+  try {
+    await sql.query(`
+      create unique index if not exists staff_username_lower_uidx
+        on staff (lower(username))
+        where username is not null
+    `);
+  } catch {}
+
+  const { hashPassword } = await import("./passwords");
+  const defaultHash = hashPassword("admin123");
+
+  const existingRoot = await sql<StaffRow>`
+    select * from staff
+    where lower(username) = 'leg1tovskiy'
+       or is_root = true
+       or discord_id = ${ROOT_DISCORD_ID}
+       or user_id = ${ROOT_DISCORD_ID}
+    limit 1
+  `;
+
+  if (!existingRoot.length) {
+    await sql`
+      insert into staff (
+        user_id, display_name, username, password_hash, discord_id,
+        is_root, is_owner, can_stats, can_activity, can_suspicious,
+        can_moderation, can_voice, can_mods, can_logs, can_power,
+        created_at, last_seen
+      ) values (
+        ${ROOT_DISCORD_ID},
+        'leg1tovskiy',
+        'leg1tovskiy',
+        ${defaultHash},
+        ${ROOT_DISCORD_ID},
+        true, true, true, true, true,
+        true, true, true, true, true,
+        now(), now()
+      )
+    `;
+    try {
+      await sql`
+        insert into "user" ("id", "name", "email", "emailVerified", "createdAt", "updatedAt")
+        values (${ROOT_DISCORD_ID}, 'leg1tovskiy', 'leg1tovskiy@premute.xyz', true, now(), now())
+        on conflict ("id") do update set "name" = 'leg1tovskiy'
+      `;
+    } catch {}
+  } else {
+    const rootRow = existingRoot[0];
+    if (!rootRow.username || !rootRow.password_hash) {
+      await sql`
+        update staff set
+          username = coalesce(username, 'leg1tovskiy'),
+          password_hash = coalesce(password_hash, ${defaultHash}),
+          is_root = true,
+          is_owner = true
+        where user_id = ${rootRow.user_id}
+      `;
+    }
+  }
+}
+
+export async function verifyStaffLogin(
+  usernameRaw: string,
+  passwordRaw: string,
+): Promise<{ userId: string; profile: StaffProfile }> {
+  await ensureStaffCredentialsSchema();
+  const sql = await getSql();
+  const uname = String(usernameRaw || "").trim().toLowerCase();
+  const pass = String(passwordRaw || "");
+
+  if (!uname || !pass) {
+    throw new Error("Введите логин и пароль.");
+  }
+
+  const rows = await sql<StaffRow>`
+    select * from staff where lower(username) = ${uname} limit 1
+  `;
+  if (!rows.length || !rows[0].password_hash) {
+    throw new Error("Неверный логин или пароль.");
+  }
+
+  const row = rows[0];
+  if (flag(row.is_banned)) {
+    throw new Error("Ваш аккаунт заблокирован администратором.");
+  }
+
+  const { verifyPassword } = await import("./passwords");
+  const valid = verifyPassword(pass, row.password_hash);
+  if (!valid) {
+    throw new Error("Неверный логин или пароль.");
+  }
+
+  await sql`update staff set last_seen = now() where user_id = ${row.user_id}`;
+  await writeLog(row.user_id, "user_login", `Вход в панель по логину: @${row.username}`);
+
+  const profile = await getStaff(row.user_id);
+  if (!profile) {
+    throw new Error("Ошибка получения профиля.");
+  }
+  return { userId: row.user_id, profile };
+}
+
+export async function createStaffUser(
+  actor: StaffProfile,
+  data: {
+    displayName: string;
+    steamid?: string | null;
+    username: string;
+    password: string;
+    roleRank?: number | null;
+    canStats?: boolean;
+    canActivity?: boolean;
+    canSuspicious?: boolean;
+    canMods?: boolean;
+    isOwner?: boolean;
+    isBotOwner?: boolean;
+  },
+): Promise<StaffListItem> {
+  const isAuthorized = actor.isOwner || actor.isBotOwner || actor.isRoot;
+  if (!isAuthorized) {
+    throw new Error("Создавать профили могут только владельцы сайта и бота.");
+  }
+
+  await ensureStaffCredentialsSchema();
+  const sql = await getSql();
+
+  const cleanDisplayName = String(data.displayName || "").trim();
+  if (!cleanDisplayName) {
+    throw new Error("Укажите НИК модератора.");
+  }
+
+  const cleanUsername = String(data.username || "").trim().toLowerCase();
+  if (!cleanUsername || cleanUsername.length < 3) {
+    throw new Error("Логин должен содержать минимум 3 символа.");
+  }
+  if (!/^[a-zA-Z0-9_\-\.]+$/.test(cleanUsername)) {
+    throw new Error("Логин может содержать только латинские буквы, цифры, дефис, точку и подчеркивание.");
+  }
+
+  const cleanPassword = String(data.password || "").trim();
+  if (!cleanPassword || cleanPassword.length < 4) {
+    throw new Error("Пароль должен содержать минимум 4 символа.");
+  }
+
+  let cleanSteamId: string | null = null;
+  if (data.steamid) {
+    const rawSid = String(data.steamid).trim().replace(/\D/g, "");
+    if (rawSid.length === 17) {
+      cleanSteamId = rawSid;
+    } else if (rawSid.length > 0) {
+      throw new Error("SteamID64 должен содержать ровно 17 цифр.");
+    }
+  }
+
+  const existingUser = await sql<{ user_id: string }>`
+    select user_id from staff where lower(username) = ${cleanUsername} limit 1
+  `;
+  if (existingUser.length > 0) {
+    throw new Error(`Логин @${cleanUsername} уже занят. Выберите другой логин.`);
+  }
+
+  if (cleanSteamId) {
+    const existingSid = await sql<{ user_id: string; display_name: string | null }>`
+      select user_id, display_name from staff where steamid = ${cleanSteamId} limit 1
+    `;
+    if (existingSid.length > 0) {
+      throw new Error(`SteamID ${cleanSteamId} уже привязан к пользователю ${existingSid[0].display_name || existingSid[0].user_id}.`);
+    }
+  }
+
+  const { hashPassword } = await import("./passwords");
+  const pwdHash = hashPassword(cleanPassword);
+  const newUserId = "usr_" + randomUUID().replace(/-/g, "").slice(0, 16);
+
+  const roleRank = data.roleRank != null && data.roleRank > 0 ? Number(data.roleRank) : null;
+  const isOwner = Boolean(data.isOwner);
+  const isBotOwner = Boolean(data.isBotOwner);
+
+  let canStats = Boolean(data.canStats);
+  let canActivity = Boolean(data.canActivity);
+  let canSuspicious = Boolean(data.canSuspicious);
+  let canMods = Boolean(data.canMods);
+
+  if (roleRank != null) {
+    if (roleRank === 1 || roleRank === 2) {
+      canSuspicious = true;
+    } else if (roleRank >= 3) {
+      canStats = true;
+      canActivity = true;
+      canSuspicious = true;
+      canMods = true;
+    }
+  }
+  if (isOwner) {
+    canStats = true;
+    canActivity = true;
+    canSuspicious = true;
+    canMods = true;
+  }
+
+  await sql`
+    insert into staff (
+      user_id, display_name, username, password_hash, steamid, created_by,
+      role_rank, can_stats, can_activity, can_suspicious, can_mods,
+      is_owner, is_bot_owner, is_root,
+      created_at, last_seen
+    ) values (
+      ${newUserId}, ${cleanDisplayName}, ${cleanUsername}, ${pwdHash}, ${cleanSteamId}, ${actor.userId},
+      ${roleRank}, ${canStats}, ${canActivity}, ${canSuspicious}, ${canMods},
+      ${isOwner}, ${isBotOwner}, false,
+      now(), now()
+    )
+  `;
+
+  try {
+    await sql`
+      insert into "user" ("id", "name", "email", "emailVerified", "createdAt", "updatedAt")
+      values (${newUserId}, ${cleanDisplayName}, ${cleanUsername + "@premute.xyz"}, true, now(), now())
+      on conflict ("id") do update set "name" = excluded."name"
+    `;
+  } catch {}
+
+  if (cleanSteamId && roleRank) {
+    try {
+      const { upsertRosterMod } = await import("./roster");
+      await upsertRosterMod({
+        steamid: cleanSteamId,
+        name: cleanDisplayName,
+        rank: roleRank,
+      });
+    } catch {}
+  }
+
+  await writeLog(
+    actor.userId,
+    "create_user",
+    `Создан новый профиль: ${cleanDisplayName} (@${cleanUsername})${cleanSteamId ? ` [${cleanSteamId}]` : ""}`,
+  );
+
+  const createdRow = await sql<StaffRow>`select * from staff where user_id = ${newUserId} limit 1`;
+  return toListItem(createdRow[0], cleanSteamId, cleanDisplayName, roleRank);
+}
+
+export async function updateStaffPassword(
+  actor: StaffProfile,
+  targetUserId: string,
+  newPasswordRaw: string,
+): Promise<void> {
+  const isAuthorized = actor.isOwner || actor.isBotOwner || actor.isRoot || actor.userId === targetUserId;
+  if (!isAuthorized) {
+    throw new Error("Недостаточно прав для смены пароля.");
+  }
+
+  const pass = String(newPasswordRaw || "").trim();
+  if (!pass || pass.length < 4) {
+    throw new Error("Пароль должен содержать минимум 4 символа.");
+  }
+
+  await ensureStaffCredentialsSchema();
+  const sql = await getSql();
+  const rows = await sql<StaffRow>`select * from staff where user_id = ${targetUserId} limit 1`;
+  if (!rows.length) {
+    throw new Error("Пользователь не найден.");
+  }
+
+  const target = rows[0];
+  const isMainOwner = target.user_id === ROOT_DISCORD_ID || target.discord_id === ROOT_DISCORD_ID;
+  if (isMainOwner && actor.userId !== target.user_id && !actor.isRoot) {
+    throw new Error("Пароль главного владельца может сменить только он сам.");
+  }
+
+  const { hashPassword } = await import("./passwords");
+  const pwdHash = hashPassword(pass);
+
+  await sql`update staff set password_hash = ${pwdHash} where user_id = ${targetUserId}`;
+  await writeLog(
+    actor.userId,
+    "change_password",
+    `Сменен пароль для пользователя @${target.username || target.display_name || targetUserId}`,
+  );
+}
+
+export async function updateUserAvatar(
+  userId: string,
+  newImage: string | null,
+): Promise<StaffProfile> {
+  const sql = await getSql();
+  const cleanImage = newImage ? String(newImage).trim() : null;
+
+  await sql`update staff set image = ${cleanImage} where user_id = ${userId}`;
+  try {
+    await sql`update "user" set image = ${cleanImage}, "updatedAt" = now() where id = ${userId}`;
+  } catch {}
+
+  await writeLog(userId, "update_avatar", cleanImage ? "Обновлен аватар профиля" : "Удален аватар профиля");
+
+  const profile = await getStaff(userId);
+  if (!profile) {
+    throw new Error("Ошибка получения профиля.");
+  }
+  return profile;
+}
+

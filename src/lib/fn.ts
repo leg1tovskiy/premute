@@ -978,6 +978,114 @@ export const requestBotCodeFn = createServerFn({ method: "POST" })
     return requestDiscordBotCode(data.discordIdOrTag);
   });
 
+export const loginWithPasswordFn = createServerFn({ method: "POST" })
+  .validator((d: { username: string; password: string }) => d)
+  .handler(async ({ data }) => {
+    const { verifyStaffLogin } = await import("./server/staff");
+    const result = await verifyStaffLogin(data.username, data.password);
+
+    const { setCookie } = await import("@tanstack/react-start/server");
+    const { SESSION_TOKEN_COOKIE } = await import("./auth/server");
+    const { getSql } = await import("./db");
+    const sql = await getSql();
+    const { randomBytes, randomUUID } = await import("node:crypto");
+
+    const sessionToken = randomBytes(32).toString("hex");
+    const sessionId = randomUUID();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    const displayName = result.profile.displayName || result.profile.username || result.userId;
+    const email = result.profile.email || `${result.userId}@premute.xyz`;
+    const image = result.profile.image ?? null;
+
+    try {
+      await sql`
+        insert into "user" ("id", "name", "email", "emailVerified", "image", "createdAt", "updatedAt")
+        values (${result.userId}, ${displayName}, ${email}, true, ${image}, now(), now())
+        on conflict ("id") do update set
+          "name" = excluded."name",
+          "image" = coalesce(excluded."image", "user"."image"),
+          "updatedAt" = now()
+      `;
+    } catch {}
+
+    await sql`
+      insert into "session" ("id", "expiresAt", "token", "createdAt", "updatedAt", "userId")
+      values (${sessionId}, ${expiresAt}, ${sessionToken}, now(), now(), ${result.userId})
+    `;
+
+    setCookie(SESSION_TOKEN_COOKIE, sessionToken, {
+      path: "/",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 30 * 24 * 60 * 60,
+    });
+    setCookie("better-auth.session_token", sessionToken, {
+      path: "/",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 30 * 24 * 60 * 60,
+    });
+
+    return {
+      ok: true,
+      sessionToken,
+      userId: result.userId,
+      profile: result.profile,
+    };
+  });
+
+export const createStaffUserFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(
+    (d: {
+      displayName: string;
+      steamid?: string | null;
+      username: string;
+      password: string;
+      roleRank?: number | null;
+      canStats?: boolean;
+      canActivity?: boolean;
+      canSuspicious?: boolean;
+      canMods?: boolean;
+      isOwner?: boolean;
+      isBotOwner?: boolean;
+    }) => d,
+  )
+  .handler(async ({ context, data }): Promise<StaffListItem> => {
+    const { getStaff, createStaffUser } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me) throw new Error("Профиль не найден.");
+    if (me.isBanned) throw new Error("Аккаунт заблокирован.");
+    return createStaffUser(me, data);
+  });
+
+export const updateStaffPasswordFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { userId: string; password: string }) => d)
+  .handler(async ({ context, data }) => {
+    const { getStaff, updateStaffPassword } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me) throw new Error("Профиль не найден.");
+    if (me.isBanned) throw new Error("Аккаунт заблокирован.");
+    await updateStaffPassword(me, data.userId, data.password);
+    return { ok: true };
+  });
+
+export const updateMyAvatarFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { image: string | null }) => d)
+  .handler(async ({ context, data }): Promise<StaffProfile> => {
+    const { updateUserAvatar, getStaff } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me) throw new Error("Профиль не найден.");
+    if (me.isBanned) throw new Error("Аккаунт заблокирован.");
+    return updateUserAvatar(context.userId, data.image);
+  });
+
+
 export const getActionLogsFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((d: { limit?: number } | undefined) => d ?? {})
