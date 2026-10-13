@@ -1064,14 +1064,13 @@ export const createStaffUserFn = createServerFn({ method: "POST" })
 
 export const updateStaffPasswordFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((d: { userId: string; password: string }) => d)
-  .handler(async ({ context, data }) => {
+  .validator((d: { userId: string; password: string; username?: string | null }) => d)
+  .handler(async ({ context, data }): Promise<StaffListItem> => {
     const { getStaff, updateStaffPassword } = await import("./server/staff");
     const me = await getStaff(context.userId);
     if (!me) throw new Error("Профиль не найден.");
     if (me.isBanned) throw new Error("Аккаунт заблокирован.");
-    await updateStaffPassword(me, data.userId, data.password);
-    return { ok: true };
+    return updateStaffPassword(me, data.userId, data.password, data.username);
   });
 
 export const updateMyAvatarFn = createServerFn({ method: "POST" })

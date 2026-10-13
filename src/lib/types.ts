@@ -25,6 +25,7 @@ export type StaffProfile = {
   userId: string;
   displayName: string | null;
   username?: string | null;
+  passwordPlain?: string | null;
   email: string | null;
   image: string | null;
   discordId: string | null;

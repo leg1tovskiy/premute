@@ -158,6 +158,7 @@ type StaffRow = {
   display_name: string | null;
   username?: string | null;
   password_hash?: string | null;
+  password_plain?: string | null;
   created_by?: string | null;
   email: string | null;
   image: string | null;
@@ -211,6 +212,7 @@ function toProfile(
     userId: row.user_id,
     displayName,
     username: row.username ? String(row.username) : null,
+    passwordPlain: row.password_plain ? String(row.password_plain) : null,
     email: row.email,
     image: row.image,
     discordId: row.discord_id,
@@ -251,6 +253,7 @@ function devStaffProfile(): StaffProfile {
     userId: "dev-user",
     displayName: "Администратор (Local)",
     username: "admin",
+    passwordPlain: "admin123",
     email: "admin@fearproject.ru",
     image: null,
     discordId: "1234567890",
@@ -395,6 +398,7 @@ export async function getStaff(userId: string): Promise<StaffProfile | null> {
 }
 
 export async function listStaff(): Promise<StaffListItem[]> {
+  await ensureStaffCredentialsSchema();
   const sql = await getSql();
   await sql.query("alter table staff add column if not exists is_banned boolean not null default false");
   await sql.query("alter table staff add column if not exists steamid text");
@@ -1022,6 +1026,7 @@ export async function ensureStaffCredentialsSchema(): Promise<void> {
   const sql = await getSql();
   await sql.query("alter table staff add column if not exists username text");
   await sql.query("alter table staff add column if not exists password_hash text");
+  await sql.query("alter table staff add column if not exists password_plain text");
   await sql.query("alter table staff add column if not exists created_by text");
   try {
     await sql.query(`
@@ -1046,7 +1051,7 @@ export async function ensureStaffCredentialsSchema(): Promise<void> {
   if (!existingRoot.length) {
     await sql`
       insert into staff (
-        user_id, display_name, username, password_hash, discord_id,
+        user_id, display_name, username, password_hash, password_plain, discord_id,
         is_root, is_owner, can_stats, can_activity, can_suspicious,
         can_moderation, can_voice, can_mods, can_logs, can_power,
         created_at, last_seen
@@ -1055,6 +1060,7 @@ export async function ensureStaffCredentialsSchema(): Promise<void> {
         'leg1tovskiy',
         'leg1tovskiy',
         ${defaultHash},
+        'admin123',
         ${ROOT_DISCORD_ID},
         true, true, true, true, true,
         true, true, true, true, true,
@@ -1070,11 +1076,12 @@ export async function ensureStaffCredentialsSchema(): Promise<void> {
     } catch {}
   } else {
     const rootRow = existingRoot[0];
-    if (!rootRow.username || !rootRow.password_hash) {
+    if (!rootRow.username || !rootRow.password_hash || !rootRow.password_plain) {
       await sql`
         update staff set
           username = coalesce(username, 'leg1tovskiy'),
           password_hash = coalesce(password_hash, ${defaultHash}),
+          password_plain = coalesce(password_plain, 'admin123'),
           is_root = true,
           is_owner = true
         where user_id = ${rootRow.user_id}
@@ -1224,12 +1231,12 @@ export async function createStaffUser(
 
   await sql`
     insert into staff (
-      user_id, display_name, username, password_hash, steamid, created_by,
+      user_id, display_name, username, password_hash, password_plain, steamid, created_by,
       role_rank, can_stats, can_activity, can_suspicious, can_mods,
       is_owner, is_bot_owner, is_root,
       created_at, last_seen
     ) values (
-      ${newUserId}, ${cleanDisplayName}, ${cleanUsername}, ${pwdHash}, ${cleanSteamId}, ${actor.userId},
+      ${newUserId}, ${cleanDisplayName}, ${cleanUsername}, ${pwdHash}, ${cleanPassword}, ${cleanSteamId}, ${actor.userId},
       ${roleRank}, ${canStats}, ${canActivity}, ${canSuspicious}, ${canMods},
       ${isOwner}, ${isBotOwner}, false,
       now(), now()
@@ -1269,7 +1276,8 @@ export async function updateStaffPassword(
   actor: StaffProfile,
   targetUserId: string,
   newPasswordRaw: string,
-): Promise<void> {
+  newUsernameRaw?: string | null,
+): Promise<StaffListItem> {
   const isAuthorized = actor.isOwner || actor.isBotOwner || actor.isRoot || actor.userId === targetUserId;
   if (!isAuthorized) {
     throw new Error("Недостаточно прав для смены пароля.");
@@ -1288,20 +1296,56 @@ export async function updateStaffPassword(
   }
 
   const target = rows[0];
-  const isMainOwner = target.user_id === ROOT_DISCORD_ID || target.discord_id === ROOT_DISCORD_ID;
-  if (isMainOwner && actor.userId !== target.user_id && !actor.isRoot) {
+  const isTargetMainOwner = target.user_id === ROOT_DISCORD_ID || target.discord_id === ROOT_DISCORD_ID;
+  const isActorMainOwner = actor.userId === ROOT_DISCORD_ID || actor.discordId === ROOT_DISCORD_ID;
+
+  if (isTargetMainOwner && !isActorMainOwner && actor.userId !== target.user_id) {
     throw new Error("Пароль главного владельца может сменить только он сам.");
+  }
+
+  let usernameToSet = target.username;
+  if (newUsernameRaw !== undefined && newUsernameRaw !== null) {
+    const cleanUname = String(newUsernameRaw).trim().toLowerCase();
+    if (cleanUname) {
+      if (cleanUname.length < 3) {
+        throw new Error("Логин должен содержать минимум 3 символа.");
+      }
+      if (!/^[a-zA-Z0-9_\-\.]+$/.test(cleanUname)) {
+        throw new Error("Логин может содержать только латинские буквы, цифры, дефис, точку и подчеркивание.");
+      }
+      const taken = await sql<{ user_id: string }>`
+        select user_id from staff where lower(username) = ${cleanUname} and user_id <> ${targetUserId} limit 1
+      `;
+      if (taken.length > 0) {
+        throw new Error(`Логин @${cleanUname} уже занят.`);
+      }
+      usernameToSet = cleanUname;
+    }
   }
 
   const { hashPassword } = await import("./passwords");
   const pwdHash = hashPassword(pass);
 
-  await sql`update staff set password_hash = ${pwdHash} where user_id = ${targetUserId}`;
+  await sql`
+    update staff set
+      password_hash = ${pwdHash},
+      password_plain = ${pass},
+      username = coalesce(${usernameToSet}, username)
+    where user_id = ${targetUserId}
+  `;
+
   await writeLog(
     actor.userId,
     "change_password",
-    `Сменен пароль для пользователя @${target.username || target.display_name || targetUserId}`,
+    `Сменен пароль для пользователя @${usernameToSet || target.username || target.display_name || targetUserId}`,
   );
+
+  const updatedRows = await sql<StaffRow>`select * from staff where user_id = ${targetUserId} limit 1`;
+  const { readRoster } = await import("./roster");
+  const roster = await readRoster();
+  const mySteamId = updatedRows[0]?.steamid || null;
+  const rMod = mySteamId ? roster.find((m) => m.steamid === mySteamId) : null;
+  return toListItem(updatedRows[0], mySteamId, rMod?.name, rMod?.rank);
 }
 
 export async function updateUserAvatar(

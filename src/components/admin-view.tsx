@@ -1,7 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
+  Check,
   ChevronDown,
+  Copy,
   Download,
   ExternalLink,
   Eye,
@@ -263,7 +265,9 @@ export function AdminView({ me }: { me: StaffProfile }) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
             {rows.map((u) => {
-              const locked = u.isRoot && u.userId !== me.userId;
+              const isTargetMainOwner = isMainOwner(u);
+              const locked = isTargetMainOwner && !meIsMainOwner;
+              const canEditCredentials = meIsMainOwner || (!isTargetMainOwner && canCreate);
               const handle = u.displayName || u.email || "Без имени";
               const initial = handle.trim().charAt(0).toUpperCase();
 
@@ -392,6 +396,49 @@ export function AdminView({ me }: { me: StaffProfile }) {
                     </div>
                   </div>
 
+                  {/* ── Учётные данные для входа (логин и пароль) ────────────────── */}
+                  {canCreate ? (
+                    <div className="relative z-10 mt-3 rounded-2xl border border-border/70 bg-elevated/40 p-2.5 sm:p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-fg flex items-center gap-1.5">
+                          <KeyRound className="size-3.5 text-accent" />
+                          Учётные данные для входа
+                        </span>
+                        {canEditCredentials ? (
+                          <button
+                            type="button"
+                            onClick={() => setChangePasswordUser(u)}
+                            className="text-[10px] text-accent font-bold hover:underline cursor-pointer flex items-center gap-1"
+                          >
+                            {u.passwordPlain ? "Сменить →" : "Задать →"}
+                          </button>
+                        ) : null}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div className="flex flex-col gap-0.5 rounded-xl border border-border/60 bg-surface/80 p-2">
+                          <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Логин</span>
+                          <div className="flex items-center justify-between min-w-0 gap-1">
+                            <span className="font-mono text-xs font-bold text-fg truncate">
+                              {u.username ? (
+                                `@${u.username}`
+                              ) : (
+                                <span className="text-amber-400 font-normal italic">не задан</span>
+                              )}
+                            </span>
+                            {u.username ? <CopyButton text={u.username} title="Скопировать логин" /> : null}
+                          </div>
+                        </div>
+
+                        <PasswordDisplayField
+                          password={u.passwordPlain}
+                          onSet={() => setChangePasswordUser(u)}
+                          canEdit={canEditCredentials}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+
                   {/* Compact SteamID & Tag Inputs */}
                   {me.caps.isOwner ? (
                     <div className="relative z-10 mt-3.5 grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-2xl border border-border/60 bg-elevated/40 p-2.5">
@@ -434,7 +481,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
                               ? String(u.roleRank)
                               : "none"
                           }
-                          disabled={locked || u.isRoot || u.isBanned}
+                          disabled={locked || (!meIsMainOwner && u.isRoot) || u.isBanned}
                           onValueChange={(val) => handleRoleChange(u, val)}
                         >
                           <SelectTrigger className="w-full h-8.5 bg-surface/90 text-xs font-semibold">
@@ -479,7 +526,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
                     </span>
 
                     <div className="flex items-center gap-1.5">
-                      {canCreate && !locked ? (
+                      {canEditCredentials ? (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -492,7 +539,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
                         </Button>
                       ) : null}
 
-                      {!isMainOwner(u) && !u.isRoot && u.userId !== me.userId ? (
+                      {!isMainOwner(u) && (!u.isRoot || meIsMainOwner) && u.userId !== me.userId ? (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -540,7 +587,8 @@ export function AdminView({ me }: { me: StaffProfile }) {
         ? (() => {
             const u = rows.find((r) => r.userId === manualModalUserId);
             if (!u) return null;
-            const locked = u.isRoot && u.userId !== me.userId;
+            const isTargetMainOwner = isMainOwner(u);
+            const locked = isTargetMainOwner && !meIsMainOwner;
             const handle = u.displayName || u.email || "Пользователь";
             const roleRank = u.roleRank ?? null;
             const isSeniorOrStaff = roleRank !== null && roleRank >= 3;
@@ -683,6 +731,9 @@ export function AdminView({ me }: { me: StaffProfile }) {
         <ChangePasswordModal
           user={changePasswordUser}
           onClose={() => setChangePasswordUser(null)}
+          onSaved={(updated) => {
+            setRows((prev) => prev.map((r) => (r.userId === updated.userId ? updated : r)));
+          }}
         />
       ) : null}
     </div>
@@ -1136,12 +1187,25 @@ function CreateUserModal({
 function ChangePasswordModal({
   user,
   onClose,
+  onSaved,
 }: {
   user: StaffListItem;
   onClose: () => void;
+  onSaved: (updated: StaffListItem) => void;
 }) {
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState(user.username || "");
+  const [password, setPassword] = useState(user.passwordPlain || "");
+  const [showPassword, setShowPassword] = useState(true);
   const [busy, setBusy] = useState(false);
+
+  function generatePassword() {
+    const chars = "abcdefghjkmnpqrstuvwxyz23456789";
+    let res = "";
+    for (let i = 0; i < 8; i++) {
+      res += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setPassword(res);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1150,18 +1214,31 @@ function ChangePasswordModal({
       toast.error("Пароль должен содержать минимум 4 символа");
       return;
     }
+    const cleanLogin = username.trim().toLowerCase();
+    if (cleanLogin && cleanLogin.length < 3) {
+      toast.error("Логин должен содержать минимум 3 символа");
+      return;
+    }
+    if (cleanLogin && !/^[a-z0-9_\-\.]+$/.test(cleanLogin)) {
+      toast.error("Логин может содержать только латинские буквы, цифры, дефис, точку и подчеркивание");
+      return;
+    }
+
     setBusy(true);
     try {
-      await updateStaffPasswordFn({
+      const updated = await updateStaffPasswordFn({
         data: {
           userId: user.userId,
           password: cleanPass,
+          username: cleanLogin || null,
         },
       });
-      toast.success(`Пароль для @${user.username || user.displayName} успешно изменён!`);
+      notifyActionLogUpdated();
+      toast.success(`Учётные данные для @${updated.username || updated.displayName} успешно сохранены!`);
+      onSaved(updated);
       onClose();
     } catch (err: any) {
-      toast.error(err?.message || "Не удалось сменить пароль");
+      toast.error(err?.message || "Не удалось сохранить учётные данные");
     } finally {
       setBusy(false);
     }
@@ -1169,12 +1246,19 @@ function ChangePasswordModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-sm rounded-3xl border border-border/80 bg-surface/95 p-6 shadow-2xl glass-panel space-y-4">
+      <div className="relative w-full max-w-md rounded-3xl border border-border/80 bg-surface/95 p-6 shadow-2xl glass-panel space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-black text-fg flex items-center gap-2">
-            <KeyRound className="size-4.5 text-accent" />
-            Смена пароля
-          </h2>
+          <div className="flex items-center gap-2.5">
+            <span className="grid size-9 place-items-center rounded-2xl bg-accent/20 border border-accent/40 text-accent">
+              <KeyRound className="size-4.5" />
+            </span>
+            <div>
+              <h2 className="text-base font-black text-fg">Учётные данные для входа</h2>
+              <p className="text-xs text-muted">
+                {user.displayName || user.email || user.userId}
+              </p>
+            </div>
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -1184,22 +1268,58 @@ function ChangePasswordModal({
           </button>
         </div>
 
-        <p className="text-xs text-muted">
-          Новый пароль для пользователя <span className="font-bold text-fg">@{user.username || user.displayName}</span>:
-        </p>
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          {/* Логин */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-fg">Логин</label>
+              <span className="text-[10px] text-muted">Латиница, мин. 3 симв.</span>
+            </div>
+            <Input
+              type="text"
+              placeholder="логин (например: minilyyy)"
+              value={username}
+              onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_\-\.]/g, ""))}
+              className="h-10 rounded-xl bg-elevated/70 text-xs font-mono focus:border-accent"
+              autoCapitalize="none"
+              autoCorrect="off"
+            />
+          </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            type="text"
-            placeholder="Новый пароль"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoFocus
-            className="h-10 rounded-xl bg-elevated/70 text-xs font-mono focus:border-accent"
-          />
+          {/* Пароль */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-fg">Пароль *</label>
+              <button
+                type="button"
+                onClick={generatePassword}
+                className="text-[11px] text-accent font-bold hover:underline cursor-pointer flex items-center gap-1"
+              >
+                <Sparkles className="size-3" />
+                Случайный пароль
+              </button>
+            </div>
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder="Новый пароль"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="h-10 rounded-xl bg-elevated/70 pr-10 text-xs font-mono focus:border-accent"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-fg cursor-pointer"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+              </button>
+            </div>
+          </div>
 
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={busy} className="rounded-xl text-xs">
               Отмена
             </Button>
@@ -1208,12 +1328,93 @@ function ChangePasswordModal({
               disabled={busy || !password.trim()}
               className="rounded-xl bg-accent hover:bg-accent/90 text-accent-fg font-bold text-xs"
             >
-              {busy ? "Сохранение..." : "Сменить пароль"}
+              {busy ? <Loader2 className="size-3.5 animate-spin mr-1.5" /> : null}
+              Сохранить
             </Button>
           </div>
         </form>
       </div>
     </div>
+  );
+}
+
+function PasswordDisplayField({
+  password,
+  onSet,
+  canEdit,
+}: {
+  password?: string | null;
+  onSet?: () => void;
+  canEdit?: boolean;
+}) {
+  const [revealed, setRevealed] = useState(false);
+
+  if (!password) {
+    return (
+      <div className="flex flex-col gap-0.5 rounded-xl border border-border/60 bg-surface/80 p-2">
+        <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Пароль</span>
+        <div className="flex items-center justify-between min-w-0">
+          <span className="font-mono text-xs text-amber-400 font-normal italic">не задан</span>
+          {canEdit && onSet ? (
+            <button
+              type="button"
+              onClick={onSet}
+              className="text-[10px] text-accent font-semibold hover:underline cursor-pointer"
+            >
+              Задать
+            </button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-0.5 rounded-xl border border-border/60 bg-surface/80 p-2">
+      <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Пароль</span>
+      <div className="flex items-center justify-between min-w-0 gap-1.5">
+        <span className="font-mono text-xs font-bold text-fg truncate select-all">
+          {revealed ? password : "••••••••"}
+        </span>
+        <div className="flex items-center gap-0.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setRevealed(!revealed)}
+            className="grid size-6 place-items-center rounded-lg text-muted hover:text-fg hover:bg-elevated transition-colors cursor-pointer"
+            title={revealed ? "Скрыть пароль" : "Показать пароль"}
+          >
+            {revealed ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+          </button>
+          <CopyButton text={password} title="Скопировать пароль" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CopyButton({ text, title }: { text: string; title: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success("Скопировано в буфер");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Не удалось скопировать");
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="grid size-6 place-items-center rounded-lg text-muted hover:text-accent hover:bg-elevated transition-colors cursor-pointer shrink-0"
+      title={title}
+    >
+      {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
+    </button>
   );
 }
 
