@@ -46,8 +46,6 @@ import { toast } from "sonner";
 import { signOut } from "@/lib/auth/client";
 import { ThemeSelect } from "@/components/theme-provider";
 import { usePalette } from "@/components/command-palette";
-import { NotificationBell } from "@/components/notification-bell";
-import { StatusIndicator } from "@/components/status-indicator";
 import { Skeleton } from "@/components/skeletons";
 import { allowedTabs } from "@/lib/tabs";
 import { usePanel } from "@/lib/panel";
@@ -55,7 +53,6 @@ import { getServersFn, getStatsFn, getRecentPunishmentsFn, updateMyAvatarFn, typ
 import type { StatsPayload } from "@/lib/types";
 import { RANK_SHORT, RANK_TITLE } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
-import { SidebarActionLogs } from "@/components/sidebar-action-logs";
 import { AnimatedBlock, AnimatedNumber } from "@/components/animated-number";
 import { cn } from "@/lib/utils";
 
@@ -448,23 +445,6 @@ export function PanelShell({ children }: { children: ReactNode }) {
               </div>
             ) : null}
 
-            {/* Quick search button */}
-            <button
-              type="button"
-              onClick={() => setPaletteOpen(true)}
-              className="inline-flex h-9 items-center gap-2.5 rounded-xl border border-border/80 bg-elevated/70 px-3 text-xs text-muted transition-all hover:border-accent/40 hover:bg-elevated hover:text-fg shadow-sm"
-              title="Палитра команд (Ctrl + K)"
-            >
-              <Search className="size-3.5 text-subtle" />
-              <span className="hidden md:inline">Поиск...</span>
-              <kbd className="hidden rounded bg-surface px-1.5 py-0.5 font-mono text-[10px] text-subtle border border-border/60 sm:inline-block">
-                ⌘K
-              </kbd>
-            </button>
-
-            <StatusIndicator />
-            <NotificationBell />
-
             <div className="hidden md:inline-flex xl:hidden items-center">
               <ThemeSelect />
             </div>
@@ -561,9 +541,6 @@ export function PanelShell({ children }: { children: ReactNode }) {
             ) : null}
           </div>
         </div>
-
-        {/* Окошко логов сайта (для Владельца сайта и Владельца бота) - строго ПОД панелью управления */}
-        <SidebarActionLogs />
       </aside>
 
       {/* ── Mobile Drawer ───────────────────────────────────────────── */}
@@ -701,8 +678,6 @@ export function PanelShell({ children }: { children: ReactNode }) {
                 <span>Выйти</span>
               </button>
             </div>
-
-            <SidebarActionLogs />
           </div>
         </div>
       ) : null}

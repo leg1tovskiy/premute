@@ -90,6 +90,7 @@ export const setStaffPerms = createServerFn({ method: "POST" })
       canActivity?: boolean;
       canSuspicious?: boolean;
       canMods?: boolean;
+      canLogs?: boolean;
       isOwner?: boolean;
       isBotOwner?: boolean;
       isBanned?: boolean;
@@ -109,6 +110,7 @@ export const setStaffPerms = createServerFn({ method: "POST" })
       canActivity: data.canActivity,
       canSuspicious: data.canSuspicious,
       canMods: data.canMods,
+      canLogs: data.canLogs,
       isOwner: data.isOwner,
       isBotOwner: data.isBotOwner,
       isBanned: data.isBanned,
@@ -1050,6 +1052,7 @@ export const createStaffUserFn = createServerFn({ method: "POST" })
       canActivity?: boolean;
       canSuspicious?: boolean;
       canMods?: boolean;
+      canLogs?: boolean;
       isOwner?: boolean;
       isBotOwner?: boolean;
     }) => d,
@@ -1091,8 +1094,8 @@ export const getActionLogsFn = createServerFn({ method: "POST" })
   .handler(async ({ context, data }): Promise<ActionLogItem[]> => {
     const { getStaff } = await import("./server/staff");
     const me = await getStaff(context.userId);
-    if (!me || (!me.isOwner && !me.isBotOwner && !me.isRoot)) {
-      throw new Error("Доступно только владельцам сайта и бота.");
+    if (!me || (!me.caps.canLogs && !me.isOwner && !me.isBotOwner && !me.isRoot) || me.isBanned) {
+      throw new Error("Доступ к логам закрыт.");
     }
     const { getSql } = await import("./db");
     const sql = await getSql();

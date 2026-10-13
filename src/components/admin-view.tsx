@@ -118,6 +118,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
           canActivity: next.canActivity,
           canSuspicious: next.canSuspicious,
           canMods: next.canMods,
+          canLogs: next.canLogs,
           isOwner: next.isOwner,
           isBotOwner: next.isBotOwner,
           isBanned: next.isBanned,
@@ -140,6 +141,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
             canActivity: updated.canActivity,
             canSuspicious: updated.canSuspicious,
             canMods: updated.canMods,
+            canLogs: updated.canLogs,
             canGeneralStats: updated.canStats,
             isOwner: updated.isOwner,
           },
@@ -387,6 +389,12 @@ export function AdminView({ me }: { me: StaffProfile }) {
                             Стата закрыта
                           </Badge>
                         )}
+
+                        {u.canLogs && !u.isOwner && !u.isRoot ? (
+                          <Badge tone="accent" className="font-bold text-[10px]">
+                            Логи
+                          </Badge>
+                        ) : null}
                       </div>
 
                       <div className="mt-1 text-[11px] text-subtle font-mono truncate space-y-0.5">
@@ -676,6 +684,13 @@ export function AdminView({ me }: { me: StaffProfile }) {
                       byRole={modsByRole}
                       onChange={(v) => void patch(u.userId, { canMods: v })}
                     />
+                    <Toggle
+                      label="Логи сайта"
+                      hint="Вкладка «Логи» (журнал действий, авторизаций и изменений)"
+                      checked={u.isOwner || u.canLogs}
+                      disabled={locked || u.isOwner || u.isBanned}
+                      onChange={(v) => void patch(u.userId, { canLogs: v })}
+                    />
                     {me.caps.canGrantBotOwner ? (
                       <Toggle
                         label="Владелец бота"
@@ -934,6 +949,7 @@ function CreateUserModal({
   const [canActivity, setCanActivity] = useState(false);
   const [canSuspicious, setCanSuspicious] = useState(true);
   const [canMods, setCanMods] = useState(false);
+  const [canLogs, setCanLogs] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [isBotOwner, setIsBotOwner] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -947,6 +963,7 @@ function CreateUserModal({
       setCanActivity(true);
       setCanSuspicious(true);
       setCanMods(true);
+      setCanLogs(true);
     } else if (val === "bot_owner") {
       setIsOwner(true);
       setIsBotOwner(true);
@@ -954,6 +971,7 @@ function CreateUserModal({
       setCanActivity(true);
       setCanSuspicious(true);
       setCanMods(true);
+      setCanLogs(true);
     } else if (val === "none") {
       setIsOwner(false);
       setIsBotOwner(false);
@@ -961,6 +979,7 @@ function CreateUserModal({
       setCanActivity(false);
       setCanSuspicious(false);
       setCanMods(false);
+      setCanLogs(false);
     } else {
       const rank = Number(val);
       setIsOwner(false);
@@ -970,6 +989,7 @@ function CreateUserModal({
       setCanActivity(isSenior);
       setCanSuspicious(true);
       setCanMods(isSenior);
+      setCanLogs(false);
     }
   }
 
@@ -1011,6 +1031,7 @@ function CreateUserModal({
           canActivity: isOwner || canActivity,
           canSuspicious: isOwner || canSuspicious,
           canMods: isOwner || canMods,
+          canLogs: isOwner || canLogs,
           isOwner,
           isBotOwner,
         },
@@ -1150,6 +1171,10 @@ function CreateUserModal({
               <label className="flex items-center justify-between rounded-xl border border-border/60 bg-surface/60 p-2 cursor-pointer">
                 <span>Модераторы</span>
                 <Switch checked={isOwner || canMods} onCheckedChange={setCanMods} disabled={isOwner} />
+              </label>
+              <label className="flex items-center justify-between rounded-xl border border-border/60 bg-surface/60 p-2 cursor-pointer">
+                <span>Логи</span>
+                <Switch checked={isOwner || canLogs} onCheckedChange={setCanLogs} disabled={isOwner} />
               </label>
               <label className="flex items-center justify-between rounded-xl border border-border/60 bg-surface/60 p-2 cursor-pointer">
                 <span className="font-bold text-accent">Владелец сайта</span>

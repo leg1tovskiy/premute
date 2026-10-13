@@ -104,7 +104,7 @@ export function computeCaps(
   const canMods = isOwner || isSeniorOrStaff || flag(row.can_mods);
   const canModeration = isOwner || isSeniorOrStaff || flag(row.can_moderation);
   const canVoice = isOwner || isSeniorOrStaff || flag(row.can_voice);
-  const canLogs = isOwner || isSeniorOrStaff || flag(row.can_logs);
+  const canLogs = isOwner || flag(row.can_logs);
   const canPower = isOwner || isSeniorOrStaff || flag(row.can_power);
   const canAdmin = isOwner;
   const canConsole = isRoot;
@@ -468,6 +468,7 @@ export async function updateStaffPermissions(
     canActivity?: boolean;
     canSuspicious?: boolean;
     canMods?: boolean;
+    canLogs?: boolean;
     isOwner?: boolean;
     isBotOwner?: boolean;
     isBanned?: boolean;
@@ -556,6 +557,7 @@ export async function updateStaffPermissions(
   let canActivity = patch.canActivity !== undefined ? Boolean(patch.canActivity) : flag(targetRows[0]?.can_activity);
   let canSuspicious = patch.canSuspicious !== undefined ? Boolean(patch.canSuspicious) : flag(targetRows[0]?.can_suspicious);
   let canMods = patch.canMods !== undefined ? Boolean(patch.canMods) : flag(targetRows[0]?.can_mods);
+  let canLogs = patch.canLogs !== undefined ? Boolean(patch.canLogs) : flag(targetRows[0]?.can_logs);
 
   const currentRank = patch.roleRank !== undefined ? patch.roleRank : target.roleRank;
 
@@ -614,6 +616,7 @@ export async function updateStaffPermissions(
       can_activity = ${canActivity},
       can_suspicious = ${canSuspicious},
       can_mods = ${canMods},
+      can_logs = ${canLogs},
       is_root = ${isRoot},
       is_owner = ${isOwner},
       is_bot_owner = ${isBotOwner},
@@ -709,6 +712,9 @@ export async function updateStaffPermissions(
   }
   if (patch.canMods !== undefined && Boolean(patch.canMods) !== Boolean(target.canMods)) {
     tabChanges.push(`Модераторы: ${patch.canMods ? "выдана" : "снята"}`);
+  }
+  if (patch.canLogs !== undefined && Boolean(patch.canLogs) !== Boolean(target.canLogs)) {
+    tabChanges.push(`Логи: ${patch.canLogs ? "выданы" : "сняты"}`);
   }
   if (tabChanges.length > 0) {
     await writeLog(actor.userId, "tab_change", `Изменение вкладок для ${targetName}: ${tabChanges.join(", ")}`);
@@ -1211,6 +1217,7 @@ export async function createStaffUser(
   let canActivity = Boolean(data.canActivity);
   let canSuspicious = Boolean(data.canSuspicious);
   let canMods = Boolean(data.canMods);
+  let canLogs = Boolean(data.canLogs);
 
   if (roleRank != null) {
     if (roleRank === 1 || roleRank === 2) {
@@ -1227,17 +1234,18 @@ export async function createStaffUser(
     canActivity = true;
     canSuspicious = true;
     canMods = true;
+    canLogs = true;
   }
 
   await sql`
     insert into staff (
       user_id, display_name, username, password_hash, password_plain, steamid, created_by,
-      role_rank, can_stats, can_activity, can_suspicious, can_mods,
+      role_rank, can_stats, can_activity, can_suspicious, can_mods, can_logs,
       is_owner, is_bot_owner, is_root,
       created_at, last_seen
     ) values (
       ${newUserId}, ${cleanDisplayName}, ${cleanUsername}, ${pwdHash}, ${cleanPassword}, ${cleanSteamId}, ${actor.userId},
-      ${roleRank}, ${canStats}, ${canActivity}, ${canSuspicious}, ${canMods},
+      ${roleRank}, ${canStats}, ${canActivity}, ${canSuspicious}, ${canMods}, ${canLogs},
       ${isOwner}, ${isBotOwner}, false,
       now(), now()
     )
