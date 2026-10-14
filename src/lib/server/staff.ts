@@ -212,7 +212,7 @@ function toProfile(
     userId: row.user_id,
     displayName,
     username: row.username ? String(row.username) : null,
-    passwordPlain: row.password_plain ? String(row.password_plain) : null,
+    passwordPlain: caps.isRoot && row.password_plain ? String(row.password_plain) : null,
     email: row.email,
     image: row.image,
     discordId: row.discord_id,
@@ -243,8 +243,13 @@ function toListItem(
   mySteamId?: string | null,
   fearName?: string | null,
   rosterRank?: number | null,
+  isRootActor?: boolean,
 ): StaffListItem {
   const { caps: _c, ...rest } = toProfile(row, mySteamId, fearName, rosterRank);
+  if (!isRootActor) {
+    rest.username = null;
+    rest.passwordPlain = null;
+  }
   return rest;
 }
 
@@ -397,7 +402,7 @@ export async function getStaff(userId: string): Promise<StaffProfile | null> {
   return toProfile(rows[0], mySteamId, rMod?.name, rMod?.rank);
 }
 
-export async function listStaff(): Promise<StaffListItem[]> {
+export async function listStaff(actor?: StaffProfile): Promise<StaffListItem[]> {
   await ensureStaffCredentialsSchema();
   const sql = await getSql();
   await sql.query("alter table staff add column if not exists is_banned boolean not null default false");
@@ -407,11 +412,12 @@ export async function listStaff(): Promise<StaffListItem[]> {
   const rows = await sql<StaffRow>`select * from staff order by is_root desc, is_owner desc, last_seen desc`;
   const { readRoster } = await import("./roster");
   const roster = await readRoster();
+  const isRootActor = Boolean(actor?.isRoot);
   return rows.map((row) => {
     const isExplicitlyCleared = row.steamid === "none" || row.steamid === "null";
     const mySteamId = isExplicitlyCleared ? null : (row.steamid || findSteamIdInRoster(roster, row.discord_id, row.display_name));
     const rMod = mySteamId ? roster.find((m) => m.steamid === mySteamId) : null;
-    return toListItem(row, mySteamId, rMod?.name, rMod?.rank);
+    return toListItem(row, mySteamId, rMod?.name, rMod?.rank, isRootActor);
   });
 }
 
@@ -525,8 +531,7 @@ export async function updateStaffPermissions(
       patch.canActivity === false ||
       patch.canSuspicious === false ||
       patch.canMods === false ||
-      patch.canLogs === false ||
-      patch.canAdmin === false
+      patch.canLogs === false
     ) {
       throw new Error("Нельзя ограничивать права корневого владельца (ROOT).");
     }
@@ -713,7 +718,7 @@ export async function updateStaffPermissions(
     ? null
     : (rows[0]?.steamid || findSteamIdInRoster(roster, rows[0]?.discord_id, rows[0]?.display_name));
   const rMod = mySteamId ? roster.find((m) => m.steamid === mySteamId) : null;
-  return toListItem(rows[0], mySteamId, rMod?.name, rMod?.rank);
+  return toListItem(rows[0], mySteamId, rMod?.name, rMod?.rank, Boolean(actor.isRoot));
 }
 
 export async function deleteStaffUser(actor: StaffProfile, targetUserId: string): Promise<void> {
@@ -1165,13 +1170,13 @@ export async function createStaffUser(
     canActivity?: boolean;
     canSuspicious?: boolean;
     canMods?: boolean;
+    canLogs?: boolean;
     isOwner?: boolean;
     isBotOwner?: boolean;
   },
 ): Promise<StaffListItem> {
-  const isAuthorized = actor.isOwner || actor.isBotOwner || actor.isRoot;
-  if (!isAuthorized) {
-    throw new Error("Создавать профили могут только владельцы сайта и бота.");
+  if (!actor.isRoot) {
+    throw new Error("Настраивать логины и пароли могут только ROOT пользователи.");
   }
 
   await ensureStaffCredentialsSchema();
@@ -1293,7 +1298,7 @@ export async function createStaffUser(
   );
 
   const createdRow = await sql<StaffRow>`select * from staff where user_id = ${newUserId} limit 1`;
-  return toListItem(createdRow[0], cleanSteamId, cleanDisplayName, roleRank);
+  return toListItem(createdRow[0], cleanSteamId, cleanDisplayName, roleRank, true);
 }
 
 export async function updateStaffPassword(
@@ -1302,9 +1307,8 @@ export async function updateStaffPassword(
   newPasswordRaw: string,
   newUsernameRaw?: string | null,
 ): Promise<StaffListItem> {
-  const isAuthorized = actor.isOwner || actor.isBotOwner || actor.isRoot || actor.userId === targetUserId;
-  if (!isAuthorized) {
-    throw new Error("Недостаточно прав для смены пароля.");
+  if (!actor.isRoot) {
+    throw new Error("Настраивать логины и пароли могут только ROOT пользователи.");
   }
 
   const pass = String(newPasswordRaw || "").trim();
@@ -1369,7 +1373,7 @@ export async function updateStaffPassword(
   const roster = await readRoster();
   const mySteamId = updatedRows[0]?.steamid || null;
   const rMod = mySteamId ? roster.find((m) => m.steamid === mySteamId) : null;
-  return toListItem(updatedRows[0], mySteamId, rMod?.name, rMod?.rank);
+  return toListItem(updatedRows[0], mySteamId, rMod?.name, rMod?.rank, true);
 }
 
 export async function updateUserAvatar(

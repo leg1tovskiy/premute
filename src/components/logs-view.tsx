@@ -479,7 +479,7 @@ export function LogsView({ me }: { me: StaffProfile }) {
 
               {canClearLogs ? (
                 <Button
-                  variant="destructive"
+                  variant="danger"
                   size="sm"
                   onClick={() => void handleClear()}
                   disabled={clearing || logs.length === 0}

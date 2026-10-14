@@ -59,7 +59,8 @@ export function AdminView({ me }: { me: StaffProfile }) {
   const [createUserOpen, setCreateUserOpen] = useState(false);
   const [changePasswordUser, setChangePasswordUser] = useState<StaffListItem | null>(null);
   const meIsMainOwner = me.userId === ROOT_DISCORD_ID || me.discordId === ROOT_DISCORD_ID;
-  const canCreate = me.isOwner || me.isBotOwner || me.isRoot;
+  const isRootUser = Boolean(me.isRoot || me.caps?.isRoot);
+  const canCreate = isRootUser;
 
   useEffect(() => {
     if (!manualModalUserId) return;
@@ -268,7 +269,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
             {rows.map((u) => {
               const isTargetMainOwner = isMainOwner(u);
               const locked = isTargetMainOwner && !meIsMainOwner;
-              const canEditCredentials = meIsMainOwner || (!isTargetMainOwner && canCreate);
+              const canEditCredentials = isRootUser;
               const handle = u.displayName || u.email || "Без имени";
               const initial = handle.trim().charAt(0).toUpperCase();
 
@@ -319,7 +320,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
                         <p className="truncate font-extrabold text-sm text-fg" title={handle}>
                           {handle}
                         </p>
-                        {u.username ? (
+                        {u.username && isRootUser ? (
                           <span className="font-mono text-xs font-bold text-accent">
                             @{u.username}
                           </span>
@@ -390,7 +391,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
                   </div>
 
                   {/* ── Учётные данные для входа (логин и пароль) ────────────────── */}
-                  {canCreate ? (
+                  {isRootUser ? (
                     <div className="relative z-10 mt-3 rounded-2xl border border-border/70 bg-elevated/40 p-2.5 sm:p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-extrabold uppercase tracking-wider text-fg flex items-center gap-1.5">
@@ -872,7 +873,7 @@ function OwnershipBadge({
   tone: "gold" | "danger";
   canClick: boolean;
   title: string;
-  onClick: () => void;
+  onClick?: () => void;
   children: ReactNode;
 }) {
   return (

@@ -67,7 +67,7 @@ export const listStaffFn = createServerFn({ method: "GET" })
     const { getStaff, listStaff } = await import("./server/staff");
     const me = await getStaff(context.userId);
     if (!me?.caps.canAdmin || me.isBanned) throw new Error("Недостаточно прав.");
-    return listStaff();
+    return listStaff(me);
   });
 
 export const deleteStaffFn = createServerFn({ method: "POST" })
@@ -1025,6 +1025,7 @@ export const createStaffUserFn = createServerFn({ method: "POST" })
     const me = await getStaff(context.userId);
     if (!me) throw new Error("Профиль не найден.");
     if (me.isBanned) throw new Error("Аккаунт заблокирован.");
+    if (!me.isRoot) throw new Error("Настраивать логины и пароли могут только ROOT пользователи.");
     return createStaffUser(me, data);
   });
 
@@ -1036,6 +1037,7 @@ export const updateStaffPasswordFn = createServerFn({ method: "POST" })
     const me = await getStaff(context.userId);
     if (!me) throw new Error("Профиль не найден.");
     if (me.isBanned) throw new Error("Аккаунт заблокирован.");
+    if (!me.isRoot) throw new Error("Настраивать логины и пароли могут только ROOT пользователи.");
     return updateStaffPassword(me, data.userId, data.password, data.username);
   });
 
