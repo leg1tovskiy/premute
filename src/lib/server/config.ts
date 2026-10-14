@@ -21,8 +21,13 @@ export const FEAR_API = "https://fearproject.ru/api/punishments";
 export const MSK_OFFSET_SEC = 3 * 3600;
 
 /** Live Discord bot on the VPS — voice playback + panel ops. */
-export const PANEL_BOT_URL = "http://64.188.66.194:3847";
+export const PANEL_BOT_URL = process.env.PANEL_BOT_URL || "http://127.0.0.1:3847";
 
 /** Отдельный воркер статистики на VPS: считает статы/онлайн с fearproject.ru
  * независимо от бота и отдаёт сайту по HTTP (порт 3848). */
-export const STATS_WORKER_URL = "http://64.188.66.194:3848";
+export const STATS_WORKER_URL = process.env.STATS_WORKER_URL || "http://127.0.0.1:3848";
+
+export const STATS_WORKER_SECRET =
+  process.env.STATS_WORKER_SECRET ||
+  process.env.PANEL_SECRET ||
+  "a8aa7ea00a23edee4c10d05308ff8dcf";

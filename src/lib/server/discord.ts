@@ -6,6 +6,7 @@ import {
   PROTECTED_USER_IDS,
   DISCORD_VOICE_CHANNEL_ID,
   STATS_WORKER_URL,
+  STATS_WORKER_SECRET,
 } from "./config";
 import { createHash } from "node:crypto";
 import type {
@@ -268,7 +269,7 @@ export async function ttsMp3(text: string): Promise<Uint8Array> {
 }
 
 function panelSecret() {
-  return createHash("sha256").update(`${DISCORD_BOT_TOKEN}panel`).digest("hex").slice(0, 32);
+  return STATS_WORKER_SECRET;
 }
 
 export async function syncBotOwners(_ids: string[], _actor: string): Promise<void> {
