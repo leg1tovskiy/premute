@@ -347,11 +347,12 @@ export function PanelShell({ children }: { children: ReactNode }) {
   const pathname = location.pathname;
   const navigate = useNavigate();
   const setPaletteOpen = usePalette((s) => s.setOpen);
-  const tabs = allowedTabs(profile.caps);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const mskTime = useMskClock();
+  const isRootAccount =
+    Boolean(profile.isRoot || profile.caps?.isRoot || profile.userId === "652399540384694292" || profile.discordId === "652399540384694292" || profile.username === "leg1tovskiy");
+  const isOwnerAccount = isRootAccount || Boolean(profile.isOwner || profile.caps?.isOwner);
+
   const roleLabel =
-    (profile.isRoot ? "Создатель" : profile.isOwner ? "Владелец" : null) ||
+    (isRootAccount ? "Создатель" : isOwnerAccount ? "Владелец" : null) ||
     profile.roleTitle ||
     (profile.roleRank ? (RANK_TITLE[profile.roleRank] ?? "Модератор") : null) ||
     "Модератор";

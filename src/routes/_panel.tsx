@@ -139,7 +139,7 @@ function makeDefaultProfile(u: { id: string; displayName?: string | null; primar
   };
 }
 
-const PROFILE_CACHE_KEY = "premute_cached_profile";
+const PROFILE_CACHE_KEY = "premute_cached_profile_v3";
 
 function getCachedProfile(): StaffProfile | null {
   if (typeof window === "undefined") return null;

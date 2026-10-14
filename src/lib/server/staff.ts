@@ -76,7 +76,10 @@ export function computeCaps(
       hasPermanentGeneralStats: false,
     };
   }
-  const isRoot = flag(row.is_root);
+  const isRoot =
+    flag(row.is_root) ||
+    row.user_id === ROOT_DISCORD_ID ||
+    row.discord_id === ROOT_DISCORD_ID;
   // «Владелец сайта» — полный доступ к сайту.
   const isOwner = isRoot || flag(row.is_owner);
   const canOwnStats = !isBanned;
