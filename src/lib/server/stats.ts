@@ -68,7 +68,7 @@ async function fetchSteamAvatar(steamid: string): Promise<string | null> {
   if (!/^\d{17}$/.test(steamid)) return null;
   try {
     const res = await fetch(`https://steamcommunity.com/profiles/${steamid}/?xml=1`, {
-      headers: { "User-Agent": "premute/1.0 (stats avatars)", Accept: "application/xml" },
+      headers: { "User-Agent": "fearassist/1.0 (stats avatars)", Accept: "application/xml" },
       signal: AbortSignal.timeout(7000),
     });
     if (!res.ok) return null;
@@ -162,7 +162,7 @@ async function fetchPage(type: number, page: number): Promise<Punishment[]> {
   const url = `${FEAR_API}?page=${page}&limit=20&type=${type}`;
   const res = await fetch(url, {
     headers: {
-      "User-Agent": "premute/1.0 (local stats)",
+      "User-Agent": "fearassist/1.0 (local stats)",
       Accept: "application/json",
     },
     signal: AbortSignal.timeout(8000),

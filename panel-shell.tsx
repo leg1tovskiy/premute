@@ -104,11 +104,11 @@ export function PanelShell({
           >
             <img
               src="/logo.png"
-              alt="PremuteBOT logo"
+              alt="FearAssist logo"
               className="size-8 shrink-0 rounded-sm border border-border object-cover"
             />
             <span className="text-left">
-              <span className="block text-sm font-semibold leading-none">PremuteBOT</span>
+              <span className="block text-sm font-semibold leading-none">FearAssist</span>
             </span>
             <ChevronDown
               className={cn("size-3.5 text-subtle transition-transform md:hidden", menuOpen && "rotate-180")}
@@ -196,7 +196,7 @@ export function HomeHero() {
         P
       </span>
       <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-        Приветствую в панели управления бота PremuteBOT
+        Приветствую в панели управления FearAssist
       </h1>
       <p className="mt-4 text-sm leading-relaxed text-muted">
         Вкладки сверху — статистика модераторов FEAR, наказания на сервере, озвучка, логи и

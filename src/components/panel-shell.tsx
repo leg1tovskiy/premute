@@ -334,14 +334,14 @@ export function PanelShell({ children }: { children: ReactNode }) {
             <div className="relative">
               <img
                 src="/logo.png"
-                alt="PremuteBOT"
+                alt="FearAssist"
                 className="size-10 rounded-xl border border-border/80 object-cover shadow-sm transition-transform group-hover:scale-105"
               />
               <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-surface bg-success" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-sm font-extrabold tracking-tight">PremuteBOT</span>
+                <span className="text-sm font-extrabold tracking-tight">FearAssist</span>
                 <span className="rounded bg-accent/15 px-1.5 py-0.2 text-[10px] font-bold text-accent border border-accent/30">PRO</span>
               </div>
               <p className="text-[11px] text-subtle">FearProject CS2</p>
@@ -555,9 +555,9 @@ export function PanelShell({ children }: { children: ReactNode }) {
             <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-3.5 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <img src="/logo.png" alt="PremuteBOT" className="size-8 rounded-lg border border-border object-cover" />
+                  <img src="/logo.png" alt="FearAssist" className="size-8 rounded-lg border border-border object-cover" />
                   <div>
-                    <span className="font-bold text-sm block leading-tight">PremuteBOT</span>
+                    <span className="font-bold text-sm block leading-tight">FearAssist</span>
                     <span className="text-[10px] text-subtle">FearProject CS2</span>
                   </div>
                 </div>

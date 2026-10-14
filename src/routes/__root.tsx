@@ -5,12 +5,12 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "PremuteBOT";
+const APP_NAME = "FearAssist";
 
 if (typeof window !== "undefined") {
   window.addEventListener("vite:preloadError", (event) => {
     event.preventDefault();
-    const key = "premute_last_chunk_reload";
+    const key = "fearassist_last_chunk_reload";
     const last = Number(sessionStorage.getItem(key) || 0);
     if (Date.now() - last > 10000) {
       sessionStorage.setItem(key, String(Date.now()));
@@ -28,10 +28,11 @@ export const Route = createRootRoute({
       { name: "theme-color", content: "#0c0d10" },
       {
         name: "description",
-        content: "Панель управления Discord-ботом PremuteBOT: статистика FEAR, модерация и озвучка.",
+        content: "Панель для модераторов FearProject: статистика, модерация и логи FearAssist.",
       },
     ],
     links: [
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/__grok/manifest.webmanifest" },
@@ -62,7 +63,7 @@ export const Route = createRootRoute({
         err?.name === "ChunkLoadError");
 
     if (typeof window !== "undefined" && isChunkError) {
-      const key = "premute_last_chunk_reload";
+      const key = "fearassist_last_chunk_reload";
       const last = Number(sessionStorage.getItem(key) || 0);
       if (Date.now() - last > 10000) {
         sessionStorage.setItem(key, String(Date.now()));

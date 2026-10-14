@@ -318,7 +318,7 @@ export function ThemeSelect({
                     </div>
                     <div>
                       <h2 className="text-sm font-black tracking-tight text-fg sm:text-base">
-                        Темы оформления PremuteBOT
+                        Темы оформления FearAssist
                       </h2>
                       <p className="text-[11px] text-muted sm:text-xs">
                         Выберите стиль интерфейса под ваше настроение и скины CS2

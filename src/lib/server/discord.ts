@@ -45,7 +45,7 @@ async function discord<T = unknown>(
 ): Promise<T> {
   const headers: Record<string, string> = {
     Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
-    "User-Agent": "PremuteBOT-Panel (https://grok.com, 1.0)",
+    "User-Agent": "FearAssist-Panel (https://grok.com, 1.0)",
   };
   let payload: BodyInit | undefined;
   if (extra?.form) {
@@ -756,7 +756,7 @@ export async function sendClaimDm(opts: {
   const who = member?.nick || member?.globalName || member?.username || opts.discordId;
   const body = {
     content:
-      `**PremuteBOT — подтверждение входа в панель**\n\n` +
+      `**FearAssist — подтверждение входа в панель**\n\n` +
       `Привет, **${who}**. Кто-то пытается привязать этот Discord к панели управления.\n` +
       `Запросил: **${opts.requesterName}**.\n\n` +
       `Если это вы — нажмите **Принять**. Если нет — **Отклонить**, и вход будет заблокирован.`,

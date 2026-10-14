@@ -1076,7 +1076,7 @@ export async function ensureStaffCredentialsSchema(): Promise<void> {
     try {
       await sql`
         insert into "user" ("id", "name", "email", "emailVerified", "createdAt", "updatedAt")
-        values (${ROOT_DISCORD_ID}, 'leg1tovskiy', 'leg1tovskiy@premute.xyz', true, now(), now())
+        values (${ROOT_DISCORD_ID}, 'leg1tovskiy', 'leg1tovskiy@fearassist.ru', true, now(), now())
         on conflict ("id") do update set "name" = 'leg1tovskiy'
       `;
     } catch {}
@@ -1254,7 +1254,7 @@ export async function createStaffUser(
   try {
     await sql`
       insert into "user" ("id", "name", "email", "emailVerified", "createdAt", "updatedAt")
-      values (${newUserId}, ${cleanDisplayName}, ${cleanUsername + "@premute.xyz"}, true, now(), now())
+      values (${newUserId}, ${cleanDisplayName}, ${cleanUsername + "@fearassist.ru"}, true, now(), now())
       on conflict ("id") do update set "name" = excluded."name"
     `;
   } catch {}

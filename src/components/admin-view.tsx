@@ -78,7 +78,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `premute-backup-${new Date(data.generatedAt * 1000).toISOString().slice(0, 10)}.json`;
+      a.download = `fearassist-backup-${new Date(data.generatedAt * 1000).toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a);
       a.click();
       a.remove();

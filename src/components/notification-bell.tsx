@@ -40,7 +40,7 @@ export function NotificationBell() {
         const status = await getSystemStatusFn();
         if (!alive) return;
         if (prev.current.bot === true && !status.bot) {
-          notify("PremuteBOT недоступен", "Бот перестал отвечать. Проверьте «Питание» или сервер.");
+          notify("FearAssist недоступен", "Бот перестал отвечать. Проверьте «Питание» или сервер.");
         }
         prev.current.bot = status.bot;
 

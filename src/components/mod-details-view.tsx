@@ -528,6 +528,8 @@ function DiscordShareModal({
     ? `\n📅 За неделю: ${m.weekTotal ?? 0} / ${weekTarget} (${Math.round(((m.weekTotal ?? 0) / weekTarget) * 100)}%)`
     : "";
 
+  const appOrigin = typeof window !== "undefined" ? window.location.origin : "https://premute.vercel.app";
+
   const discordMarkdown = `📊 **Отчёт модератора ${handle} | FearProject CS2**
 📅 Период: ${monthName}
 🛡 Ранг: ${rankText}
@@ -538,7 +540,7 @@ function DiscordShareModal({
 🎯 Норма месяца: ${m.total} / ${target} (${pct}%)
 🔓 Снято решений: ${m.removed ?? 0}
 ───────────────────────
-🔗 Профиль: https://premute.vercel.app/player/${steamid}`;
+🔗 Профиль: ${appOrigin}/player/${steamid}`;
 
   function copyText() {
     try {
@@ -551,7 +553,7 @@ function DiscordShareModal({
 
   function copyLink() {
     try {
-      void navigator.clipboard.writeText(`https://premute.vercel.app/player/${steamid}`);
+      void navigator.clipboard.writeText(`${appOrigin}/player/${steamid}`);
       toast.success("Ссылка на профиль скопирована!");
     } catch {
       toast.error("Не удалось скопировать ссылку");

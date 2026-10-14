@@ -54,11 +54,13 @@ export function LoginScreen() {
 
         {/* Header */}
         <div className="mb-6 flex items-center gap-3.5 pl-2">
-          <span className="grid size-12 place-items-center rounded-2xl border border-accent/40 bg-elevated text-xl font-black text-accent shadow-md">
-            P
-          </span>
+          <img
+            src="/logo.png"
+            alt="FearAssist"
+            className="size-12 rounded-2xl border border-accent/40 bg-elevated/40 p-1 object-contain shadow-md"
+          />
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.25em] text-accent">PremuteBOT</p>
+            <p className="text-xs font-black uppercase tracking-[0.25em] text-accent">FearAssist</p>
             <p className="text-xs font-semibold text-muted">Панель для модераторов FearProject</p>
           </div>
         </div>

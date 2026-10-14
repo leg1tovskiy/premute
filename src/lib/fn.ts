@@ -361,7 +361,7 @@ export const getModDetailsFn = createServerFn({ method: "POST" })
     if (!avatar && /^\d{17}$/.test(mod.steamid)) {
       try {
         const res = await fetch(`https://steamcommunity.com/profiles/${mod.steamid}/?xml=1`, {
-          headers: { "User-Agent": "premute/1.0 (stats avatars)", Accept: "application/xml" },
+          headers: { "User-Agent": "fearassist/1.0 (stats avatars)", Accept: "application/xml" },
           signal: AbortSignal.timeout(3000),
         });
         if (res.ok) {
@@ -997,7 +997,7 @@ export const loginWithPasswordFn = createServerFn({ method: "POST" })
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     const displayName = result.profile.displayName || result.profile.username || result.userId;
-    const email = result.profile.email || `${result.userId}@premute.xyz`;
+    const email = result.profile.email || `${result.userId}@fearassist.ru`;
     const image = result.profile.image ?? null;
 
     try {
