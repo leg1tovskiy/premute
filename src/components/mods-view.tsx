@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { ArchiveRestore, Loader2, Pencil, Plus, Search, Trash2, Users } from "lucide-react";
+import { Loader2, Pencil, Plus, Search, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,10 +22,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageHeaderSkeleton, RowsSkeleton } from "@/components/skeletons";
-import { deleteModFn, getBackupsFn, listModsFn, setBackupFn, unsetBackupFn, upsertModFn } from "@/lib/fn";
+import { deleteModFn, listModsFn, upsertModFn } from "@/lib/fn";
 import { notifyActionLogUpdated } from "@/lib/action-log-events";
 import { RANK_TITLE } from "@/lib/constants";
-import type { BackupsPayload, BackupEntry, RosterMod, RosterRank } from "@/lib/types";
+import type { RosterMod, RosterRank } from "@/lib/types";
 import { AnimatedBlock, AnimatedNumber } from "@/components/animated-number";
 
 const STEAMID_RE = /^\d{17}$/;
@@ -42,7 +42,6 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
   const [draft, setDraft] = useState({ name: "", rank: 1, discord: "" });
   const [recounting, setRecounting] = useState(false);
   const [search, setSearch] = useState("");
-  const [backups, setBackups] = useState<Record<string, BackupEntry>>({});
   const [pendingRemove, setPendingRemove] = useState<RosterMod | null>(null);
 
   async function load() {
@@ -58,19 +57,8 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
     }
   }
 
-  async function loadBackups() {
-    if (!isOwner) return;
-    try {
-      const data = await getBackupsFn();
-      setBackups(data.backups.entries);
-    } catch {
-      /* тихо: форма просто останется пустой */
-    }
-  }
-
   useEffect(() => {
     void load();
-    void loadBackups();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -330,8 +318,7 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
                       </div>
                     </div>
                   ) : (
-                    <>
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="font-medium">{m.name}</p>
@@ -374,15 +361,6 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
                         </Button>
                       </div>
                     </div>
-                    {isOwner ? (
-                      <BackupForm
-                        steamid={m.steamid}
-                        name={m.name}
-                        entry={backups[m.steamid] || null}
-                        onSaved={(p) => setBackups(p.backups.entries)}
-                      />
-                    ) : null}
-                    </>
                   )}
                 </li>
               );
@@ -427,157 +405,6 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
           </AlertDialogActions>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
-}
-
-function numOrNull(s: string): number | null {
-  const t = String(s).trim();
-  if (!t) return null;
-  const n = Number(t);
-  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : NaN;
-}
-
-function fmtBkpTime(sec: number) {
-  return new Intl.DateTimeFormat("ru-RU", {
-    timeZone: "Europe/Moscow",
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(sec * 1000));
-}
-
-function BackupForm({
-  steamid,
-  name,
-  entry,
-  onSaved,
-}: {
-  steamid: string;
-  name: string;
-  entry: BackupEntry | null;
-  onSaved: (p: BackupsPayload) => void;
-}) {
-  const [bans, setBans] = useState(entry?.bans != null ? String(entry.bans) : "");
-  const [mutes, setMutes] = useState(entry?.mutes != null ? String(entry.mutes) : "");
-  const [total, setTotal] = useState(entry && entry.bans == null && entry.total != null ? String(entry.total) : "");
-  const [busy, setBusy] = useState(false);
-
-  const bN = numOrNull(bans);
-  const mN = numOrNull(mutes);
-  const derived = bN != null && mN != null ? String(bN + mN) : "";
-  const totalShown = derived || total;
-
-  async function save() {
-    if (busy) return;
-    const tN = numOrNull(total);
-    if ([bN, mN, tN].some((v) => v != null && Number.isNaN(v))) {
-      toast.error("Баны, муты и общее — целые неотрицательные числа");
-      return;
-    }
-    if (bN != null || mN != null) {
-      if (bN == null || mN == null) {
-        toast.error("Баны и муты задаются вместе (общее = их сумма)");
-        return;
-      }
-    } else if (tN == null) {
-      toast.error("Заполните баны и муты или только общее");
-      return;
-    }
-    setBusy(true);
-    try {
-      const payload =
-        bN != null && mN != null
-          ? { steamid, bans: bN, mutes: mN }
-          : { steamid, total: (tN ?? 0) as number };
-      const next = await setBackupFn({ data: payload });
-      onSaved(next);
-      notifyActionLogUpdated();
-      if (bN != null && mN != null) {
-        setTotal(String(bN + mN));
-      } else {
-        setBans("");
-        setMutes("");
-      }
-      toast.success(`Бэкап ${name} сохранён до конца месяца`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Не сохранён");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function reset() {
-    if (!entry || busy) return;
-    if (!window.confirm(`Сбросить бэкап ${name} (- - - во всех полях)?`)) return;
-    setBusy(true);
-    try {
-      const next = await unsetBackupFn({ data: { steamid } });
-      setBans("");
-      setMutes("");
-      setTotal("");
-      onSaved(next);
-      notifyActionLogUpdated();
-      toast.success("Бэкап сброшен");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Не сброшен");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="mt-3 flex flex-wrap items-end justify-center gap-x-3 gap-y-2 rounded-md border border-dashed border-border bg-elevated/60 px-3 py-2.5">
-      <div className="flex items-center gap-2">
-        <ArchiveRestore className="size-4 text-accent" />
-        <span className="text-xs font-medium uppercase tracking-wider text-muted">Бэкап</span>
-        {entry ? (
-          <span className="text-[11px] text-accent">активен с {fmtBkpTime(entry.setAt)} МСК</span>
-        ) : (
-          <span className="text-[11px] text-subtle">нет</span>
-        )}
-      </div>
-      <label className="flex items-center gap-1.5 text-xs text-subtle">
-        Баны
-        <Input
-          value={bans}
-          onChange={(e) => setBans(e.target.value.replace(/\D/g, "").slice(0, 6))}
-          inputMode="numeric"
-          placeholder="—"
-          className="h-8 w-20 text-sm"
-        />
-      </label>
-      <label className="flex items-center gap-1.5 text-xs text-subtle">
-        Муты
-        <Input
-          value={mutes}
-          onChange={(e) => setMutes(e.target.value.replace(/\D/g, "").slice(0, 6))}
-          inputMode="numeric"
-          placeholder="—"
-          className="h-8 w-20 text-sm"
-        />
-      </label>
-      <label className="flex items-center gap-1.5 text-xs text-subtle">
-        Общее
-        <Input
-          value={totalShown}
-          onChange={(e) => setTotal(e.target.value.replace(/\D/g, "").slice(0, 6))}
-          inputMode="numeric"
-          placeholder="—"
-          disabled={derived !== ""}
-          className="h-8 w-20 text-sm disabled:opacity-60"
-        />
-      </label>
-      <div className="flex items-center gap-1.5">
-        <Button type="button" size="sm" onClick={() => void save()} disabled={busy}>
-          {busy ? <Loader2 className="animate-spin" /> : null}
-          Задать
-        </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={() => void reset()} disabled={busy || !entry}>
-          Сбросить
-        </Button>
-      </div>
     </div>
   );
 }
