@@ -15,13 +15,16 @@ import {
   Flame,
   Hammer,
   Loader2,
+  Plus,
   RefreshCw,
   Search,
   Share2,
   Shield,
+  Sparkles,
   Target,
   TrendingUp,
   Unlock,
+  Video,
   VolumeX,
   X,
   Zap,
@@ -36,6 +39,8 @@ import { downloadCsv } from "@/lib/csv";
 import { RANK_SHORT, fearProfileUrl } from "@/lib/constants";
 import type { ModDetails, PunishmentRecord } from "@/lib/types";
 import { AnimatedBlock, AnimatedNumber } from "@/components/animated-number";
+import { ModeratorCardModal } from "@/components/moderator-card-modal";
+import { AttachProofModal } from "@/components/attach-proof-modal";
 import { cn } from "@/lib/utils";
 import {
   Bar,
@@ -641,6 +646,45 @@ export function ModDetailsView({
   const [allTimeRecords, setAllTimeRecords] = useState<PunishmentRecord[] | null>(null);
   const [loadingAllTime, setLoadingAllTime] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [cardOpen, setCardOpen] = useState(false);
+  const [proofModalRecord, setProofModalRecord] = useState<PunishmentRecord | null>(null);
+  const [proofFilter, setProofFilter] = useState<"all" | "with_proof" | "no_proof">("all");
+
+  function handleProofSaved(
+    recordId: number,
+    kind: "ban" | "mute",
+    proof: NonNullable<PunishmentRecord["proof"]>,
+  ) {
+    const updater = (list: PunishmentRecord[]) =>
+      list.map((r) => (r.id === recordId && r.kind === kind ? { ...r, proof } : r));
+
+    setData((prev) =>
+      prev
+        ? {
+            ...prev,
+            records: updater(prev.records),
+            allRecords: prev.allRecords ? updater(prev.allRecords) : undefined,
+          }
+        : null,
+    );
+    setAllTimeRecords((prev) => (prev ? updater(prev) : null));
+  }
+
+  function handleProofRemoved(recordId: number, kind: "ban" | "mute") {
+    const updater = (list: PunishmentRecord[]) =>
+      list.map((r) => (r.id === recordId && r.kind === kind ? { ...r, proof: null } : r));
+
+    setData((prev) =>
+      prev
+        ? {
+            ...prev,
+            records: updater(prev.records),
+            allRecords: prev.allRecords ? updater(prev.allRecords) : undefined,
+          }
+        : null,
+    );
+    setAllTimeRecords((prev) => (prev ? updater(prev) : null));
+  }
 
   async function load(silent = false) {
     if (!slug) {
@@ -727,6 +771,9 @@ export function ModDetailsView({
               : "active";
         if (status !== "all" && st !== status) return false;
 
+        if (proofFilter === "with_proof" && !r.proof?.url) return false;
+        if (proofFilter === "no_proof" && r.proof?.url) return false;
+
         if (datePreset === "today" && r.created < todayStartSec) return false;
         if (datePreset === "3days" && r.created < now - 3 * 86400) return false;
         if (datePreset === "week" && r.created < now - 7 * 86400) return false;
@@ -738,7 +785,7 @@ export function ModDetailsView({
           r.playerSteamid.includes(q)
         );
       });
-  }, [data, activeSource, kind, status, datePreset, search, sortDir]);
+  }, [data, activeSource, kind, status, proofFilter, datePreset, search, sortDir]);
 
   if (loading) {
     return (
@@ -809,8 +856,8 @@ export function ModDetailsView({
 
   return (
     <div className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-8 sm:py-8 space-y-6">
-      {/* ── Top Back Link ──────────────────────────────────────────── */}
-      {!hideBackLink && (
+      {/* ── Top Bar ──────────────────────────────────────────── */}
+      {!hideBackLink ? (
         <AnimatedBlock delay={0}>
           <div className="flex items-center justify-between">
             <Link
@@ -820,13 +867,46 @@ export function ModDetailsView({
               <ArrowLeft className="size-3.5" />
               Назад к общей статистике
             </Link>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => setCardOpen(true)}
+                className="rounded-xl border border-accent/40 bg-accent/15 px-3 py-1.5 text-xs font-bold text-accent hover:bg-accent hover:text-accent-fg transition-all shadow-sm"
+              >
+                <Sparkles className="size-3.5" />
+                Карточка
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShareOpen(true)}
+                className="rounded-xl border border-border/80 bg-elevated/70 px-3 py-1.5 text-xs font-bold text-fg hover:border-accent hover:text-accent transition-all shadow-sm"
+              >
+                <Share2 className="size-3.5" />
+                Поделиться отчётом
+              </Button>
+            </div>
+          </div>
+        </AnimatedBlock>
+      ) : (
+        <AnimatedBlock delay={0}>
+          <div className="flex items-center justify-end gap-2">
             <Button
               size="sm"
-              onClick={() => setShareOpen(true)}
+              onClick={() => setCardOpen(true)}
               className="rounded-xl border border-accent/40 bg-accent/15 px-3 py-1.5 text-xs font-bold text-accent hover:bg-accent hover:text-accent-fg transition-all shadow-sm"
             >
+              <Sparkles className="size-3.5" />
+              Карточка модератора
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShareOpen(true)}
+              className="rounded-xl border border-border/80 bg-elevated/70 px-3 py-1.5 text-xs font-bold text-fg hover:border-accent hover:text-accent transition-all shadow-sm"
+            >
               <Share2 className="size-3.5" />
-              Поделиться отчётом
+              Поделиться
             </Button>
           </div>
         </AnimatedBlock>
@@ -932,14 +1012,25 @@ export function ModDetailsView({
                     "цель не задана"
                   )}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setShareOpen(true)}
-                  className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-bold text-accent hover:underline cursor-pointer"
-                >
-                  <Share2 className="size-3" />
-                  Поделиться
-                </button>
+                <div className="mt-1 flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setShareOpen(true)}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-accent hover:underline cursor-pointer"
+                  >
+                    <Share2 className="size-3" />
+                    Поделиться
+                  </button>
+                  <span className="text-muted text-[10px]">&middot;</span>
+                  <button
+                    type="button"
+                    onClick={() => setCardOpen(true)}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-accent hover:underline cursor-pointer"
+                  >
+                    <Sparkles className="size-3" />
+                    Карточка
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1184,6 +1275,31 @@ export function ModDetailsView({
 
               <span className="mx-1 h-4 w-px bg-border/80" />
 
+              {/* Proof Filter */}
+              {(
+                [
+                  { id: "all", label: "Все опры" },
+                  { id: "with_proof", label: "С опрой" },
+                  { id: "no_proof", label: "Без опры" },
+                ] as const
+              ).map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setProofFilter(f.id)}
+                  className={cn(
+                    "h-7.5 rounded-xl border px-3 text-xs font-bold transition-all",
+                    proofFilter === f.id
+                      ? "border-accent bg-accent text-accent-fg shadow-sm"
+                      : "border-border/60 bg-elevated/60 text-muted hover:text-fg",
+                  )}
+                >
+                  {f.label}
+                </button>
+              ))}
+
+              <span className="mx-1 h-4 w-px bg-border/80" />
+
               {/* Date Preset Filter */}
               {(
                 [
@@ -1305,6 +1421,34 @@ export function ModDetailsView({
                       </p>
                     ) : null}
                   </div>
+                  {/* Proof Button / Badge */}
+                  {r.proof?.url ? (
+                    <button
+                      type="button"
+                      onClick={() => setProofModalRecord(r)}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-accent/40 bg-accent/15 px-2.5 py-1 text-xs font-bold text-accent hover:bg-accent hover:text-accent-fg transition-all shrink-0 cursor-pointer shadow-xs"
+                      title={r.proof.comment ? `Опра: ${r.proof.comment}` : "Посмотреть опру"}
+                    >
+                      <Video className="size-3.5" />
+                      <span>Опра</span>
+                      {r.proof.comment && (
+                        <span className="text-[10px] font-normal text-accent/80 truncate max-w-[110px] hidden md:inline">
+                          ({r.proof.comment})
+                        </span>
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setProofModalRecord(r)}
+                      className="inline-flex items-center gap-1 rounded-xl border border-dashed border-border/70 bg-elevated/40 px-2.5 py-1 text-xs font-semibold text-muted hover:border-accent hover:text-accent hover:bg-accent/10 transition-all shrink-0 cursor-pointer"
+                      title="Прикрепить доказательство / откат"
+                    >
+                      <Plus className="size-3" />
+                      <span className="hidden sm:inline">Опра</span>
+                    </button>
+                  )}
+
                   <Badge
                     tone={r.kind === "ban" ? "danger" : "warn"}
                     className="shrink-0 font-bold"
@@ -1336,6 +1480,28 @@ export function ModDetailsView({
         steamid={m.steamid}
         rank={m.rank}
         m={m}
+        monthName={data.month}
+      />
+
+      {/* ── Attach / View Proof Modal ──────────────────────────────── */}
+      <AttachProofModal
+        open={Boolean(proofModalRecord)}
+        record={proofModalRecord}
+        onClose={() => setProofModalRecord(null)}
+        onSaved={handleProofSaved}
+        onRemoved={handleProofRemoved}
+      />
+
+      {/* ── Moderator Card Modal ───────────────────────────────────── */}
+      <ModeratorCardModal
+        open={cardOpen}
+        onClose={() => setCardOpen(false)}
+        m={{
+          ...m,
+          allTimeTotal: m.allTimeTotal ?? allTimeRecords?.length ?? m.total,
+          allTimeBans: (m.allTimeBans ?? allTimeRecords?.filter((x) => x.kind === "ban").length ?? m.bans) ?? undefined,
+          allTimeMutes: (m.allTimeMutes ?? allTimeRecords?.filter((x) => x.kind === "mute").length ?? m.mutes) ?? undefined,
+        }}
         monthName={data.month}
       />
     </div>

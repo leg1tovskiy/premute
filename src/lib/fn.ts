@@ -402,14 +402,21 @@ export const getModDetailsFn = createServerFn({ method: "POST" })
       lastPunishmentAt,
     };
 
+    const { getProofsMap } = await import("./server/proofs");
+    const proofs = await getProofsMap();
+    const attachProofToRecord = (r: PunishmentRecord): PunishmentRecord => ({
+      ...r,
+      proof: proofs[`${r.kind}_${r.id}`] ?? null,
+    });
+
     return {
       month: worker?.month || stats.month,
       updatedAt: worker?.updatedAt || stats.updatedAt,
       monthStart: worker?.monthStart ?? null,
       monthEnd: worker?.monthEnd ?? null,
       moderator: finalMod,
-      records: recs,
-      allRecords: allRecs,
+      records: recs.map(attachProofToRecord),
+      allRecords: allRecs.map(attachProofToRecord),
     };
   });
 
@@ -427,7 +434,36 @@ export const getModAllPunishmentsFn = createServerFn({ method: "POST" })
     }
     const { fetchWorkerModAllPunishments } = await import("./server/discord");
     const res = await fetchWorkerModAllPunishments(steamid, Boolean(data.refresh));
-    return { records: res?.records ?? [] };
+    const rawRecords = res?.records ?? [];
+    const { getProofsMap } = await import("./server/proofs");
+    const proofs = await getProofsMap();
+    const records = rawRecords.map((r) => ({
+      ...r,
+      proof: proofs[`${r.kind}_${r.id}`] ?? null,
+    }));
+    return { records };
+  });
+
+export const attachProofFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { recordId: number; kind: "ban" | "mute"; proofUrl: string; comment?: string | null }) => d)
+  .handler(async ({ context, data }) => {
+    const { getStaff } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me || me.isBanned) throw new Error("Нет доступа.");
+    const { attachProof } = await import("./server/proofs");
+    return attachProof(me, data);
+  });
+
+export const removeProofFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { recordId: number; kind: "ban" | "mute" }) => d)
+  .handler(async ({ context, data }) => {
+    const { getStaff } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me || me.isBanned) throw new Error("Нет доступа.");
+    const { removeProof } = await import("./server/proofs");
+    return removeProof(me, data);
   });
 
 export const getDailyStatsFn = createServerFn({ method: "GET" })
@@ -453,7 +489,14 @@ export const getPlayerRecordsFn = createServerFn({ method: "POST" })
     if (!/^\d{17}$/.test(steamid)) throw new Error("SteamID64 — 17 цифр.");
     const { fetchWorkerPlayer } = await import("./server/discord");
     const res = await fetchWorkerPlayer(steamid);
-    return { month: res?.month ?? null, records: res?.records ?? [] };
+    const rawRecords = res?.records ?? [];
+    const { getProofsMap } = await import("./server/proofs");
+    const proofs = await getProofsMap();
+    const records = rawRecords.map((r) => ({
+      ...r,
+      proof: proofs[`${r.kind}_${r.id}`] ?? null,
+    }));
+    return { month: res?.month ?? null, records };
   });
 
 export const getSuspiciousFn = createServerFn({ method: "GET" })
@@ -684,6 +727,7 @@ export const exportBackupFn = createServerFn({ method: "GET" })
     await dump("stats_cache", sql`select * from stats_cache`);
     await dump("action_log", sql`select * from action_log order by created_at desc limit 5000`);
     await dump("discord_claims", sql`select * from discord_claims order by created_at desc limit 2000`);
+    await dump("punishment_proofs", sql`select * from punishment_proofs order by created_at desc`);
     await dump("users", sql`select "id", "name", "email", "image", "createdAt" from "user" order by "createdAt"`);
     const generatedAt = Math.floor(Date.now() / 1000);
     return { generatedAt, json: JSON.stringify({ generatedAt, tables }, null, 2) };

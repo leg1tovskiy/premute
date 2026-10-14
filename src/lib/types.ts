@@ -131,6 +131,12 @@ export type PunishmentRecord = {
   unpunishAdmin: string | null;
   avatar?: string | null;
   adminAvatar?: string | null;
+  proof?: {
+    url: string;
+    comment?: string | null;
+    authorName?: string | null;
+    updatedAt?: string;
+  } | null;
 };
 
 export type ModDetails = {

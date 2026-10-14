@@ -6,10 +6,12 @@ import {
   Download,
   ExternalLink,
   Hammer,
+  Plus,
   RefreshCw,
   Search,
   ShieldAlert,
   User,
+  Video,
   VolumeX,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +23,7 @@ import { downloadCsv } from "@/lib/csv";
 import { fearProfileUrl } from "@/lib/constants";
 import type { PlayerRecord } from "@/lib/types";
 import { AnimatedBlock, AnimatedNumber } from "@/components/animated-number";
+import { AttachProofModal } from "@/components/attach-proof-modal";
 import { cn } from "@/lib/utils";
 
 function fmtDate(sec: number) {
@@ -68,6 +71,23 @@ export function PlayerView() {
   const [loading, setLoading] = useState(true);
   const [kind, setKind] = useState<"all" | "ban" | "mute">("all");
   const [search, setSearch] = useState("");
+  const [proofModalRecord, setProofModalRecord] = useState<PlayerRecord | null>(null);
+
+  function handleProofSaved(
+    recordId: number,
+    kind: "ban" | "mute",
+    proof: NonNullable<PlayerRecord["proof"]>,
+  ) {
+    setRecords((prev) =>
+      prev ? prev.map((r) => (r.id === recordId && r.kind === kind ? { ...r, proof } : r)) : null,
+    );
+  }
+
+  function handleProofRemoved(recordId: number, kind: "ban" | "mute") {
+    setRecords((prev) =>
+      prev ? prev.map((r) => (r.id === recordId && r.kind === kind ? { ...r, proof: null } : r)) : null,
+    );
+  }
 
   async function load() {
     setLoading(true);
@@ -313,6 +333,32 @@ export function PlayerView() {
                       >
                         {r.kind === "ban" ? "Бан" : "Мут"}
                       </Badge>
+                      {r.proof?.url ? (
+                        <button
+                          type="button"
+                          onClick={() => setProofModalRecord(r)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/15 px-2 py-0.5 text-xs font-bold text-accent hover:bg-accent hover:text-accent-fg transition-all shrink-0 cursor-pointer shadow-xs"
+                          title={r.proof.comment ? `Опра: ${r.proof.comment}` : "Посмотреть опру"}
+                        >
+                          <Video className="size-3" />
+                          <span>Опра</span>
+                          {r.proof.comment && (
+                            <span className="text-[10px] font-normal text-accent/80 truncate max-w-[120px] hidden sm:inline">
+                              ({r.proof.comment})
+                            </span>
+                          )}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setProofModalRecord(r)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-dashed border-border/70 bg-elevated/40 px-2 py-0.5 text-xs font-semibold text-muted hover:border-accent hover:text-accent hover:bg-accent/10 transition-all shrink-0 cursor-pointer"
+                          title="Прикрепить доказательство / откат"
+                        >
+                          <Plus className="size-3" />
+                          <span>Опра</span>
+                        </button>
+                      )}
                       <span className="font-mono text-[11px] text-subtle">
                         {fmtDateTime(r.created)} МСК
                       </span>
@@ -355,6 +401,14 @@ export function PlayerView() {
           История всех наказаний игрока синхронизирована с серверами FearProject за всё время.
         </p>
       </AnimatedBlock>
+
+      <AttachProofModal
+        open={Boolean(proofModalRecord)}
+        record={proofModalRecord}
+        onClose={() => setProofModalRecord(null)}
+        onSaved={handleProofSaved}
+        onRemoved={handleProofRemoved}
+      />
     </div>
   );
 }
