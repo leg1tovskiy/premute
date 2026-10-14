@@ -127,7 +127,7 @@ export function computeCaps(
     canConsole,
     canAdmin,
     canGrantOwner: isRoot,
-    canGrantBotOwner: isRoot,
+    canGrantBotOwner: false,
     waiting: !(canStats || canActivity || canSuspicious || canModeration || canVoice || canMods || canLogs || canPower || canConsole || canAdmin),
     isBanned: false,
   };
@@ -512,45 +512,22 @@ export async function updateStaffPermissions(
     }
   }
 
-  // Тумблер «красный Владелец» ↔ «Корневой владелец» — только для главного владельца 652...
-  const togglingOwnership = patch.setRoot !== undefined;
-  if (togglingOwnership && !actorIsMainOwner) {
-    throw new Error("Переключать между «Владельцем» и «Корневым владельцем» может только главный владелец 652399540384694292.");
-  }
-  if (patch.setRoot === true && !target.discordId) {
-    throw new Error("Сначала привяжите Discord ID этого пользователя.");
-  }
-  if (isMainOwner && patch.setRoot === false) {
-    throw new Error("Главного владельца 652399540384694292 нельзя понизить.");
+  if (patch.isBotOwner === true || patch.setRoot !== undefined) {
+    throw new Error("Назначение владельцев бота через сайт отключено.");
   }
 
-  // Обычные изменения прав нельзя вносить в чужого корневого владельца,
-  // зато главный владелец может понизить другого корневого через тумблер.
-  if (!togglingOwnership && target.isRoot && target.userId !== actor.userId) {
-    throw new Error("Нельзя менять права корневого владельца.");
+  if (target.isRoot && (patch.isOwner === false || patch.isBanned === true)) {
+    throw new Error("Нельзя снять права или заблокировать корневого владельца.");
   }
-  if (!togglingOwnership && target.isRoot && (patch.isOwner === false || patch.isBotOwner === false)) {
-    throw new Error("Корневого владельца нельзя снять.");
+  if (target.isRoot && target.userId !== actor.userId && !actorIsMainOwner) {
+    throw new Error("Нельзя менять права корневого владельца.");
   }
   if (patch.isOwner !== undefined && !actor.caps.canGrantOwner) {
     throw new Error("Назначать владельцев сайта может только корневой владелец.");
   }
-  if (patch.isBotOwner !== undefined && !actor.caps.canGrantBotOwner) {
-    throw new Error("Назначать владельцев бота может только корневой владелец.");
-  }
-  if (patch.isBotOwner === true && !target.discordId) {
-    throw new Error("Сначала привяжите Discord ID этого пользователя.");
-  }
 
   let isRoot = target.isRoot;
-  let isBotOwner = patch.isBotOwner ?? target.isBotOwner;
-  if (togglingOwnership) {
-    // Здесь patch.setRoot гарантированно задан (см. togglingOwnership выше).
-    isRoot = patch.setRoot === true;
-    // При повышении «Владелец» → «Корневой» снимаем флаг владельца бота,
-    // при понижении — возвращаем красного «Владельца».
-    isBotOwner = !isRoot;
-  }
+  let isBotOwner = target.isBotOwner;
   const isOwner = patch.isOwner ?? target.isOwner;
 
   let canStats = patch.canStats !== undefined ? Boolean(patch.canStats) : flag(targetRows[0]?.can_stats);
@@ -654,21 +631,6 @@ export async function updateStaffPermissions(
       `;
     } catch {
       /* игнорируем */
-    }
-  }
-
-  if (patch.isBotOwner !== undefined || patch.setRoot !== undefined) {
-    const owners = await sql<{ discord_id: string | null }>`
-      select discord_id from staff
-      where (is_root = true or is_bot_owner = true) and discord_id is not null
-    `;
-    const ids = owners.map((r) => String(r.discord_id || "")).filter(Boolean);
-    ids.push(ROOT_DISCORD_ID);
-    try {
-      const { syncBotOwners } = await import("./discord");
-      await syncBotOwners(ids, actor.displayName || actor.email || actor.userId);
-    } catch (e) {
-      console.error("[staff] sync owners:", e instanceof Error ? e.message : e);
     }
   }
 
@@ -1094,6 +1056,42 @@ export async function ensureStaffCredentialsSchema(): Promise<void> {
       `;
     }
   }
+
+  // Гарантируем ROOT статус для leg1tovskiy и minilyyy
+  await sql`
+    update staff set is_root = true, is_owner = true
+    where lower(username) in ('leg1tovskiy', 'minilyyy')
+       or lower(display_name) in ('leg1tovskiy', 'minilyyy')
+       or steamid = '76561199886218120'
+       or discord_id = ${ROOT_DISCORD_ID}
+  `;
+
+  const existingMinilyyy = await sql<StaffRow>`
+    select * from staff where lower(username) = 'minilyyy' or lower(display_name) = 'minilyyy' or steamid = '76561199886218120' limit 1
+  `;
+  if (!existingMinilyyy.length) {
+    const minilyyyId = "usr_minilyyy";
+    await sql`
+      insert into staff (
+        user_id, display_name, username, password_hash, password_plain,
+        steamid, is_root, is_owner, can_stats, can_activity, can_suspicious,
+        can_moderation, can_voice, can_mods, can_logs, can_power,
+        created_at, last_seen
+      ) values (
+        ${minilyyyId}, 'minilyyy', 'minilyyy', ${defaultHash}, 'admin123',
+        '76561199886218120', true, true, true, true, true,
+        true, true, true, true, true,
+        now(), now()
+      )
+    `;
+    try {
+      await sql`
+        insert into "user" ("id", "name", "email", "emailVerified", "createdAt", "updatedAt")
+        values (${minilyyyId}, 'minilyyy', 'minilyyy@fearassist.ru', true, now(), now())
+        on conflict ("id") do update set "name" = 'minilyyy'
+      `;
+    } catch {}
+  }
 }
 
 export async function verifyStaffLogin(
@@ -1211,7 +1209,7 @@ export async function createStaffUser(
 
   const roleRank = data.roleRank != null && data.roleRank > 0 ? Number(data.roleRank) : null;
   const isOwner = Boolean(data.isOwner);
-  const isBotOwner = Boolean(data.isBotOwner);
+  const isBotOwner = false;
 
   let canStats = Boolean(data.canStats);
   let canActivity = Boolean(data.canActivity);

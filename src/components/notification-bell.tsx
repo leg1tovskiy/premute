@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, BellRing } from "lucide-react";
 import { toast } from "sonner";
-import { getStatsFn, getSystemStatusFn } from "@/lib/fn";
+import { getStatsFn } from "@/lib/fn";
 import { usePanel } from "@/lib/panel";
 
 const LS_KEY = "premute-notify";
@@ -37,12 +37,6 @@ export function NotificationBell() {
     let alive = true;
     const pull = async () => {
       try {
-        const status = await getSystemStatusFn();
-        if (!alive) return;
-        if (prev.current.bot === true && !status.bot) {
-          notify("FearAssist недоступен", "Бот перестал отвечать. Проверьте «Питание» или сервер.");
-        }
-        prev.current.bot = status.bot;
 
         if (profile.caps.canStats) {
           const stats = await getStatsFn({ data: { refresh: false } });

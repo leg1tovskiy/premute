@@ -638,11 +638,11 @@ export const clearDismissedPlayersFn = createServerFn({ method: "POST" })
 export const getSystemStatusFn = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async (): Promise<SystemStatus> => {
-    const { fetchWorkerHealth, fetchBotAlive } = await import("./server/discord");
-    const [worker, bot] = await Promise.all([fetchWorkerHealth(), fetchBotAlive()]);
+    const { fetchWorkerHealth } = await import("./server/discord");
+    const worker = await fetchWorkerHealth();
     return {
       worker: worker.ok,
-      bot,
+      bot: true,
       workerUpdatedAt: worker.updatedAt,
       checkedAt: Math.floor(Date.now() / 1000),
     };
@@ -727,16 +727,7 @@ export const listModsFn = createServerFn({ method: "GET" })
     const { getStaff } = await import("./server/staff");
     const me = await getStaff(context.userId);
     if (!me?.caps.canMods) throw new Error("Нет доступа к списку модераторов.");
-    const { fetchBotRoster } = await import("./server/discord");
-    const { readRoster, writeRoster, bundledRanks } = await import("./server/roster");
-    const live = await fetchBotRoster();
-    if (live?.moderators?.length) {
-      await writeRoster(live.moderators);
-      return {
-        moderators: live.moderators,
-        ranks: live.ranks.length ? live.ranks : bundledRanks(),
-      };
-    }
+    const { readRoster, bundledRanks } = await import("./server/roster");
     return { moderators: await readRoster(), ranks: bundledRanks() };
   });
 
@@ -755,28 +746,14 @@ export const upsertModFn = createServerFn({ method: "POST" })
     if (!Number.isInteger(rank) || rank < 1 || rank > 5) throw new Error("Ранг должен быть от 1 до 5.");
     const name = (data.name || "").trim() || steamid;
     const discord = data.discord == null ? null : String(data.discord).replace(/^@/, "").trim();
-    const actor = me.displayName || me.email || context.userId;
-    const { mutateBotMod } = await import("./server/discord");
     const { upsertRosterMod, readRoster, bundledRanks } = await import("./server/roster");
     const op = data.create ? "mod_add" : "mod_edit";
-    let live: RosterPayload;
-    try {
-      live = await mutateBotMod({ op, actor, steamid, name, rank, discord });
-    } catch (e) {
-      throw new Error(e instanceof Error ? e.message : "Бот не принял изменение.");
-    }
-    if (live.moderators.length) {
-      const { writeRoster } = await import("./server/roster");
-      await writeRoster(live.moderators);
-      await writeLog(context.userId, op, `${steamid} ${name}`);
-      return live;
-    }
     await upsertRosterMod({ steamid, name, rank, discord });
     await writeLog(context.userId, op, `${steamid} ${name}`);
     return {
       moderators: await readRoster(),
       ranks: bundledRanks(),
-      recounting: Boolean(data.create),
+      recounting: false,
     };
   });
 
@@ -789,21 +766,7 @@ export const deleteModFn = createServerFn({ method: "POST" })
     if (!me?.caps.canMods) throw new Error("Нет доступа к управлению модераторами.");
     const steamid = String(data.steamid || "").trim();
     if (!STEAMID_RE.test(steamid)) throw new Error("SteamID64 — 17 цифр.");
-    const actor = me.displayName || me.email || context.userId;
-    const { mutateBotMod } = await import("./server/discord");
     const { deleteRosterMod, bundledRanks } = await import("./server/roster");
-    let live: RosterPayload;
-    try {
-      live = await mutateBotMod({ op: "mod_del", actor, steamid });
-    } catch (e) {
-      throw new Error(e instanceof Error ? e.message : "Бот не принял удаление.");
-    }
-    if (live.moderators.length) {
-      const { writeRoster } = await import("./server/roster");
-      await writeRoster(live.moderators);
-      await writeLog(context.userId, "mod_del", steamid);
-      return live;
-    }
     const remaining = await deleteRosterMod(steamid);
     await writeLog(context.userId, "mod_del", steamid);
     return { moderators: remaining, ranks: bundledRanks() };

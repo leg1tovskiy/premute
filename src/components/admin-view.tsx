@@ -202,11 +202,6 @@ export function AdminView({ me }: { me: StaffProfile }) {
     }
   }
 
-  function toggleOwnership(u: StaffListItem) {
-    const setRoot = !u.isRoot;
-    void patch(u.userId, { ...u, setRoot });
-  }
-
   function isMainOwner(u: StaffListItem) {
     return u.userId === ROOT_DISCORD_ID || u.discordId === ROOT_DISCORD_ID;
   }
@@ -331,25 +326,11 @@ export function AdminView({ me }: { me: StaffProfile }) {
                         {u.isRoot ? (
                           <OwnershipBadge
                             tone="gold"
-                            canClick={meIsMainOwner && !isMainOwner(u)}
-                            title={
-                              meIsMainOwner && !isMainOwner(u)
-                                ? "Понизить до «Владельца»"
-                                : "Корневой владелец"
-                            }
-                            onClick={() => toggleOwnership(u)}
+                            canClick={false}
+                            title="Корневой владелец (ROOT)"
                           >
                             <Shield className="mr-1 size-3" />
                             ROOT
-                          </OwnershipBadge>
-                        ) : u.isBotOwner ? (
-                          <OwnershipBadge
-                            tone="danger"
-                            canClick={meIsMainOwner}
-                            title={meIsMainOwner ? "Назначить «Корневым владельцем»" : "Владелец"}
-                            onClick={() => toggleOwnership(u)}
-                          >
-                            Владелец
                           </OwnershipBadge>
                         ) : null}
 
@@ -691,14 +672,6 @@ export function AdminView({ me }: { me: StaffProfile }) {
                       disabled={locked || u.isOwner || u.isBanned}
                       onChange={(v) => void patch(u.userId, { canLogs: v })}
                     />
-                    {me.caps.canGrantBotOwner ? (
-                      <Toggle
-                        label="Владелец бота"
-                        checked={u.isRoot || u.isBotOwner}
-                        disabled={locked || u.isRoot || u.isBanned}
-                        onChange={(v) => void patch(u.userId, { isBotOwner: v })}
-                      />
-                    ) : null}
                     {me.caps.canGrantOwner ? (
                       <Toggle
                         label="Владелец сайта"
@@ -951,22 +924,12 @@ function CreateUserModal({
   const [canMods, setCanMods] = useState(false);
   const [canLogs, setCanLogs] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
-  const [isBotOwner, setIsBotOwner] = useState(false);
   const [busy, setBusy] = useState(false);
 
   function handleRolePresetChange(val: string) {
     setRoleRank(val);
     if (val === "owner") {
       setIsOwner(true);
-      setIsBotOwner(false);
-      setCanStats(true);
-      setCanActivity(true);
-      setCanSuspicious(true);
-      setCanMods(true);
-      setCanLogs(true);
-    } else if (val === "bot_owner") {
-      setIsOwner(true);
-      setIsBotOwner(true);
       setCanStats(true);
       setCanActivity(true);
       setCanSuspicious(true);
@@ -974,7 +937,6 @@ function CreateUserModal({
       setCanLogs(true);
     } else if (val === "none") {
       setIsOwner(false);
-      setIsBotOwner(false);
       setCanStats(false);
       setCanActivity(false);
       setCanSuspicious(false);
@@ -983,7 +945,6 @@ function CreateUserModal({
     } else {
       const rank = Number(val);
       setIsOwner(false);
-      setIsBotOwner(false);
       const isSenior = rank >= 3;
       setCanStats(isSenior);
       setCanActivity(isSenior);
@@ -1033,7 +994,6 @@ function CreateUserModal({
           canMods: isOwner || canMods,
           canLogs: isOwner || canLogs,
           isOwner,
-          isBotOwner,
         },
       });
 
@@ -1145,9 +1105,6 @@ function CreateUserModal({
                 <SelectItem value="4">Ст. Администратор (Ранг 4: полный доступ без админки)</SelectItem>
                 <SelectItem value="5">Стафф (Ранг 5: высший ранг состава)</SelectItem>
                 <SelectItem value="owner">Владелец сайта</SelectItem>
-                {actor.isRoot || actor.isBotOwner ? (
-                  <SelectItem value="bot_owner">Владелец бота и сайта</SelectItem>
-                ) : null}
               </SelectContent>
             </Select>
           </div>
@@ -1180,12 +1137,6 @@ function CreateUserModal({
                 <span className="font-bold text-accent">Владелец сайта</span>
                 <Switch checked={isOwner} onCheckedChange={setIsOwner} />
               </label>
-              {actor.isRoot || actor.isBotOwner ? (
-                <label className="flex items-center justify-between rounded-xl border border-border/60 bg-surface/60 p-2 cursor-pointer">
-                  <span className="font-bold text-danger">Владелец бота</span>
-                  <Switch checked={isBotOwner} onCheckedChange={setIsBotOwner} />
-                </label>
-              ) : null}
             </div>
           </div>
 

@@ -171,7 +171,7 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent">FearProject CS2</p>
           <h1 className="mt-2 text-2xl font-black tracking-tight text-fg sm:text-3xl">Состав команды модерации</h1>
           <p className="mt-1 max-w-2xl text-xs text-muted">
-            Добавление или изменение модератора автоматически синхронизируется с ботом и серверами.
+            Управление составом команды модераторов FearProject CS2.
           </p>
           {recounting ? (
             <p className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-accent">
@@ -381,7 +381,7 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
             <>
               <AnimatedNumber value={sorted.length} /> в списке
             </>
-          )} · состав синхронизируется с ботом
+          )}
         </p>
       </AnimatedBlock>
 
@@ -389,7 +389,7 @@ export function ModsView({ isOwner = false }: { isOwner?: boolean }) {
         <AlertDialogContent>
           <AlertDialogTitle>Убрать {pendingRemove?.name} из списка?</AlertDialogTitle>
           <AlertDialogDescription>
-            Бот удалит модератора из состава, а статистика перестанет учитывать его наказания.
+            Модератор будет удалён из состава, а статистика перестанет учитывать его действия.
           </AlertDialogDescription>
           <AlertDialogActions>
             <AlertDialogCancel>Отмена</AlertDialogCancel>

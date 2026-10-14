@@ -5,7 +5,6 @@ import {
   DISCORD_WARN_CHANNEL_ID,
   PROTECTED_USER_IDS,
   DISCORD_VOICE_CHANNEL_ID,
-  PANEL_BOT_URL,
   STATS_WORKER_URL,
 } from "./config";
 import { createHash } from "node:crypto";
@@ -207,8 +206,7 @@ export async function sendBotDm(targetId: string, content: string) {
   await discord("POST", `/channels/${dm.id}/messages`, { content: content.slice(0, 1900) });
 }
 
-// Отложенная отправка «от имени бота»: планирует задачу у бота, он отправляет по таймеру.
-// when — эпоха (мс). Бот берёт на себя таймер и переживает перезапуск.
+// Отложенная отправка — взаимодействие с ботом отключено
 export async function scheduleBotSend(opts: {
   place: "dm" | "channel";
   userId?: string;
@@ -219,39 +217,7 @@ export async function scheduleBotSend(opts: {
   actor: string;
   when: number;
 }): Promise<{ when: number }> {
-  const body = {
-    secret: panelSecret(),
-    op: "schedule_send",
-    actor: opts.actor.slice(0, 80),
-    place: opts.place,
-    userId: opts.userId,
-    channelId: opts.channelId,
-    text: opts.text.slice(0, 1500),
-    mention: opts.mention,
-    sign: opts.sign,
-    when: opts.when,
-  };
-  const post = async (url: string) => {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(8000),
-    });
-    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; when?: number };
-    if (res.ok && json.ok) return { ok: true as const, when: Number(json.when) || opts.when };
-    if (json.error) throw new DiscordError(json.error, res.status);
-    throw new DiscordError(`Panel HTTP ${res.status}`, res.status);
-  };
-  try {
-    return await post(`${PANEL_BOT_URL}/panel`);
-  } catch (e) {
-    if (e instanceof DiscordError) throw e;
-    // Бот временно недоступен — дублируем запрос в лог-канал, бот его подхватит (PMCMD).
-    const { secret: _s, ...pub } = body;
-    await sendChannelMessage(DISCORD_LOG_CHANNEL_ID, `PMCMD${JSON.stringify(pub)}`);
-    return { when: opts.when };
-  }
+  return { when: opts.when };
 }
 
 export async function sendWarn(targetId: string, reason: string, actorTag: string) {
@@ -271,17 +237,8 @@ export async function sendWarn(targetId: string, reason: string, actorTag: strin
 // Дублируем лог панели в буфер бота, чтобы запись появилась во вкладке «Логи».
 // Ошибки игнорируем — буфер не критичен. Await обязателен: Vercel может
 // заморозить функцию сразу после ответа и fire-and-forget запрос не уйдёт.
-async function pushBotLog(text: string): Promise<void> {
-  try {
-    await fetch(`${PANEL_BOT_URL}/panel`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ secret: panelSecret(), op: "log", text: text.slice(0, 1900) }),
-      signal: AbortSignal.timeout(5000),
-    });
-  } catch {
-    // буфер не критичен
-  }
+async function pushBotLog(_text: string): Promise<void> {
+  // Взаимодействие с ботом отключено
 }
 
 export async function sendLog(text: string) {
@@ -314,54 +271,19 @@ function panelSecret() {
   return createHash("sha256").update(`${DISCORD_BOT_TOKEN}panel`).digest("hex").slice(0, 32);
 }
 
-export async function syncBotOwners(ids: string[], actor: string): Promise<void> {
-  const unique = [...new Set(ids.map((id) => String(id || "").replace(/\D/g, "")).filter((id) => /^\d{17,20}$/.test(id)))];
-  const body = { secret: panelSecret(), op: "owners_set", ids: unique, actor: actor.slice(0, 80) };
-  try {
-    const res = await fetch(`${PANEL_BOT_URL}/panel`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) throw new Error(`owners HTTP ${res.status}`);
-  } catch (e) {
-    console.error("[owners] sync:", e instanceof Error ? e.message : e);
-  }
+export async function syncBotOwners(_ids: string[], _actor: string): Promise<void> {
+  // Взаимодействие с ботом отключено
 }
 
 
-export async function playInVoice(opts: {
+export async function playInVoice(_opts: {
   op: "say" | "sound";
   channelId?: string;
   actor: string;
   text?: string;
   file?: string;
 }): Promise<void> {
-  const body = {
-    secret: panelSecret(),
-    op: opts.op,
-    ch: opts.channelId || "",
-    actor: opts.actor.slice(0, 80),
-    text: opts.text,
-    file: opts.file,
-  };
-  try {
-    const res = await fetch(`${PANEL_BOT_URL}/panel`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(8000),
-    });
-    const json = (await res.json()) as { ok?: boolean; error?: string };
-    if (res.ok && json.ok) return;
-    if (json.error) throw new DiscordError(json.error, res.status);
-    throw new DiscordError(`Panel HTTP ${res.status}`, res.status);
-  } catch (e) {
-    if (e instanceof DiscordError) throw e;
-    const { secret: _s, ...pub } = body;
-    await sendChannelMessage(DISCORD_LOG_CHANNEL_ID, `PMCMD${JSON.stringify(pub)}`);
-  }
+  // Взаимодействие с ботом отключено
 }
 
 export async function fetchWorkerStats(): Promise<{
@@ -513,16 +435,9 @@ export async function fetchWorkerServers(): Promise<GameServersPayload | null> {
   }
 }
 
-/** Панель бота отвечает? (лёгкий авторизованный запрос). */
+/** Панель бота — взаимодействие отключено */
 export async function fetchBotAlive(): Promise<boolean> {
-  try {
-    const res = await fetch(`${PANEL_BOT_URL}/panel/mods?s=${encodeURIComponent(panelSecret())}`, {
-      signal: AbortSignal.timeout(3500),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
+  return true;
 }
 
 export async function fetchWorkerSuspicious(): Promise<{
@@ -589,33 +504,11 @@ export async function clearWorkerBackup(steamid: string): Promise<BackupsPayload
 }
 
 export async function fetchBotRoster(): Promise<RosterPayload | null> {
-  try {
-    const res = await fetch(`${PANEL_BOT_URL}/panel/mods?s=${encodeURIComponent(panelSecret())}`, {
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) return null;
-    const json = (await res.json()) as { ok?: boolean; moderators?: RosterMod[]; ranks?: RosterPayload["ranks"] };
-    if (!json.ok || !Array.isArray(json.moderators)) return null;
-    return { moderators: json.moderators, ranks: json.ranks || [] };
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 export async function fetchBotLogs(): Promise<{ ts: number; text: string }[] | null> {
-  try {
-    const res = await fetch(`${PANEL_BOT_URL}/panel/logs?s=${encodeURIComponent(panelSecret())}`, {
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) return null;
-    const json = (await res.json()) as { ok?: boolean; logs?: { ts?: number; text?: string }[] };
-    if (!json.ok || !Array.isArray(json.logs)) return null;
-    return json.logs
-      .map((l) => ({ ts: Number(l.ts) || 0, text: String(l.text || "") }))
-      .filter((l) => l.text);
-  } catch {
-    return null;
-  }
+  return [];
 }
 
 export type OnlineInfo = { server: string; nickname: string; map: string | null };
@@ -656,48 +549,23 @@ export async function fetchWorkerActivity(): Promise<ActivityPayload | null> {
 }
 
 export async function botPower(
-  action: "restart" | "shutdown",
-  actor: string,
+  _action: "restart" | "shutdown",
+  _actor: string,
 ): Promise<void> {
-  const body = { secret: panelSecret(), op: "power", action, actor: actor.slice(0, 80) };
-  const res = await fetch(`${PANEL_BOT_URL}/panel`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(8000),
-  });
-  const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
-  if (res.ok && json.ok) return;
-  if (json.error) throw new DiscordError(json.error, res.status);
-  throw new DiscordError(`Panel HTTP ${res.status}`, res.status);
+  // Взаимодействие с ботом отключено
 }
 
-// Голосовое сообщение с сайта -> бот проигрывает в войсе (raw body, макс ~8 МБ).
+// Голосовое сообщение — взаимодействие с ботом отключено
 export async function botVoiceUpload(
-  audio: ArrayBuffer,
-  mime: string,
-  channelId: string,
-  actor: string,
+  _audio: ArrayBuffer,
+  _mime: string,
+  _channelId: string,
+  _actor: string,
 ): Promise<void> {
-  const qs = new URLSearchParams({
-    s: panelSecret(),
-    ch: channelId,
-    mime: mime || "audio/webm",
-    actor: actor.slice(0, 80),
-  });
-  const res = await fetch(`${PANEL_BOT_URL}/panel/voice-upload?${qs.toString()}`, {
-    method: "POST",
-    headers: { "Content-Type": mime || "application/octet-stream" },
-    body: audio,
-    signal: AbortSignal.timeout(20000),
-  });
-  const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
-  if (res.ok && json.ok) return;
-  if (json.error) throw new DiscordError(json.error, res.status);
-  throw new DiscordError(`Panel HTTP ${res.status}`, res.status);
+  // Взаимодействие с ботом отключено
 }
 
-export async function mutateBotMod(opts: {
+export async function mutateBotMod(_opts: {
   op: "mod_add" | "mod_edit" | "mod_del";
   actor: string;
   steamid: string;
@@ -705,34 +573,7 @@ export async function mutateBotMod(opts: {
   rank?: number;
   discord?: string | null;
 }): Promise<RosterPayload> {
-  const body = {
-    secret: panelSecret(),
-    op: opts.op,
-    actor: opts.actor.slice(0, 80),
-    steamid: opts.steamid,
-    name: opts.name,
-    rank: opts.rank,
-    discord: opts.discord,
-  };
-  try {
-    const res = await fetch(`${PANEL_BOT_URL}/panel`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(8000),
-    });
-    const json = (await res.json()) as RosterPayload & { ok?: boolean; error?: string; recounting?: boolean };
-    if (res.ok && json.ok && Array.isArray(json.moderators)) {
-      return { moderators: json.moderators, ranks: json.ranks || [], recounting: json.recounting };
-    }
-    if (json.error) throw new DiscordError(json.error, res.status);
-    throw new DiscordError(`Panel HTTP ${res.status}`, res.status);
-  } catch (e) {
-    if (e instanceof DiscordError) throw e;
-    const { secret: _s, ...pub } = body;
-    await sendChannelMessage(DISCORD_LOG_CHANNEL_ID, `PMCMD${JSON.stringify(pub)}`);
-    return { moderators: [], ranks: [], recounting: opts.op === "mod_add" };
-  }
+  return { moderators: [], ranks: [] };
 }
 
 export async function fetchGuildMember(discordId: string): Promise<GuildMember | null> {
