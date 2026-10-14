@@ -340,10 +340,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
               <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-surface bg-success" />
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-extrabold tracking-tight">FearAssist</span>
-                <span className="rounded bg-accent/15 px-1.5 py-0.2 text-[10px] font-bold text-accent border border-accent/30">PRO</span>
-              </div>
+              <span className="text-sm font-extrabold tracking-tight">FearAssist</span>
               <p className="text-[11px] text-subtle">FearProject CS2</p>
             </div>
           </Link>
