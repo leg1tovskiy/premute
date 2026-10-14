@@ -17,6 +17,7 @@ export function ModeratorCardModal({
     allTimeTotal?: number;
     allTimeBans?: number;
     allTimeMutes?: number;
+    weekTotal?: number;
   };
   monthName: string;
 }) {
@@ -191,6 +192,8 @@ export function ModeratorCardModal({
 
       // Rank pill
       textY += 42;
+      c.font = "900 13px sans-serif";
+      c.letterSpacing = "1.5px";
       const rankBadgeWidth = c.measureText(rankText.toUpperCase()).width + 36;
       c.fillStyle = "rgba(234, 179, 8, 0.15)";
       c.strokeStyle = "rgba(234, 179, 8, 0.4)";
@@ -201,8 +204,6 @@ export function ModeratorCardModal({
       c.stroke();
 
       c.fillStyle = "#eab308";
-      c.font = "900 13px sans-serif";
-      c.letterSpacing = "1.5px";
       c.fillText(rankText.toUpperCase(), infoX + 18, textY);
 
       // SteamID / Details
@@ -223,13 +224,13 @@ export function ModeratorCardModal({
       const gap = 20;
 
       const tiles = [
-        { label: "БАНОВ (МЕСЯЦ)", value: m.bans, icon: "🔨", color: "#f87171" },
-        { label: "МУТОВ (МЕСЯЦ)", value: m.mutes, icon: "🔇", color: "#fbbf24" },
-        { label: "ДЕЙСТВИЙ (МЕСЯЦ)", value: m.total, icon: "⚡", color: "#60a5fa" },
+        { label: "БАНЫ", value: m.bans, icon: "🔨", color: "#f87171" },
+        { label: "МУТЫ", value: m.mutes, icon: "🔇", color: "#fbbf24" },
+        { label: "ДЕЙСТВИЯ (НЕДЕЛЯ)", value: m.weekTotal ?? 0, icon: "⚡", color: "#60a5fa" },
         {
-          label: "ВСЁ ВРЕМЯ",
-          value: m.allTimeTotal && m.allTimeTotal > 0 ? m.allTimeTotal : m.total,
-          icon: "🏆",
+          label: "ДЕЙСТВИЯ (МЕСЯЦ)",
+          value: m.total,
+          icon: "🔥",
           color: "#a78bfa",
         },
       ];
@@ -344,7 +345,7 @@ export function ModeratorCardModal({
       // 5. Footer Watermark
       c.fillStyle = "rgba(255, 255, 255, 0.25)";
       c.font = "bold 11px monospace";
-      c.fillText("FEARASSIST.ONLINE • СИСТЕМА УПРАВЛЕНИЯ И АНАЛИТИКИ FEARPROJECT", 80, 615);
+      c.fillText("FEARASSIST.ONLINE", 80, 615);
 
       c.textAlign = "right";
       c.fillText("OFFICIAL VERIFIED BADGE 🛡️", 1120, 615);

@@ -410,9 +410,9 @@ export function AdminView({ me }: { me: StaffProfile }) {
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                        <div className="flex flex-col gap-0.5 rounded-xl border border-border/60 bg-surface/80 p-2">
+                        <div className="flex flex-col justify-center gap-1 rounded-xl border border-border/70 bg-surface/90 px-3.5 py-2">
                           <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Логин</span>
-                          <div className="flex items-center justify-between min-w-0 gap-1">
+                          <div className="flex items-center justify-between min-w-0 gap-1.5">
                             <span className="font-mono text-xs font-bold text-fg truncate">
                               {u.username ? (
                                 `@${u.username}`
@@ -1373,7 +1373,7 @@ function PasswordDisplayField({
 
   if (!password) {
     return (
-      <div className="flex flex-col gap-0.5 rounded-xl border border-border/60 bg-surface/80 p-2">
+      <div className="flex flex-col justify-center gap-1 rounded-xl border border-border/70 bg-surface/90 px-3.5 py-2">
         <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Пароль</span>
         <div className="flex items-center justify-between min-w-0">
           <span className="font-mono text-xs text-amber-400 font-normal italic">не задан</span>
@@ -1392,7 +1392,7 @@ function PasswordDisplayField({
   }
 
   return (
-    <div className="flex flex-col gap-0.5 rounded-xl border border-border/60 bg-surface/80 p-2">
+    <div className="flex flex-col justify-center gap-1 rounded-xl border border-border/70 bg-surface/90 px-3.5 py-2">
       <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Пароль</span>
       <div className="flex items-center justify-between min-w-0 gap-1.5">
         <span className="font-mono text-xs font-bold text-fg truncate select-all">

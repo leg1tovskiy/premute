@@ -1498,6 +1498,7 @@ export function ModDetailsView({
         onClose={() => setCardOpen(false)}
         m={{
           ...m,
+          weekTotal: m.weekTotal ?? 0,
           allTimeTotal: m.allTimeTotal ?? allTimeRecords?.length ?? m.total,
           allTimeBans: (m.allTimeBans ?? allTimeRecords?.filter((x) => x.kind === "ban").length ?? m.bans) ?? undefined,
           allTimeMutes: (m.allTimeMutes ?? allTimeRecords?.filter((x) => x.kind === "mute").length ?? m.mutes) ?? undefined,

@@ -959,23 +959,27 @@ export const botLoginFn = createServerFn({ method: "POST" })
     const { verifyDiscordBotCode } = await import("./server/bot-auth");
     const result = await verifyDiscordBotCode(data.code);
     const { setCookie } = await import("@tanstack/react-start/server");
-    const { SESSION_TOKEN_COOKIE } = await import("./auth/server");
+    const { SESSION_TOKEN_COOKIE, auth } = await import("./auth/server");
+    const { serializeSignedCookie } = await import("better-call");
 
-    // Set cookie on response
-    setCookie(SESSION_TOKEN_COOKIE, result.sessionToken, {
+    const secret = (auth.options.secret as string) || "fearassist_auth_secret_7f9c2d1e8a4b6530291f04e8d7c6b5a1";
+    const signedHostCookie = await serializeSignedCookie(SESSION_TOKEN_COOKIE, result.sessionToken, secret);
+    const hostVal = decodeURIComponent(signedHostCookie.slice(SESSION_TOKEN_COOKIE.length + 1).split(";")[0]);
+
+    const signedBaCookie = await serializeSignedCookie("better-auth.session_token", result.sessionToken, secret);
+    const baVal = decodeURIComponent(signedBaCookie.slice("better-auth.session_token".length + 1).split(";")[0]);
+
+    const isProd = process.env.NODE_ENV === "production";
+    const cookieOpts = {
       path: "/",
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: isProd,
+      sameSite: "lax" as const,
       maxAge: 30 * 24 * 60 * 60,
-    });
-    setCookie("better-auth.session_token", result.sessionToken, {
-      path: "/",
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 30 * 24 * 60 * 60,
-    });
+    };
+
+    setCookie(SESSION_TOKEN_COOKIE, hostVal, cookieOpts);
+    setCookie("better-auth.session_token", baVal, cookieOpts);
 
     return result;
   });
@@ -994,7 +998,7 @@ export const loginWithPasswordFn = createServerFn({ method: "POST" })
     const result = await verifyStaffLogin(data.username, data.password);
 
     const { setCookie } = await import("@tanstack/react-start/server");
-    const { SESSION_TOKEN_COOKIE } = await import("./auth/server");
+    const { SESSION_TOKEN_COOKIE, auth } = await import("./auth/server");
     const { getSql } = await import("./db");
     const sql = await getSql();
     const { randomBytes, randomUUID } = await import("node:crypto");
@@ -1023,20 +1027,26 @@ export const loginWithPasswordFn = createServerFn({ method: "POST" })
       values (${sessionId}, ${expiresAt}, ${sessionToken}, now(), now(), ${result.userId})
     `;
 
-    setCookie(SESSION_TOKEN_COOKIE, sessionToken, {
+    const { serializeSignedCookie } = await import("better-call");
+    const secret = (auth.options.secret as string) || "fearassist_auth_secret_7f9c2d1e8a4b6530291f04e8d7c6b5a1";
+
+    const signedHostCookie = await serializeSignedCookie(SESSION_TOKEN_COOKIE, sessionToken, secret);
+    const hostVal = decodeURIComponent(signedHostCookie.slice(SESSION_TOKEN_COOKIE.length + 1).split(";")[0]);
+
+    const signedBaCookie = await serializeSignedCookie("better-auth.session_token", sessionToken, secret);
+    const baVal = decodeURIComponent(signedBaCookie.slice("better-auth.session_token".length + 1).split(";")[0]);
+
+    const isProd = process.env.NODE_ENV === "production";
+    const cookieOpts = {
       path: "/",
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: isProd,
+      sameSite: "lax" as const,
       maxAge: 30 * 24 * 60 * 60,
-    });
-    setCookie("better-auth.session_token", sessionToken, {
-      path: "/",
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 30 * 24 * 60 * 60,
-    });
+    };
+
+    setCookie(SESSION_TOKEN_COOKIE, hostVal, cookieOpts);
+    setCookie("better-auth.session_token", baVal, cookieOpts);
 
     return {
       ok: true,
