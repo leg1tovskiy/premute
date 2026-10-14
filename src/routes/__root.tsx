@@ -24,12 +24,36 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: APP_NAME },
-      { name: "theme-color", content: "#0c0d10" },
+      { title: "FearAssist — Панель модераторов" },
+      { name: "theme-color", content: "#38bdf8" },
       {
         name: "description",
-        content: "Панель для модераторов FearProject: статистика, модерация и логи FearAssist.",
+        content: "Единая панель для модераторов FearProject: статистика, модерация, тикеты и аудит логов.",
       },
+      // Open Graph / Discord Embed
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://fearassist.online/" },
+      { property: "og:site_name", content: "FEARPROJECT.RU" },
+      { property: "og:title", content: "FearAssist — Панель модераторов" },
+      {
+        property: "og:description",
+        content: "Единая панель модерации и статистики FearProject: управление составом, игроки, тикеты и аудит логов.",
+      },
+      { property: "og:image", content: "https://fearassist.online/og-image.png?v=2" },
+      { property: "og:image:secure_url", content: "https://fearassist.online/og-image.png?v=2" },
+      { property: "og:image:type", content: "image/png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "FEARASSIST — Единая панель модерации" },
+      // Twitter Card (Large Image)
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:url", content: "https://fearassist.online/" },
+      { name: "twitter:title", content: "FearAssist — Панель модераторов" },
+      {
+        name: "twitter:description",
+        content: "Единая панель модерации и статистики FearProject: управление составом, игроки, тикеты и аудит логов.",
+      },
+      { name: "twitter:image", content: "https://fearassist.online/og-image.png?v=2" },
     ],
     links: [
       { rel: "icon", type: "image/png", href: "/favicon.png?v=3" },
