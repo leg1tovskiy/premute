@@ -322,7 +322,7 @@ export function PanelShell({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   const currentTab = tabs.find((t) => t.to === pathname);
-  const pageTitle = pathname === "/" ? "Главная" : (currentTab?.label || "Статистика");
+  const pageTitle = pathname === "/" ? "Главная" : (currentTab?.label || (pathname === "/stats" ? "Общая статистика" : "Панель"));
 
   return (
     <div className="flex min-h-dvh bg-bg text-fg">

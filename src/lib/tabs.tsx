@@ -26,7 +26,7 @@ export type TabDef = {
 
 export const TABS: TabDef[] = [
   { id: "mystats", to: "/mystats", label: "Моя статистика", desc: "Личные показатели и наказания", icon: User, cap: "canOwnStats" },
-  { id: "stats", to: "/stats", label: "Статистика", desc: "Общая статистика модераторов", icon: BarChart3, cap: "canGeneralStats" },
+  { id: "stats", to: "/stats", label: "Общая статистика", desc: "Общая статистика состава модераторов", icon: BarChart3, cap: "canGeneralStats" },
   { id: "online", to: "/online", label: "Онлайн", desc: "Онлайн модераторов на серверах", icon: Radio, cap: "canActivity" },
   { id: "tops", to: "/tops", label: "Топы", desc: "Рейтинг модераторов", icon: Trophy, cap: "canGeneralStats" },
   { id: "suspicious", to: "/suspicious", label: "Игроки", desc: "Подозрительные и новореги", icon: Gamepad2, cap: "canSuspicious" },
