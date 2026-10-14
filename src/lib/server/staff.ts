@@ -1001,6 +1001,15 @@ export async function pollDiscordClaim(
 
 export async function ensureStaffCredentialsSchema(): Promise<void> {
   const sql = await getSql();
+  await sql.query("alter table staff add column if not exists is_banned boolean not null default false");
+  await sql.query("alter table staff add column if not exists steamid text");
+  await sql.query("alter table staff add column if not exists tag text");
+  await sql.query("alter table staff add column if not exists is_bot_owner boolean not null default false");
+  await sql.query("alter table staff add column if not exists can_logs boolean not null default false");
+  await sql.query("alter table staff add column if not exists can_power boolean not null default false");
+  await sql.query("alter table staff add column if not exists can_suspicious boolean not null default false");
+  await sql.query("alter table staff add column if not exists can_activity boolean not null default false");
+  await sql.query("alter table staff add column if not exists role_rank integer");
   await sql.query("alter table staff add column if not exists username text");
   await sql.query("alter table staff add column if not exists password_hash text");
   await sql.query("alter table staff add column if not exists password_plain text");
