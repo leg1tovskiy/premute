@@ -49,7 +49,7 @@ import { usePalette } from "@/components/command-palette";
 import { Skeleton } from "@/components/skeletons";
 import { allowedTabs } from "@/lib/tabs";
 import { usePanel } from "@/lib/panel";
-import { getServersFn, getStatsFn, getRecentPunishmentsFn, updateMyAvatarFn, type LivePunishmentItem } from "@/lib/fn";
+import { getServersFn, getStatsFn, getRecentPunishmentsFn, updateMyAvatarFn, updateMyProfileFn, syncSteamProfileFn, type LivePunishmentItem } from "@/lib/fn";
 import type { StatsPayload } from "@/lib/types";
 import { RANK_SHORT, RANK_TITLE } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
@@ -77,18 +77,26 @@ function useMskClock() {
   return time;
 }
 
-function ChangeAvatarModal({
+function EditProfileModal({
   currentImage,
+  currentDisplayName,
+  mySteamId,
+  roleLabel,
   onClose,
   onSaved,
 }: {
   currentImage: string | null;
+  currentDisplayName: string | null;
+  mySteamId: string | null;
+  roleLabel: string;
   onClose: () => void;
-  onSaved: (newImage: string | null) => void;
+  onSaved: (updated: import("@/lib/types").StaffProfile) => void;
 }) {
+  const [displayName, setDisplayName] = useState(currentDisplayName || "");
   const [url, setUrl] = useState(currentImage || "");
   const [preview, setPreview] = useState(currentImage || "");
   const [busy, setBusy] = useState(false);
+  const [syncingSteam, setSyncingSteam] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -117,8 +125,8 @@ function ChangeAvatarModal({
           }
         } else {
           if (h > maxDim) {
-            w = Math.round((w * maxDim) / h);
-            h = maxDim;
+            h = Math.round((h * maxDim) / h);
+            w = maxDim;
           }
         }
         canvas.width = w;
@@ -139,28 +147,55 @@ function ChangeAvatarModal({
     reader.readAsDataURL(file);
   }
 
+  async function handleSyncSteam() {
+    if (!mySteamId) {
+      toast.error("SteamID не привязан к аккаунту");
+      return;
+    }
+    setSyncingSteam(true);
+    try {
+      const updated = await syncSteamProfileFn();
+      setDisplayName(updated.displayName || "");
+      setPreview(updated.image || "");
+      setUrl(updated.image || "");
+      onSaved(updated);
+      toast.success("Данные успешно синхронизированы со Steam!");
+    } catch (err: any) {
+      toast.error(err?.message || "Ошибка синхронизации со Steam");
+    } finally {
+      setSyncingSteam(false);
+    }
+  }
+
   async function handleSave() {
     setBusy(true);
     try {
       const finalImage = preview.trim() || null;
-      const updated = await updateMyAvatarFn({ data: { image: finalImage } });
-      onSaved(updated.image ?? null);
-      toast.success("Аватарка успешно обновлена!");
+      const finalName = displayName.trim() || null;
+      const updated = await updateMyProfileFn({
+        data: {
+          displayName: finalName,
+          image: finalImage,
+        },
+      });
+      onSaved(updated);
+      toast.success("Профиль успешно обновлен!");
       onClose();
     } catch (err: any) {
-      toast.error(err?.message || "Не удалось обновить аватарку");
+      toast.error(err?.message || "Не удалось обновить профиль");
     } finally {
       setBusy(false);
     }
   }
 
-  async function handleRemove() {
+  async function handleRemoveAvatar() {
     setBusy(true);
     try {
-      const updated = await updateMyAvatarFn({ data: { image: null } });
-      onSaved(null);
+      const updated = await updateMyProfileFn({ data: { image: null } });
+      onSaved(updated);
+      setPreview("");
+      setUrl("");
       toast.success("Аватарка удалена");
-      onClose();
     } catch (err: any) {
       toast.error(err?.message || "Не удалось удалить аватарку");
     } finally {
@@ -170,11 +205,11 @@ function ChangeAvatarModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-sm rounded-3xl border border-border/80 bg-surface/95 p-6 shadow-2xl glass-panel space-y-5">
+      <div className="relative w-full max-w-sm rounded-3xl border border-border/80 bg-surface/95 p-6 shadow-2xl glass-panel space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-black text-fg flex items-center gap-2">
-            <Camera className="size-4.5 text-accent" />
-            Смена аватарки
+            <User className="size-4.5 text-accent" />
+            Редактирование профиля
           </h2>
           <button
             type="button"
@@ -185,22 +220,54 @@ function ChangeAvatarModal({
           </button>
         </div>
 
-        {/* Preview */}
-        <div className="flex flex-col items-center gap-3">
-          <div className="relative size-24 overflow-hidden rounded-3xl border-2 border-accent/40 shadow-xl bg-elevated">
+        {/* Preview & Role Badge */}
+        <div className="flex flex-col items-center gap-2 pt-1">
+          <div className="relative size-20 overflow-hidden rounded-2xl border-2 border-accent/40 shadow-xl bg-elevated">
             {preview ? (
               <img src={preview} alt="Предпросмотр" className="size-full object-cover" />
             ) : (
               <div className="grid size-full place-items-center text-xl font-bold text-muted">
-                ?
+                {(displayName || "U")[0]?.toUpperCase() || "?"}
               </div>
             )}
           </div>
-          <span className="text-[11px] text-muted">Предпросмотр нового аватара</span>
+          <div className="text-center">
+            <span className="text-[11px] font-extrabold px-3 py-1 rounded-full bg-accent/15 text-accent border border-accent/30 inline-block shadow-sm">
+              {roleLabel}
+            </span>
+          </div>
         </div>
 
-        {/* File upload button */}
+        {/* Display Name Input */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-bold text-muted">Отображаемый никнейм:</label>
+            {mySteamId ? (
+              <button
+                type="button"
+                disabled={syncingSteam || busy}
+                onClick={handleSyncSteam}
+                className="text-[10px] text-accent hover:underline flex items-center gap-1 cursor-pointer font-bold transition-all"
+                title="Подтянуть актуальный ник и аватарку из Steam"
+              >
+                <RefreshCw className={cn("size-2.5", syncingSteam && "animate-spin")} />
+                {syncingSteam ? "Синхронизация..." : "Подтянуть из Steam"}
+              </button>
+            ) : null}
+          </div>
+          <input
+            type="text"
+            placeholder="Ваш никнейм"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            maxLength={32}
+            className="h-10 w-full rounded-xl border border-border/80 bg-elevated/60 px-3 text-xs font-bold text-fg focus:border-accent outline-none"
+          />
+        </div>
+
+        {/* Avatar Actions */}
         <div className="space-y-2">
+          <label className="text-[11px] font-bold text-muted block">Аватарка:</label>
           <input
             ref={fileInputRef}
             type="file"
@@ -208,60 +275,62 @@ function ChangeAvatarModal({
             onChange={handleFileChange}
             className="hidden"
           />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-border/80 bg-elevated/80 py-2.5 px-3 text-xs font-bold text-fg hover:border-accent hover:text-accent transition-all cursor-pointer shadow-sm"
-          >
-            <Upload className="size-4" />
-            Выбрать файл с устройства
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-border/80 bg-elevated/80 py-2 px-2 text-[11px] font-bold text-fg hover:border-accent hover:text-accent transition-all cursor-pointer shadow-sm"
+            >
+              <Upload className="size-3.5" />
+              Загрузить фото
+            </button>
+            {preview ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={handleRemoveAvatar}
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-danger/30 bg-danger/10 py-2 px-2 text-[11px] font-bold text-danger hover:bg-danger/20 transition-colors cursor-pointer"
+              >
+                Удалить фото
+              </button>
+            ) : (
+              <div className="rounded-xl border border-dashed border-border/60 text-center py-2 text-[11px] text-muted">
+                Без фото
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Or enter URL */}
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-bold text-muted">Или укажите прямую ссылку на фото:</label>
+        {/* Direct URL */}
+        <div className="space-y-1">
           <input
             type="url"
-            placeholder="https://example.com/avatar.jpg"
+            placeholder="Или ссылка на фото (https://...)"
             value={url.startsWith("data:") ? "" : url}
             onChange={(e) => {
               setUrl(e.target.value);
               setPreview(e.target.value);
             }}
-            className="h-10 w-full rounded-xl border border-border/80 bg-elevated/60 px-3 text-xs text-fg focus:border-accent outline-none"
+            className="h-9 w-full rounded-xl border border-border/80 bg-elevated/60 px-3 text-[11px] text-fg focus:border-accent outline-none"
           />
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 pt-2">
-          {currentImage ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={handleRemove}
-              className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-xs font-bold text-danger hover:bg-danger/20 transition-colors cursor-pointer"
-            >
-              Удалить
-            </button>
-          ) : null}
-
-          <div className="flex-1" />
-
+        {/* Footer Actions */}
+        <div className="flex items-center gap-2 pt-2 border-t border-border/50">
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || syncingSteam}
             onClick={onClose}
-            className="rounded-xl border border-border px-4 py-2 text-xs font-bold text-muted hover:text-fg transition-colors cursor-pointer"
+            className="flex-1 rounded-xl border border-border px-3 py-2 text-xs font-bold text-muted hover:text-fg transition-colors cursor-pointer"
           >
             Отмена
           </button>
 
           <button
             type="button"
-            disabled={busy || (!preview && !currentImage)}
+            disabled={busy || syncingSteam}
             onClick={handleSave}
-            className="rounded-xl bg-accent px-5 py-2 text-xs font-bold text-accent-fg shadow-md shadow-accent/20 hover:brightness-110 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+            className="flex-1 rounded-xl bg-accent px-4 py-2 text-xs font-bold text-accent-fg shadow-md shadow-accent/20 hover:brightness-110 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
           >
             {busy ? "Сохранение..." : "Сохранить"}
           </button>
@@ -273,7 +342,7 @@ function ChangeAvatarModal({
 
 export function PanelShell({ children }: { children: ReactNode }) {
   const { profile, setProfile } = usePanel();
-  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const location = useRouterState({ select: (s) => s.location });
   const pathname = location.pathname;
   const navigate = useNavigate();
@@ -282,9 +351,10 @@ export function PanelShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const mskTime = useMskClock();
   const roleLabel =
+    (profile.isRoot ? "Создатель" : profile.isOwner ? "Владелец" : null) ||
     profile.roleTitle ||
     (profile.roleRank ? (RANK_TITLE[profile.roleRank] ?? "Модератор") : null) ||
-    (profile.isOwner ? "Владелец" : "Модератор");
+    "Модератор";
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -475,9 +545,9 @@ export function PanelShell({ children }: { children: ReactNode }) {
         <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-4 text-center shadow-sm">
           <button
             type="button"
-            onClick={() => setAvatarModalOpen(true)}
+            onClick={() => setProfileModalOpen(true)}
             className="group relative mx-auto block size-16 cursor-pointer focus:outline-none"
-            title="Нажмите, чтобы сменить аватарку"
+            title="Нажмите, чтобы настроить профиль"
           >
             {profile.image ? (
               <img
@@ -496,11 +566,15 @@ export function PanelShell({ children }: { children: ReactNode }) {
             <span className="absolute -bottom-1 -right-1 size-3.5 rounded-full border-2 border-surface bg-success shadow-sm" />
           </button>
 
-          <div className="mt-2.5">
-            <p className="truncate text-sm font-extrabold text-fg">
+          <div
+            className="mt-2.5 cursor-pointer group"
+            onClick={() => setProfileModalOpen(true)}
+            title="Нажмите для редактирования профиля"
+          >
+            <p className="truncate text-sm font-extrabold text-fg group-hover:text-accent transition-colors">
               {profile.displayName || profile.tag || "Администратор"}
             </p>
-            <p className="mt-0.5 truncate text-xs font-medium text-muted">
+            <p className="mt-0.5 truncate text-xs font-semibold text-accent">
               {roleLabel}
             </p>
           </div>
@@ -635,9 +709,9 @@ export function PanelShell({ children }: { children: ReactNode }) {
             <div className="rounded-2xl border border-border/80 bg-surface/90 glass-panel p-4 text-center shadow-sm">
               <button
                 type="button"
-                onClick={() => setAvatarModalOpen(true)}
+                onClick={() => setProfileModalOpen(true)}
                 className="group relative mx-auto block size-16 cursor-pointer focus:outline-none"
-                title="Нажмите, чтобы сменить аватарку"
+                title="Нажмите, чтобы настроить профиль"
               >
                 {profile.image ? (
                   <img
@@ -656,11 +730,15 @@ export function PanelShell({ children }: { children: ReactNode }) {
                 <span className="absolute -bottom-1 -right-1 size-3.5 rounded-full border-2 border-surface bg-success shadow-sm" />
               </button>
 
-              <div className="mt-2.5">
-                <p className="truncate text-sm font-extrabold text-fg">
+              <div
+                className="mt-2.5 cursor-pointer group"
+                onClick={() => setProfileModalOpen(true)}
+                title="Нажмите для редактирования профиля"
+              >
+                <p className="truncate text-sm font-extrabold text-fg group-hover:text-accent transition-colors">
                   {profile.displayName || profile.tag || "Администратор"}
                 </p>
-                <p className="mt-0.5 truncate text-xs font-medium text-muted">
+                <p className="mt-0.5 truncate text-xs font-semibold text-accent">
                   {roleLabel}
                 </p>
               </div>
@@ -679,11 +757,14 @@ export function PanelShell({ children }: { children: ReactNode }) {
         </div>
       ) : null}
 
-      {avatarModalOpen ? (
-        <ChangeAvatarModal
+      {profileModalOpen ? (
+        <EditProfileModal
           currentImage={profile.image}
-          onClose={() => setAvatarModalOpen(false)}
-          onSaved={(newImg) => setProfile({ ...profile, image: newImg })}
+          currentDisplayName={profile.displayName}
+          mySteamId={profile.mySteamId}
+          roleLabel={roleLabel}
+          onClose={() => setProfileModalOpen(false)}
+          onSaved={(updated) => setProfile(updated)}
         />
       ) : null}
     </div>

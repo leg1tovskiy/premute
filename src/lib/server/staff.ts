@@ -204,9 +204,17 @@ function toProfile(
       : (rosterRank ?? null);
   const caps = computeCaps(row, effectiveSteamId, effectiveRank);
 
-  const displayName = fearName ||
-    (row.display_name && !/^\d{17,20}$/.test(row.display_name) ? row.display_name : null) ||
-    row.display_name;
+  const cleanDisplayName =
+    row.display_name && !/^\d{17,20}$/.test(row.display_name) ? row.display_name : null;
+  const displayName = cleanDisplayName || fearName || row.username || row.display_name;
+
+  const roleTitle = caps.isRoot
+    ? "Создатель"
+    : caps.isOwner
+      ? "Владелец"
+      : effectiveRank
+        ? (RANK_TITLE[effectiveRank] ?? "Модератор")
+        : "Модератор";
 
   return {
     userId: row.user_id,
@@ -233,7 +241,7 @@ function toProfile(
     createdAt: iso(row.created_at),
     lastSeen: iso(row.last_seen),
     roleRank: effectiveRank,
-    roleTitle: effectiveRank ? (RANK_TITLE[effectiveRank] ?? "Модератор") : (caps.isOwner ? "Владелец" : null),
+    roleTitle,
     caps,
   };
 }
@@ -1384,20 +1392,92 @@ export async function updateUserAvatar(
   userId: string,
   newImage: string | null,
 ): Promise<StaffProfile> {
+  return updateMyProfile(userId, { image: newImage });
+}
+
+export async function updateMyProfile(
+  userId: string,
+  data: { displayName?: string | null; image?: string | null },
+): Promise<StaffProfile> {
   const sql = await getSql();
-  const cleanImage = newImage ? String(newImage).trim() : null;
 
-  await sql`update staff set image = ${cleanImage} where user_id = ${userId}`;
-  try {
-    await sql`update "user" set image = ${cleanImage}, "updatedAt" = now() where id = ${userId}`;
-  } catch {}
+  if (data.displayName !== undefined) {
+    const cleanName = data.displayName?.trim() || null;
+    if (cleanName && cleanName.length > 32) {
+      throw new Error("Никнейм не может быть длиннее 32 символов.");
+    }
+    await sql`update staff set display_name = ${cleanName} where user_id = ${userId}`;
+    try {
+      await sql`update "user" set "name" = coalesce(${cleanName}, "name"), "updatedAt" = now() where "id" = ${userId}`;
+      const meRow = await sql<StaffRow>`select steamid from staff where user_id = ${userId} limit 1`;
+      if (cleanName && meRow[0]?.steamid && /^\d{17}$/.test(meRow[0].steamid)) {
+        await sql`update mod_roster set name = ${cleanName} where steamid = ${meRow[0].steamid}`;
+      }
+    } catch {}
+    await writeLog(userId, "update_profile", `Обновлено отображаемое имя: ${cleanName || "по умолчанию"}`);
+  }
 
-  await writeLog(userId, "update_avatar", cleanImage ? "Обновлен аватар профиля" : "Удален аватар профиля");
+  if (data.image !== undefined) {
+    const cleanImage = data.image ? String(data.image).trim() : null;
+    await sql`update staff set image = ${cleanImage} where user_id = ${userId}`;
+    try {
+      await sql`update "user" set "image" = ${cleanImage}, "updatedAt" = now() where "id" = ${userId}`;
+    } catch {}
+    await writeLog(userId, "update_avatar", cleanImage ? "Обновлен аватар профиля" : "Удален аватар профиля");
+  }
 
   const profile = await getStaff(userId);
-  if (!profile) {
-    throw new Error("Ошибка получения профиля.");
-  }
+  if (!profile) throw new Error("Ошибка получения профиля.");
   return profile;
 }
+
+export async function syncSteamProfile(userId: string): Promise<StaffProfile> {
+  const sql = await getSql();
+  const rows = await sql<StaffRow>`select * from staff where user_id = ${userId} limit 1`;
+  if (!rows[0]) throw new Error("Профиль не найден.");
+  const sid = rows[0].steamid ? String(rows[0].steamid).trim() : null;
+  if (!sid || sid === "none" || !/^\d{17}$/.test(sid)) {
+    throw new Error("SteamID не привязан к аккаунту.");
+  }
+
+  try {
+    const res = await fetch(`https://steamcommunity.com/profiles/${sid}/?xml=1`, {
+      headers: { "User-Agent": "fearassist/1.0", Accept: "application/xml" },
+      signal: AbortSignal.timeout(7000),
+    });
+    if (res.ok) {
+      const xml = await res.text();
+      const pick = (tag: string) => {
+        const found = xml.match(new RegExp(`<${tag}><!\\[CDATA\\[([^\\]]+)\\]\\]></${tag}>`)) ||
+                      xml.match(new RegExp(`<${tag}>([^<]+)</${tag}>`));
+        return found?.[1]?.trim() || null;
+      };
+      const personaName = pick("steamID");
+      const avatarUrl = pick("avatarFull") || pick("avatarMedium") || pick("avatarIcon");
+
+      if (personaName) {
+        await sql`update staff set display_name = ${personaName} where user_id = ${userId}`;
+        try {
+          await sql`update "user" set "name" = ${personaName}, "updatedAt" = now() where "id" = ${userId}`;
+          await sql`update mod_roster set name = ${personaName} where steamid = ${sid}`;
+        } catch {}
+      }
+      if (avatarUrl && avatarUrl.startsWith("https://")) {
+        await sql`update staff set image = ${avatarUrl} where user_id = ${userId}`;
+        try {
+          await sql`update "user" set "image" = ${avatarUrl}, "updatedAt" = now() where "id" = ${userId}`;
+        } catch {}
+      }
+      await writeLog(userId, "sync_steam", `Синхронизирован профиль со Steam: ${personaName || sid}`);
+    }
+  } catch (err: any) {
+    console.error("[staff] Failed to sync steam profile:", err);
+    throw new Error("Не удалось получить данные из Steam Community");
+  }
+
+  const profile = await getStaff(userId);
+  if (!profile) throw new Error("Ошибка получения профиля.");
+  return profile;
+}
+
 

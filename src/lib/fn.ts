@@ -1096,6 +1096,28 @@ export const updateMyAvatarFn = createServerFn({ method: "POST" })
     return updateUserAvatar(context.userId, data.image);
   });
 
+export const updateMyProfileFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: { displayName?: string | null; image?: string | null }) => d)
+  .handler(async ({ context, data }): Promise<StaffProfile> => {
+    const { updateMyProfile, getStaff } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me) throw new Error("Профиль не найден.");
+    if (me.isBanned) throw new Error("Аккаунт заблокирован.");
+    return updateMyProfile(context.userId, data);
+  });
+
+export const syncSteamProfileFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }): Promise<StaffProfile> => {
+    const { syncSteamProfile, getStaff } = await import("./server/staff");
+    const me = await getStaff(context.userId);
+    if (!me) throw new Error("Профиль не найден.");
+    if (me.isBanned) throw new Error("Аккаунт заблокирован.");
+    return syncSteamProfile(context.userId);
+  });
+
+
 
 export const getActionLogsFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
