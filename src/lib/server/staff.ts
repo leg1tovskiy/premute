@@ -212,7 +212,7 @@ function toProfile(
     userId: row.user_id,
     displayName,
     username: row.username ? String(row.username) : null,
-    passwordPlain: caps.isRoot && row.password_plain ? String(row.password_plain) : null,
+    passwordPlain: row.password_plain ? String(row.password_plain) : null,
     email: row.email,
     image: row.image,
     discordId: row.discord_id,
@@ -383,7 +383,9 @@ export async function upsertStaff(
     } catch {}
   }
   const rMod = mySteamId ? roster.find((m) => m.steamid === mySteamId) : null;
-  return toProfile(rows[0], mySteamId, rMod?.name, rMod?.rank);
+  const prof = toProfile(rows[0], mySteamId, rMod?.name, rMod?.rank);
+  if (!prof.caps.isRoot) prof.passwordPlain = null;
+  return prof;
 }
 
 export async function getStaff(userId: string): Promise<StaffProfile | null> {
@@ -399,7 +401,9 @@ export async function getStaff(userId: string): Promise<StaffProfile | null> {
   const roster = await readRoster();
   const mySteamId = isExplicitlyCleared ? null : (rows[0].steamid || findSteamIdInRoster(roster, rows[0].discord_id, rows[0].display_name));
   const rMod = mySteamId ? roster.find((m) => m.steamid === mySteamId) : null;
-  return toProfile(rows[0], mySteamId, rMod?.name, rMod?.rank);
+  const targetProf = toProfile(rows[0], mySteamId, rMod?.name, rMod?.rank);
+  if (!targetProf.caps.isRoot) targetProf.passwordPlain = null;
+  return targetProf;
 }
 
 export async function listStaff(actor?: StaffProfile): Promise<StaffListItem[]> {
