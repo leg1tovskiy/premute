@@ -155,6 +155,10 @@ export function AdminView({ me }: { me: StaffProfile }) {
   }
 
   function handleRoleChange(u: StaffListItem, val: string) {
+    if (u.isRoot) {
+      toast.error("Роль корневого владельца (ROOT) нельзя изменить.");
+      return;
+    }
     if (val === "owner") {
       void patch(u.userId, {
         isOwner: true,
@@ -460,53 +464,74 @@ export function AdminView({ me }: { me: StaffProfile }) {
                       </div>
 
                       <div className="relative">
-                        <Select
-                          value={
-                            u.isRoot
-                              ? "root"
-                              : u.isOwner
-                              ? "owner"
-                              : u.roleRank
-                              ? String(u.roleRank)
-                              : "none"
-                          }
-                          disabled={locked || (!meIsMainOwner && u.isRoot) || u.isBanned}
-                          onValueChange={(val) => handleRoleChange(u, val)}
-                        >
-                          <SelectTrigger className="w-full h-8.5 bg-surface/90 text-xs font-semibold">
-                            <SelectValue placeholder="Выберите роль" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Без роли (доступ закрыт)</SelectItem>
-                            <SelectItem value="1">Мл. Модератор (только своя стата + Игроки)</SelectItem>
-                            <SelectItem value="2">Модератор (только своя стата + Игроки)</SelectItem>
-                            <SelectItem value="3">Ст. Модератор (все вкладки)</SelectItem>
-                            <SelectItem value="4">Ст. Администратор (все вкладки)</SelectItem>
-                            <SelectItem value="5">Стафф (все вкладки)</SelectItem>
-                            {me.caps.canGrantOwner ? (
-                              <SelectItem value="owner">Владелец сайта (все вкладки + админка)</SelectItem>
-                            ) : null}
-                            {u.isRoot ? <SelectItem value="root" disabled>Корневой владелец (ROOT)</SelectItem> : null}
-                          </SelectContent>
-                        </Select>
+                        {u.isRoot ? (
+                          <div className="flex h-8.5 w-full items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 text-xs font-bold text-amber-300 select-none">
+                            <span className="flex items-center gap-1.5">
+                              <Shield className="size-3.5 text-amber-400" />
+                              Корневой владелец (ROOT)
+                            </span>
+                            <span className="text-[10px] text-amber-400/80 font-normal uppercase tracking-wider">
+                              Неизменяемо
+                            </span>
+                          </div>
+                        ) : (
+                          <Select
+                            value={
+                              u.isOwner
+                                ? "owner"
+                                : u.roleRank
+                                ? String(u.roleRank)
+                                : "none"
+                            }
+                            disabled={locked || u.isBanned}
+                            onValueChange={(val) => handleRoleChange(u, val)}
+                          >
+                            <SelectTrigger className="w-full h-8.5 bg-surface/90 text-xs font-semibold">
+                              <SelectValue placeholder="Выберите роль" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Без роли (доступ закрыт)</SelectItem>
+                              <SelectItem value="1">Мл. Модератор (только своя стата + Игроки)</SelectItem>
+                              <SelectItem value="2">Модератор (только своя стата + Игроки)</SelectItem>
+                              <SelectItem value="3">Ст. Модератор (все вкладки)</SelectItem>
+                              <SelectItem value="4">Ст. Администратор (все вкладки)</SelectItem>
+                              <SelectItem value="5">Стафф (все вкладки)</SelectItem>
+                              {me.caps.canGrantOwner ? (
+                                <SelectItem value="owner">Владелец сайта (все вкладки + админка)</SelectItem>
+                              ) : null}
+                            </SelectContent>
+                          </Select>
+                        )}
                       </div>
                     </div>
                   ) : null}
 
                   {/* ── Ручная настройка прав (кнопка модального окна) ── */}
-                  <button
-                    type="button"
-                    onClick={() => setManualModalUserId(u.userId)}
-                    className="relative z-10 mt-2 flex w-full items-center justify-between rounded-xl border border-border/70 bg-elevated/40 p-2.5 text-xs font-bold text-muted hover:text-fg hover:border-accent/40 hover:bg-elevated/70 transition-all cursor-pointer shadow-xs select-none"
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <SlidersHorizontal className="size-3.5 text-accent" />
-                      Ручная настройка прав
-                    </span>
-                    <span className="text-[10px] text-accent font-semibold flex items-center gap-1">
-                      Настроить →
-                    </span>
-                  </button>
+                  {u.isRoot ? (
+                    <div className="relative z-10 mt-2 flex w-full items-center justify-between rounded-xl border border-border/50 bg-elevated/20 p-2.5 text-xs font-bold text-muted select-none opacity-60">
+                      <span className="flex items-center gap-1.5">
+                        <SlidersHorizontal className="size-3.5 text-accent" />
+                        Ручная настройка прав
+                      </span>
+                      <span className="text-[10px] text-accent/80 font-semibold">
+                        Полный доступ (ROOT)
+                      </span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setManualModalUserId(u.userId)}
+                      className="relative z-10 mt-2 flex w-full items-center justify-between rounded-xl border border-border/70 bg-elevated/40 p-2.5 text-xs font-bold text-muted hover:text-fg hover:border-accent/40 hover:bg-elevated/70 transition-all cursor-pointer shadow-xs select-none"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <SlidersHorizontal className="size-3.5 text-accent" />
+                        Ручная настройка прав
+                      </span>
+                      <span className="text-[10px] text-accent font-semibold flex items-center gap-1">
+                        Настроить →
+                      </span>
+                    </button>
+                  )}
 
                   {/* Card Footer: Dates & Actions */}
                   <div className="relative z-10 mt-3 pt-2.5 border-t border-border/50 flex items-center justify-between text-[11px] text-subtle">
@@ -528,7 +553,7 @@ export function AdminView({ me }: { me: StaffProfile }) {
                         </Button>
                       ) : null}
 
-                      {!isMainOwner(u) && (!u.isRoot || meIsMainOwner) && u.userId !== me.userId ? (
+                      {!isMainOwner(u) && !u.isRoot && u.userId !== me.userId ? (
                         <Button
                           variant="ghost"
                           size="sm"

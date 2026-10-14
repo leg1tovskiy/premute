@@ -516,11 +516,20 @@ export async function updateStaffPermissions(
     throw new Error("Назначение владельцев бота через сайт отключено.");
   }
 
-  if (target.isRoot && (patch.isOwner === false || patch.isBanned === true)) {
-    throw new Error("Нельзя снять права или заблокировать корневого владельца.");
-  }
-  if (target.isRoot && target.userId !== actor.userId && !actorIsMainOwner) {
-    throw new Error("Нельзя менять права корневого владельца.");
+  if (target.isRoot) {
+    if (patch.roleRank !== undefined || patch.isOwner === false || patch.isBanned === true) {
+      throw new Error("Нельзя изменять роль или статус корневого владельца (ROOT).");
+    }
+    if (
+      patch.canStats === false ||
+      patch.canActivity === false ||
+      patch.canSuspicious === false ||
+      patch.canMods === false ||
+      patch.canLogs === false ||
+      patch.canAdmin === false
+    ) {
+      throw new Error("Нельзя ограничивать права корневого владельца (ROOT).");
+    }
   }
   if (patch.isOwner !== undefined && !actor.caps.canGrantOwner) {
     throw new Error("Назначать владельцев сайта может только корневой владелец.");
