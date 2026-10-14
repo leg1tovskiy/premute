@@ -223,11 +223,10 @@ export const auth = betterAuth({
     },
   },
 
-  // Cache the session in the short-lived signed `session_data` cookie so reads
-  // (incl. the client's `/get-session`) skip the DB — this shrinks the "loading"
-  // window and reduces auth flicker. See the `auth` skill for the full
-  // flicker-prevention guidance (gate on `isPending`; SSR the session).
-  session: { cookieCache: { enabled: true, maxAge: 300 } },
+  // Disabled cookieCache: caching full user/session objects into cookies can easily
+  // exceed HTTP header limits (RFC 6265 4KB / Node.js 16KB header limits) when profile images
+  // or user metadata are present, causing HTTP 431 Request Header Fields Too Large.
+  session: { cookieCache: { enabled: false } },
 
   // Native Google and Discord OAuth providers.
   socialProviders: {
@@ -281,6 +280,31 @@ export const auth = betterAuth({
     // fires when an Authorization header is present, so the cookie path
     // (deployed apps) is unaffected.
     bearer(),
+
+    // Purge any stale oversized cookie caches from visitors
+    {
+      id: "purge-stale-cookie-cache",
+      hooks: {
+        before: [
+          {
+            matcher: () => true,
+            handler: async (ctx: any) => {
+              const inbound = ctx.request?.headers ?? ctx.headers;
+              const cookieHeader = inbound?.get?.("cookie") || "";
+              if (cookieHeader.includes("session_data=")) {
+                const names = ["__Host-grok-auth.session_data", "better-auth.session_data", "grok-auth.session_data"];
+                for (const name of names) {
+                  ctx.context?.responseHeaders?.append?.(
+                    "set-cookie",
+                    `${name}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`
+                  );
+                }
+              }
+            },
+          },
+        ],
+      },
+    },
 
     // Bridges Better Auth's Set-Cookie into TanStack Start responses. MUST be
     // last so it runs after every other plugin's hooks.

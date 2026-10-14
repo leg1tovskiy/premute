@@ -115,7 +115,7 @@ function EditProfileModal({
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement("canvas");
-        const maxDim = 256;
+        const maxDim = 128;
         let w = img.width;
         let h = img.height;
         if (w > h) {
@@ -134,7 +134,7 @@ function EditProfileModal({
         const ctx = canvas.getContext("2d");
         if (ctx) {
           ctx.drawImage(img, 0, 0, w, h);
-          const resizedData = canvas.toDataURL("image/jpeg", 0.85);
+          const resizedData = canvas.toDataURL("image/jpeg", 0.75);
           setPreview(resizedData);
           setUrl(resizedData);
         } else {
