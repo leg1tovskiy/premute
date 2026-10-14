@@ -952,6 +952,16 @@ function CreateUserModal({
   const [isOwner, setIsOwner] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  function generatePassword() {
+    const chars = "abcdefghjkmnpqrstuvwxyz23456789";
+    let res = "";
+    for (let i = 0; i < 8; i++) {
+      res += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setPassword(res);
+    setShowPassword(true);
+  }
+
   function handleRolePresetChange(val: string) {
     setRoleRank(val);
     if (val === "owner") {
@@ -1094,7 +1104,17 @@ function CreateUserModal({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-fg">Пароль *</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-fg">Пароль *</label>
+                <button
+                  type="button"
+                  onClick={generatePassword}
+                  className="text-[11px] text-accent font-bold hover:underline cursor-pointer flex items-center gap-1"
+                >
+                  <Sparkles className="size-3" />
+                  Сгенерировать
+                </button>
+              </div>
               <div className="relative">
                 <Input
                   type={showPassword ? "text" : "password"}
@@ -1102,7 +1122,7 @@ function CreateUserModal({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="h-10 rounded-xl bg-elevated/70 pr-9 text-xs focus:border-accent"
+                  className="h-10 rounded-xl bg-elevated/70 pr-9 text-xs font-mono focus:border-accent"
                 />
                 <button
                   type="button"
