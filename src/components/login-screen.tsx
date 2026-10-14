@@ -64,6 +64,15 @@ export function LoginScreen() {
 
         if (res.sessionToken) {
           sessionStorage.setItem("grok-auth.bearer-token", res.sessionToken);
+          if (remember) {
+            try {
+              localStorage.setItem("grok-auth.bearer-token", res.sessionToken);
+            } catch {}
+          } else {
+            try {
+              localStorage.removeItem("grok-auth.bearer-token");
+            } catch {}
+          }
         }
         toast.success("Авторизация успешна!");
         window.location.href = "/";
