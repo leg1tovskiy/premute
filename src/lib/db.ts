@@ -105,13 +105,24 @@ function createNeonSql(): Promise<Sql> {
   return globalRef.__pgSqlPromise__;
 }
 
+function getPgliteDataDir(): string | undefined {
+  if (process.env.PGLITE_DATA_DIR && process.env.PGLITE_DATA_DIR.trim()) {
+    return process.env.PGLITE_DATA_DIR.trim();
+  }
+  if (typeof process !== "undefined" && process.platform === "linux") {
+    return "/var/www/fearassist/data";
+  }
+  return undefined;
+}
+
 async function createPgliteSql(): Promise<Sql> {
   // Embedded Postgres, imported on demand so it never loads on the Neon path.
   // One in-memory instance per process, shared across HMR module instances, so
   // data survives source edits (it resets on dev-server restart).
   globalRef.__pgliteInstance__ ??= (async () => {
     const { PGlite } = await import("@electric-sql/pglite");
-    const dataDir = process.env.PGLITE_DATA_DIR || undefined;
+    const dataDir = getPgliteDataDir();
+    console.log("[db] Initializing PGlite with dataDir:", dataDir || "IN-MEMORY");
     const pg = new PGlite(dataDir, {
       parsers: {
         [OID_INT8]: Number,

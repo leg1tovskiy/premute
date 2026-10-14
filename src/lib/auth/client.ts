@@ -236,6 +236,7 @@ export async function signOut(redirectTo = "/"): Promise<void> {
       setBearerToken(null);
       if (typeof window !== "undefined") {
         try {
+          sessionStorage.setItem("fearassist_manual_logout", "1");
           localStorage.removeItem("premute_cached_user");
           localStorage.removeItem("premute_cached_profile");
         } catch {}

@@ -11,46 +11,49 @@ export function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [autoLoggingIn, setAutoLoggingIn] = useState(false);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem("fearassist_saved_login");
+      const manualLogout = sessionStorage.getItem("fearassist_manual_logout");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (typeof parsed?.username === "string") setUsername(parsed.username);
-        if (typeof parsed?.password === "string") setPassword(parsed.password);
+        const u = typeof parsed?.username === "string" ? parsed.username : "";
+        const p = typeof parsed?.password === "string" ? parsed.password : "";
+        if (u) setUsername(u);
+        if (p) setPassword(p);
         setRemember(true);
+
+        if (!manualLogout && u && p) {
+          setAutoLoggingIn(true);
+          void doLogin(u, p, true);
+        }
       }
     } catch {}
   }, []);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const cleanUser = username.trim();
-    if (!cleanUser) {
-      toast.error("Введите логин");
-      return;
-    }
-    if (!password) {
-      toast.error("Введите пароль");
-      return;
-    }
-
+  async function doLogin(u: string, p: string, isAuto = false) {
+    const cleanUser = u.trim();
     setLoading(true);
     try {
       const res = await loginWithPasswordFn({
         data: {
           username: cleanUser,
-          password,
+          password: p,
         },
       });
 
       if (res.ok) {
+        try {
+          sessionStorage.removeItem("fearassist_manual_logout");
+        } catch {}
+
         if (remember) {
           try {
             localStorage.setItem(
               "fearassist_saved_login",
-              JSON.stringify({ username: cleanUser, password }),
+              JSON.stringify({ username: cleanUser, password: p }),
             );
           } catch {}
         } else {
@@ -66,10 +69,62 @@ export function LoginScreen() {
         window.location.href = "/";
       }
     } catch (err: any) {
-      toast.error(err?.message || "Неверный логин или пароль");
-    } finally {
+      setAutoLoggingIn(false);
       setLoading(false);
+      if (isAuto) {
+        toast.error("Не удалось выполнить автоматический вход. Введите данные заново.");
+      } else {
+        toast.error(err?.message || "Неверный логин или пароль");
+      }
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const cleanUser = username.trim();
+    if (!cleanUser) {
+      toast.error("Введите логин");
+      return;
+    }
+    if (!password) {
+      toast.error("Введите пароль");
+      return;
+    }
+    await doLogin(cleanUser, password, false);
+  }
+
+  if (autoLoggingIn) {
+    return (
+      <main className="relative grid min-h-dvh place-items-center bg-bg px-4 py-10 text-fg">
+        <div className="login-grid pointer-events-none absolute inset-0 opacity-40" aria-hidden="true" />
+        <div className="relative flex flex-col items-center gap-4 rounded-3xl border border-border/80 bg-surface/95 p-8 shadow-2xl backdrop-blur-xl text-center max-w-sm w-full mx-4">
+          <img
+            src="/logo.png"
+            alt="FearAssist"
+            className="size-16 rounded-2xl border border-accent/40 bg-elevated/40 p-1.5 object-contain shadow-md animate-pulse"
+          />
+          <div className="space-y-1">
+            <p className="text-xs font-black uppercase tracking-[0.25em] text-accent">FearAssist</p>
+            <h1 className="text-xl font-black text-fg">Автоматический вход...</h1>
+            <p className="text-xs text-muted">Входим в систему под сохранённым аккаунтом</p>
+          </div>
+          <Loader2 className="size-5 animate-spin text-accent mt-1" />
+          <button
+            type="button"
+            onClick={() => {
+              setAutoLoggingIn(false);
+              setLoading(false);
+              try {
+                sessionStorage.setItem("fearassist_manual_logout", "1");
+              } catch {}
+            }}
+            className="mt-2 text-xs text-muted hover:text-fg underline cursor-pointer transition-colors"
+          >
+            Войти под другим логином
+          </button>
+        </div>
+      </main>
+    );
   }
 
   return (
