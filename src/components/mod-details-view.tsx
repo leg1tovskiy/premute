@@ -528,7 +528,7 @@ function DiscordShareModal({
     ? `\n📅 За неделю: ${m.weekTotal ?? 0} / ${weekTarget} (${Math.round(((m.weekTotal ?? 0) / weekTarget) * 100)}%)`
     : "";
 
-  const appOrigin = typeof window !== "undefined" ? window.location.origin : "https://premute.vercel.app";
+  const appOrigin = typeof window !== "undefined" ? window.location.origin : "https://fearassist.online";
 
   const discordMarkdown = `📊 **Отчёт модератора ${handle} | FearProject CS2**
 📅 Период: ${monthName}
