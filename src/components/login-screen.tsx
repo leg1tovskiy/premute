@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Eye, EyeOff, Lock, Loader2, User, Shield } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Eye, EyeOff, Lock, Loader2, User, Shield, Check } from "lucide-react";
 import { loginWithPasswordFn } from "@/lib/fn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,20 @@ export function LoginScreen() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("fearassist_saved_login");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed?.username === "string") setUsername(parsed.username);
+        if (typeof parsed?.password === "string") setPassword(parsed.password);
+        setRemember(true);
+      }
+    } catch {}
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,6 +46,19 @@ export function LoginScreen() {
       });
 
       if (res.ok) {
+        if (remember) {
+          try {
+            localStorage.setItem(
+              "fearassist_saved_login",
+              JSON.stringify({ username: cleanUser, password }),
+            );
+          } catch {}
+        } else {
+          try {
+            localStorage.removeItem("fearassist_saved_login");
+          } catch {}
+        }
+
         if (res.sessionToken) {
           sessionStorage.setItem("grok-auth.bearer-token", res.sessionToken);
         }
@@ -121,6 +147,31 @@ export function LoginScreen() {
                 {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
+          </div>
+
+          {/* Remember Password Checkbox */}
+          <div className="pt-0.5">
+            <label className="inline-flex items-center gap-2.5 cursor-pointer select-none group text-xs text-muted hover:text-fg transition-colors">
+              <div className="relative flex items-center justify-center">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  disabled={loading}
+                  className="peer sr-only"
+                />
+                <div className="size-4 rounded-md border border-border/80 bg-elevated/70 transition-all peer-checked:bg-accent peer-checked:border-accent peer-focus-visible:ring-2 peer-focus-visible:ring-accent/40 flex items-center justify-center shadow-inner group-hover:border-accent/60">
+                  <Check
+                    className={`size-3 text-accent-fg stroke-[3] transition-opacity duration-150 ${
+                      remember ? "opacity-100" : "opacity-0"
+                    }`}
+                  />
+                </div>
+              </div>
+              <span className="font-medium text-fg/90 group-hover:text-fg transition-colors">
+                Запомнить данные для входа
+              </span>
+            </label>
           </div>
 
           {/* Submit Button */}
